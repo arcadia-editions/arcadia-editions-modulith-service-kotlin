@@ -1,81 +1,66 @@
-// This is a ZenWave Scripts File (.zw)
-//
-// This file defines ZenWave SDK plugins and their configurations for SDK execution and code generation.
-//
-// Usage:
-// - Execute plugins using the Play button in IntelliJ IDEA ZenWave Model Editor
-// - Or Copy the generated command line hovering the play button on each plugin
-// - Or Run commands directly from terminal using the generated command line
-//
-// Plugin: https://plugins.jetbrains.com/plugin/22858-zenwave-domain-model-editor-for-zdl
-//
-// There are global properties that apply to all plugins, and plugin specific properties.
-// Configuration Precedence (highest to lowest):
-// 1. Command line arguments always have the highest precedence
-// 2. Plugin-specific properties (defined in this file)
-// 3. Global properties (defined in this file)
-// 4. Properties from referenced .zdl files
-//
-// Kotlin templates for BackendApplicationDefaultPlugin, OpenAPIControllersPlugin and SpringWebTestClientPlugin
 @import("io.zenwave360.sdk.plugins.customizations:kotlin-backend-application:2.7.1")
-
+@import("com.arcadiaeditions.modulith.application.arcadia-editions-modulith:service-all:0.0.1")
 config {
 
-    // This is a global configuration that applies to all plugins.
-    zdlFile "zenwave-model.zdl"
+    basePackage "com.arcadiaeditions"
+    layout.commonPackage "{{basePackage}}.common"
+    layout.entitiesCommonPackage "{{commonPackage}}.domain"
+    layout.domainEventsCommonPackage "{{commonPackage}}.domain.events"
+    layout.coreImplementationCommonPackage "{{commonPackage}}"
+    layout.coreImplementationMappersCommonPackage "{{commonPackage}}.mappers"
+    layout.infrastructureRepositoryCommonPackage "{{commonPackage}}"
+    layout.infrastructureEventsCommonPackage "{{commonPackage}}"
+    layout.adaptersWebCommonPackage "{{commonPackage}}"
+    layout.adaptersWebMappersCommonPackage "{{commonPackage}}.mappers"
+    layout.adaptersCommandsCommonPackage "{{commonPackage}}.commands"
+    layout.adaptersCommandsMappersCommonPackage "{{commonPackage}}.commands.mappers"
+    layout.adaptersEventsCommonPackage "{{commonPackage}}.events"
+    layout.adaptersEventsMappersCommonPackage "{{commonPackage}}.events.mappers"
 
-
-    // these should match the values of openapi-generator-maven-plugin
-    // used by the OpenAPIControllersPlugin and SpringWebTestClientPlugin
-    openApiApiPackage "{{basePackage}}.adapters.web"
-    openApiModelPackage "{{basePackage}}.adapters.web.model"
-    openApiModelNameSuffix DTO
-
-
-
+    useJSpecify true
+    useJMolecules true
+    useSpringModulith true
+    includeEmitEventsImplementation true
 
     plugins {
-        /** Generates an OpenAPI 3.0 specification from the ZDL model. */
-        ZDLToOpenAPIPlugin {
-            idType integer
-            idTypeFormat int64
-            targetFile "src/main/resources/public/apis/openapi.yml"
-        }
-        /** Generates an AsyncAPI 3.0 specification from the ZDL model. */
-        ZDLToAsyncAPIPlugin {
-            asyncapiVersion v3
-            idType integer
-            idTypeFormat int64
-            targetFile "src/main/resources/public/apis/asyncapi.yml"
-            includeCloudEventsHeaders true
-            includeKafkaCommonHeaders true
-        }
         /** Generates a Backend Application from the ZDL model. (Headless Core) */
         BackendApplicationDefaultPlugin {
             templates "new io.zenwave360.sdk.plugins.kotlin.BackendApplicationKotlinTemplates()"
-            haltOnFailFormatting false // the SDK formatter only formats Java, use `mvn spotless:apply` for Kotlin
-            includeEmitEventsImplementation true
-            useSpringModulith true
-            transactionalOutbox modulith
-            // --force // overwite all files
+            zdlFile "classpath:/com/arcadiaeditions/modulith/application/arcadia-editions-modulith/catalog-inventory-domain-model.zdl"
         }
-        /** Generates Spring MVC controllers in Kotlin from the OpenAPI specification (Web Adapters). */
+        BackendApplicationDefaultPlugin {
+            templates "new io.zenwave360.sdk.plugins.kotlin.BackendApplicationKotlinTemplates()"
+            zdlFile "classpath:/com/arcadiaeditions/modulith/application/arcadia-editions-modulith/catalog-products-domain-model.zdl"
+        }
+        BackendApplicationDefaultPlugin {
+            templates "new io.zenwave360.sdk.plugins.kotlin.BackendApplicationKotlinTemplates()"
+            zdlFile "classpath:/com/arcadiaeditions/modulith/application/arcadia-editions-modulith/fulfillment-shipping-domain-model.zdl"
+        }
+        BackendApplicationDefaultPlugin {
+            templates "new io.zenwave360.sdk.plugins.kotlin.BackendApplicationKotlinTemplates()"
+            zdlFile "classpath:/com/arcadiaeditions/modulith/application/arcadia-editions-modulith/notifications-consumer-domain-model.zdl"
+        }
+        BackendApplicationDefaultPlugin {
+            templates "new io.zenwave360.sdk.plugins.kotlin.BackendApplicationKotlinTemplates()"
+            zdlFile "classpath:/com/arcadiaeditions/modulith/application/arcadia-editions-modulith/orders-checkout-domain-model.zdl"
+        }
+        BackendApplicationDefaultPlugin {
+            templates "new io.zenwave360.sdk.plugins.kotlin.BackendApplicationKotlinTemplates()"
+            zdlFile "classpath:/com/arcadiaeditions/modulith/application/arcadia-editions-modulith/payments-processing-domain-model.zdl"
+        }
+
+        /** Generates Spring MVC controllers from the OpenAPI specification (Web Adapters). */
         OpenAPIControllersPlugin {
-            openapiFile "src/main/resources/public/apis/openapi.yml"
             templates "new io.zenwave360.sdk.plugins.kotlin.OpenAPIControllersKotlinTemplates()"
+            zdlFile "classpath:/com/arcadiaeditions/modulith/application/arcadia-editions-modulith/orders-checkout-domain-model.zdl"
+            openapiFile "classpath:/com/arcadiaeditions/modulith/application/arcadia-editions-modulith/orders-checkout-openapi.yml"
+            openApiModelNameSuffix DTO
         }
-
         SpringWebTestClientPlugin {
-            openapiFile "src/main/resources/public/apis/openapi.yml"
             templates "new io.zenwave360.sdk.plugins.kotlin.SpringWebTestClientKotlinTemplates()"
-        }
-
-        SpringWebTestClientPlugin {
-            openapiFile "src/main/resources/public/apis/openapi.yml"
-            templates "new io.zenwave360.sdk.plugins.kotlin.SpringWebTestClientKotlinTemplates()"
-            groupBy businessFlow
-            businessFlowTestName CreateUpdateDeleteCustomerIntegrationTest
-            operationIds createCustomer,updateCustomer,deleteCustomer,getCustomer
+            zdlFile "classpath:/com/arcadiaeditions/modulith/application/arcadia-editions-modulith/orders-checkout-domain-model.zdl"
+            openapiFile "classpath:/com/arcadiaeditions/modulith/application/arcadia-editions-modulith/orders-checkout-openapi.yml"
+            openApiModelNameSuffix DTO
         }
     }
 }
