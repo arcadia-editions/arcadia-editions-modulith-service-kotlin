@@ -1,4 +1,18 @@
 {
-    "id": 1,
-    "version": 0
+  "id": 1,
+  "version": 0,
+  "notificationId": "NOT-001",
+  "customerId": "CUST-001",
+  "orderId": "ORD-001",
+  "sku": "AE-EDN-001",
+  "type": "ORDER_CONFIRMATION",
+  "channel": "EMAIL",
+  "status": "PENDING",
+  "subject": "Your Arcadia Editions order ORD-001 is confirmed",
+  "body": "Thank you for ordering Arcadia First Edition (AE-EDN-001).",
+  "recipient": "customer@example.com",
+  "createdAt": "2026-09-26T13:00:00Z",
+  "sentAt": null,
+  "failedAt": null,
+  "failureReason": null
 }

@@ -1,40 +1,234 @@
 -- ============================================================================
--- SQL Data Script for Clinical Tool JPA Project
+-- SQL test data for Arcadia Editions Modulith (Kotlin)
 -- ============================================================================
---
--- PROMPT TO GENERATE THIS FILE:
---
--- Create an SQL data script (data.sql) that inserts exactly one sample record
--- per table for all entities in the project.
---
--- Requirements:
--- - Use nextval('sequence_name') for all ID columns to properly call the database sequences
--- - Respect foreign key dependencies and insert parent records before child records
--- - Populate ALL required fields (NOT NULL columns) with realistic sample data
--- - Include optional fields where it makes sense for a complete example
--- - Use proper SQL syntax for:
---   * JSON/JSONB columns (use valid JSON strings)
---   * Array columns (use PostgreSQL array syntax)
---   * LOB/BLOB columns (use appropriate data)
---   * Embedded objects (map to prefixed column names)
---   * Enum values (use the integer representation from converters)
---   * Timestamp fields (use CURRENT_TIMESTAMP where appropriate)
---   * Auditing fields (created_by, created_date, last_modified_by, last_modified_date)
--- - Organize the script by module with clear section comments
--- - Ensure referential integrity (all foreign keys reference valid parent IDs)
--- - Use consistent test data (e.g., user_id=1, hospital_id=1, patient_id=1)
---
--- Format:
--- - Add section headers for each module
--- - Comment each table insertion
--- - Use readable formatting with proper indentation
--- - Include a header comment explaining the script's purpose
---
--- Entity tables in this project:
--- You can find all entities and tables running: grep @Table -R src/main/java/
---
+-- Inserts exactly one sample record per entity table.
+-- IDs are allocated from Hibernate sequences (increment by 50, first value 1)
+-- so repository integration tests can look up id = 1.
+-- Logical identifiers (sku, order_id, customer_id) are shared across modules.
 -- ============================================================================
 
--- example:
--- INSERT INTO application_user (id, version, name, username, email, password, roles, enabled, credentials_non_expired, account_non_expired, account_non_locked, additional_properties, created_by, created_date, last_modified_by, last_modified_date)
--- VALUES (nextval('application_user_seq'), 0, 'Admin User', 'admin', 'user@email.com', '$2a$10$I86fM/OvHg8ounuxGq2oBufCecu3NFO4vT1SWIvd4hnM72lrzdXBG', ARRAY['USER', 'ADMIN'], true, true, true, true, '{"theme": "dark", "notifications": true}', 'user', '2024-08-02 13:36:47.389586', 'system', '2024-08-02 13:36:47.389586');
+-- ============================================================================
+-- Catalog / Products
+-- ============================================================================
+
+-- Published limited edition used as the catalog sample
+INSERT INTO product (
+    id,
+    version,
+    sku,
+    name,
+    description,
+    price,
+    currency,
+    edition_size,
+    tracking_mode,
+    launch_at,
+    status
+)
+VALUES (
+    nextval('product_seq'),
+    0,
+    'AE-EDN-001',
+    'Arcadia First Edition',
+    'Signed limited print of the Arcadia First Edition cover art',
+    49.99,
+    'EUR',
+    100,
+    'QUANTITY',
+    CURRENT_TIMESTAMP,
+    'PUBLISHED'
+);
+
+-- ============================================================================
+-- Catalog / Inventory
+-- ============================================================================
+
+-- On-hand stock for AE-EDN-001
+INSERT INTO inventory_position (
+    id,
+    version,
+    sku,
+    available_quantity,
+    reserved_quantity,
+    sold_quantity
+)
+VALUES (
+    nextval('inventory_position_seq'),
+    0,
+    'AE-EDN-001',
+    80,
+    5,
+    15
+);
+
+-- Active reservation against checkout order ORD-001
+INSERT INTO stock_reservation (
+    id,
+    version,
+    reservation_id,
+    order_id,
+    sku,
+    quantity,
+    status,
+    reserved_at,
+    expires_at,
+    released_at,
+    release_reason
+)
+VALUES (
+    nextval('stock_reservation_seq'),
+    0,
+    'RES-001',
+    'ORD-001',
+    'AE-EDN-001',
+    1,
+    'RESERVED',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP + INTERVAL '15 minutes',
+    NULL,
+    NULL
+);
+
+-- ============================================================================
+-- Orders / Checkout
+-- ============================================================================
+
+-- Confirmed checkout order for customer CUST-001
+INSERT INTO checkout_order (
+    id,
+    version,
+    order_id,
+    status,
+    items,
+    created_at,
+    confirmed_at,
+    cancelled_at
+)
+VALUES (
+    nextval('checkout_order_seq'),
+    0,
+    'ORD-001',
+    'CONFIRMED',
+    ARRAY['AE-EDN-001']::varchar[],
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP,
+    NULL
+);
+
+-- ============================================================================
+-- Payments / Processing
+-- ============================================================================
+
+-- Authorized payment for ORD-001
+INSERT INTO payment (
+    id,
+    version,
+    payment_id,
+    order_id,
+    customer_id,
+    amount,
+    currency,
+    status,
+    provider_reference,
+    attempt_count,
+    authorized_at,
+    declined_at,
+    failed_at,
+    captured_at,
+    voided_at,
+    failure_reason
+)
+VALUES (
+    nextval('payment_seq'),
+    0,
+    'PAY-001',
+    'ORD-001',
+    'CUST-001',
+    49.99,
+    'EUR',
+    'AUTHORIZED',
+    'psp_txn_001',
+    1,
+    CURRENT_TIMESTAMP,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL
+);
+
+-- ============================================================================
+-- Fulfillment / Shipping
+-- ============================================================================
+
+-- Scheduled shipment for ORD-001
+INSERT INTO fulfillment (
+    id,
+    version,
+    fulfillment_id,
+    order_id,
+    customer_id,
+    status,
+    carrier_code,
+    tracking_number,
+    scheduled_at,
+    ready_at,
+    failed_at,
+    failure_reason
+)
+VALUES (
+    nextval('fulfillment_seq'),
+    0,
+    'FUL-001',
+    'ORD-001',
+    'CUST-001',
+    'SCHEDULED',
+    'DHL',
+    NULL,
+    CURRENT_TIMESTAMP,
+    NULL,
+    NULL,
+    NULL
+);
+
+-- ============================================================================
+-- Notifications / Consumer
+-- ============================================================================
+
+-- Pending order-confirmation email for CUST-001
+INSERT INTO notification (
+    id,
+    version,
+    notification_id,
+    customer_id,
+    order_id,
+    sku,
+    type,
+    channel,
+    status,
+    subject,
+    body,
+    recipient,
+    created_at,
+    sent_at,
+    failed_at,
+    failure_reason
+)
+VALUES (
+    nextval('notification_seq'),
+    0,
+    'NOT-001',
+    'CUST-001',
+    'ORD-001',
+    'AE-EDN-001',
+    'ORDER_CONFIRMATION',
+    'EMAIL',
+    'PENDING',
+    'Your Arcadia Editions order ORD-001 is confirmed',
+    'Thank you for ordering Arcadia First Edition (AE-EDN-001).',
+    'customer@example.com',
+    CURRENT_TIMESTAMP,
+    NULL,
+    NULL,
+    NULL
+);
