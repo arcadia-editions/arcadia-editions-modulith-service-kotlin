@@ -20,6 +20,7 @@ config {
     useJSpecify true
     useJMolecules true
     useSpringModulith true
+    implementEventListeners true
     includeEmitEventsImplementation true
 
     plugins {

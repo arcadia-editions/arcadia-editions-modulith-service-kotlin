@@ -3,14 +3,23 @@ logging:
     com.arcadiaeditions: DEBUG
     org.apache.kafka.clients.admin: WARN
 
-springdoc.swagger-ui.urls:
-  - name: Arcadia Editions Modulith
-    url: /apis/openapi.yml
-
+springdoc:
+  swagger-ui:
+    urls:
+      - name: Arcadia Editions Modulith
+        url: /orders-checkout-openapi.yml
 management:
   endpoints.web.exposure.include: "*"
 
 spring:
+  web:
+    resources:
+      static-locations:
+        - classpath:/META-INF/resources/
+        - classpath:/resources/
+        - classpath:/static/
+        - classpath:/public/
+        - classpath:/com/arcadiaeditions/modulith/application/arcadia-editions-modulith/
   security:
     user:
       name: admin
