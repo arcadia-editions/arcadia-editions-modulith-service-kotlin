@@ -12,11 +12,11 @@ import java.time.*
 interface InventoryService {
 
     /**  */
-    fun reserveStock(input: ReserveStockInput): StockReservedResult
+    fun reserveStock(input: ReserveStockInput): ReserveStockResult
 
     /** With Events: [StockReleased]. */
-    fun releaseStock(input: ReleaseStockInput): StockReservation
+    fun releaseStock(input: ReleaseStockInput): List<StockReservation>
 
     /** With Events: [StockReservationConfirmed]. */
-    fun confirmStockReservation(input: ReserveStockInput): Unit
+    fun confirmStockReservation(input: ConfirmStockReservationInput): List<StockReservation>
 }

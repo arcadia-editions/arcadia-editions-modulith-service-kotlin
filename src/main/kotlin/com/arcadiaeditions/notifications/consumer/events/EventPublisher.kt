@@ -5,11 +5,11 @@ import com.arcadiaeditions.notifications.consumer.domain.events.*
 
 interface EventPublisher {
 
-    fun onOrderCancelledNotificationSent(event: OrderCancelledNotificationSent)
-
-    fun onNotificationDeliveryFailed(event: NotificationDeliveryFailed)
-
     fun onStockUnavailableNotificationSent(event: StockUnavailableNotificationSent)
 
+    fun onOrderCancelledNotificationSent(event: OrderCancelledNotificationSent)
+
     fun onOrderConfirmationSent(event: OrderConfirmationSent)
+
+    fun onNotificationDeliveryFailed(event: NotificationDeliveryFailed)
 }

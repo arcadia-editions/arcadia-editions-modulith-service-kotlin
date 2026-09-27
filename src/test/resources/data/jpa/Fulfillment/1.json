@@ -1,14 +1,4 @@
 {
-  "id": 1,
-  "version": 0,
-  "fulfillmentId": "FUL-001",
-  "orderId": "ORD-001",
-  "customerId": "CUST-001",
-  "status": "SCHEDULED",
-  "carrierCode": "DHL",
-  "trackingNumber": null,
-  "scheduledAt": "2026-09-26T13:00:00Z",
-  "readyAt": null,
-  "failedAt": null,
-  "failureReason": null
+    "id": 1,
+    "version": 0
 }

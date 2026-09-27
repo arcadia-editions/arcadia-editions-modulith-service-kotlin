@@ -11,11 +11,19 @@ class InMemoryEventPublisher : EventPublisher {
         return events
     }
 
+    override fun onStockAdjusted(event: StockAdjusted) {
+        events.add(event)
+    }
+
     override fun onStockReservationConfirmed(event: StockReservationConfirmed) {
         events.add(event)
     }
 
-    override fun onStockAdjusted(event: StockAdjusted) {
+    override fun onStockReleased(event: StockReleased) {
+        events.add(event)
+    }
+
+    override fun onStockReservationConfirmedItem(event: StockReservationConfirmedItem) {
         events.add(event)
     }
 
@@ -23,7 +31,7 @@ class InMemoryEventPublisher : EventPublisher {
         events.add(event)
     }
 
-    override fun onStockReleased(event: StockReleased) {
+    override fun onStockReleasedItem(event: StockReleasedItem) {
         events.add(event)
     }
 }

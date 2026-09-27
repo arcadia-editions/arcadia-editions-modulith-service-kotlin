@@ -9,11 +9,19 @@ import org.springframework.stereotype.Component
 @org.jmolecules.architecture.layered.InfrastructureLayer
 class DefaultEventPublisher(private val applicationEventPublisher: ApplicationEventPublisher) : EventPublisher {
 
+    override fun onStockAdjusted(event: StockAdjusted) {
+        applicationEventPublisher.publishEvent(event)
+    }
+
     override fun onStockReservationConfirmed(event: StockReservationConfirmed) {
         applicationEventPublisher.publishEvent(event)
     }
 
-    override fun onStockAdjusted(event: StockAdjusted) {
+    override fun onStockReleased(event: StockReleased) {
+        applicationEventPublisher.publishEvent(event)
+    }
+
+    override fun onStockReservationConfirmedItem(event: StockReservationConfirmedItem) {
         applicationEventPublisher.publishEvent(event)
     }
 
@@ -21,7 +29,7 @@ class DefaultEventPublisher(private val applicationEventPublisher: ApplicationEv
         applicationEventPublisher.publishEvent(event)
     }
 
-    override fun onStockReleased(event: StockReleased) {
+    override fun onStockReleasedItem(event: StockReleasedItem) {
         applicationEventPublisher.publishEvent(event)
     }
 }

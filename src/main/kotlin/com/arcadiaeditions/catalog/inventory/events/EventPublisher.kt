@@ -5,11 +5,15 @@ import com.arcadiaeditions.catalog.inventory.domain.events.*
 
 interface EventPublisher {
 
+    fun onStockAdjusted(event: StockAdjusted)
+
     fun onStockReservationConfirmed(event: StockReservationConfirmed)
 
-    fun onStockAdjusted(event: StockAdjusted)
+    fun onStockReleased(event: StockReleased)
+
+    fun onStockReservationConfirmedItem(event: StockReservationConfirmedItem)
 
     fun onStockReceived(event: StockReceived)
 
-    fun onStockReleased(event: StockReleased)
+    fun onStockReleasedItem(event: StockReleasedItem)
 }

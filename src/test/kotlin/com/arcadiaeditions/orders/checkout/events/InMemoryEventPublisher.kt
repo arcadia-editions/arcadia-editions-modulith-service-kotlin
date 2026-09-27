@@ -11,6 +11,18 @@ class InMemoryEventPublisher : EventPublisher {
         return events
     }
 
+    override fun onOrderConfirmedItem(event: OrderConfirmedItem) {
+        events.add(event)
+    }
+
+    override fun onOrderConfirmedShippingAddress(event: OrderConfirmedShippingAddress) {
+        events.add(event)
+    }
+
+    override fun onStockUnavailableItem(event: StockUnavailableItem) {
+        events.add(event)
+    }
+
     override fun onOrderCreated(event: OrderCreated) {
         events.add(event)
     }

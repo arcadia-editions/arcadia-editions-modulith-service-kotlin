@@ -15,6 +15,7 @@ data class PaymentCaptured(
     var paymentId: String? = null,
     var orderId: String? = null,
     var customerId: String? = null,
+    var customerEmail: String? = null,
     var amount: BigDecimal? = null,
     var currency: String? = null,
     var providerReference: String? = null,

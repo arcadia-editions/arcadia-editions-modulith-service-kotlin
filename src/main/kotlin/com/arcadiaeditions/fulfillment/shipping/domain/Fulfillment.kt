@@ -28,6 +28,15 @@ data class Fulfillment(
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
     var status: FulfillmentStatus = FulfillmentStatus.SCHEDULED,
+    @NotNull
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "shipping_address")
+    var shippingAddress: ShippingAddress? = null,
+    @NotNull
+    @Size(min = 1)
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "items")
+    var items: MutableList<FulfillmentItem> = mutableListOf(),
     @Column(name = "carrier_code") var carrierCode: String? = null,
     @Column(name = "tracking_number") var trackingNumber: String? = null,
     @Column(name = "scheduled_at") var scheduledAt: Instant? = null,

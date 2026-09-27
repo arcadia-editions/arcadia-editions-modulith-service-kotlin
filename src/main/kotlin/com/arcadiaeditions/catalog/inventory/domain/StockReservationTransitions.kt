@@ -2,7 +2,7 @@ package com.arcadiaeditions.catalog.inventory.domain
 object StockReservationTransitions {
 
     fun ensureCanReleaseStock(entity: StockReservation) {
-        require("releaseStock", entity, ReservationStatus.RESERVED)
+        require("releaseStock", entity, ReservationStatus.RESERVED, ReservationStatus.CONFIRMED)
     }
 
     fun ensureCanConfirmStockReservation(entity: StockReservation) {

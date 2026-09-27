@@ -5,6 +5,15 @@ spring.jpa.hibernate.ddl-auto: create
 spring.jpa.defer-datasource-initialization: true
 spring.sql.init.mode: always
 
+# Also write the DDL Hibernate runs to target/ddl/schema.sql (input for test data generation).
+# It is written while the EntityManagerFactory boots, before data.sql runs, so it works even if data.sql is broken.
+spring.jpa.properties:
+  jakarta.persistence.schema-generation.scripts.action: create
+  jakarta.persistence.schema-generation.scripts.create-target: target/ddl/schema.sql
+  hibernate.hbm2ddl.schema-generation.script.append: false
+  hibernate.hbm2ddl.delimiter: ";"
+  hibernate.format_sql: true
+
 DATASOURCE_URL: jdbc:postgresql://localhost:5432/app
 DATASOURCE_USERNAME: postgres
 DATASOURCE_PASSWORD: admin123

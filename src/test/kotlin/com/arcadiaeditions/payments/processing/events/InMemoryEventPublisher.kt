@@ -23,15 +23,15 @@ class InMemoryEventPublisher : EventPublisher {
         events.add(event)
     }
 
-    override fun onPaymentCaptured(event: PaymentCaptured) {
-        events.add(event)
-    }
-
     override fun onPaymentRetried(event: PaymentRetried) {
         events.add(event)
     }
 
     override fun onPaymentFailed(event: PaymentFailed) {
+        events.add(event)
+    }
+
+    override fun onPaymentCaptured(event: PaymentCaptured) {
         events.add(event)
     }
 

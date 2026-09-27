@@ -11,11 +11,11 @@ interface EventPublisher {
 
     fun onPaymentAuthorized(event: PaymentAuthorized)
 
-    fun onPaymentCaptured(event: PaymentCaptured)
-
     fun onPaymentRetried(event: PaymentRetried)
 
     fun onPaymentFailed(event: PaymentFailed)
+
+    fun onPaymentCaptured(event: PaymentCaptured)
 
     fun onPaymentRetryExhausted(event: PaymentRetryExhausted)
 

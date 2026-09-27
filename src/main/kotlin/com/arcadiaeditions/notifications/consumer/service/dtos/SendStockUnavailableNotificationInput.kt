@@ -9,7 +9,14 @@ import java.time.*
 /** SendStockUnavailableNotificationInput. */
 @org.jmolecules.ddd.annotation.ValueObject
 data class SendStockUnavailableNotificationInput(
+    @NotNull val orderId: String,
     @NotNull val customerId: String,
-    @NotNull val sku: String,
-    @NotNull val email: String,
-) : Serializable {}
+    @NotNull val customerEmail: String,
+    @NotNull @Size(min = 1) val unavailableItems: MutableList<StockUnavailableItemInput> = mutableListOf(),
+) : Serializable {
+
+    fun addUnavailableItems(unavailableItems: StockUnavailableItemInput): SendStockUnavailableNotificationInput {
+        this.unavailableItems += unavailableItems
+        return this
+    }
+}

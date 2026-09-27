@@ -18,7 +18,7 @@ interface EventsMapper {
     ): com.arcadiaeditions.catalog.inventory.domain.events.StockAdjusted
 
     fun asStockReservationConfirmed(
-        input: ReserveStockInput?
+        stockReservation: StockReservation
     ): com.arcadiaeditions.catalog.inventory.domain.events.StockReservationConfirmed
 
     fun asStockReleased(

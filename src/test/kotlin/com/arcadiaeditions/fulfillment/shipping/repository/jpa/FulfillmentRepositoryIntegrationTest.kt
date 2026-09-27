@@ -4,6 +4,7 @@ import com.arcadiaeditions.common.BaseRepositoryIntegrationTest
 import com.arcadiaeditions.fulfillment.shipping.domain.*
 import jakarta.persistence.EntityManager
 import java.time.*
+import java.util.List
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -37,6 +38,8 @@ class FulfillmentRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         fulfillment.orderId = ""
         fulfillment.customerId = ""
         fulfillment.status = FulfillmentStatus.values()[0]
+        fulfillment.shippingAddress = ShippingAddress()
+        fulfillment.items = List.of(FulfillmentItem())
         fulfillment.carrierCode = ""
         fulfillment.trackingNumber = ""
         fulfillment.scheduledAt = Instant.now()
@@ -63,6 +66,8 @@ class FulfillmentRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         fulfillment.orderId = ""
         fulfillment.customerId = ""
         fulfillment.status = FulfillmentStatus.values()[0]
+        fulfillment.shippingAddress = ShippingAddress()
+        fulfillment.items = List.of(FulfillmentItem())
         fulfillment.carrierCode = ""
         fulfillment.trackingNumber = ""
         fulfillment.scheduledAt = Instant.now()
@@ -75,6 +80,8 @@ class FulfillmentRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         Assertions.assertEquals("", updated.orderId)
         Assertions.assertEquals("", updated.customerId)
         Assertions.assertEquals(FulfillmentStatus.values()[0], updated.status)
+        Assertions.assertEquals(ShippingAddress(), updated.shippingAddress)
+        Assertions.assertEquals(List.of(FulfillmentItem()), updated.items)
         Assertions.assertEquals("", updated.carrierCode)
         Assertions.assertEquals("", updated.trackingNumber)
         Assertions.assertEquals(Instant.now(), updated.scheduledAt)

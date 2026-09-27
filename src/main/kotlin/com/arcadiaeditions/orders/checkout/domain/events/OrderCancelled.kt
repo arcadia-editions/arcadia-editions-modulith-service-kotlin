@@ -11,8 +11,14 @@ import java.util.*
 @org.springframework.modulith.NamedInterface("events.OrderCancelled")
 @org.jmolecules.event.annotation.DomainEvent
 @org.jmolecules.architecture.layered.DomainLayer
-data class OrderCancelled(var orderId: String? = null, var version: Integer? = null, var cancelledAt: Instant? = null) :
-    Serializable {
+data class OrderCancelled(
+    var orderId: String? = null,
+    var version: Integer? = null,
+    var customerId: String? = null,
+    var customerEmail: String? = null,
+    var reason: String? = null,
+    var cancelledAt: Instant? = null,
+) : Serializable {
 
     companion object {
         private const val serialVersionUID: Long = 1L

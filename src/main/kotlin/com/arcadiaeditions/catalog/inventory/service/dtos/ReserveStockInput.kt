@@ -8,5 +8,13 @@ import java.time.*
 
 /** ReserveStockInput. */
 @org.jmolecules.ddd.annotation.ValueObject
-data class ReserveStockInput(@NotNull val orderId: String, @NotNull val sku: String, @NotNull val quantity: Integer) :
-    Serializable {}
+data class ReserveStockInput(
+    @NotNull val orderId: String,
+    @NotNull @Size(min = 1) val items: MutableList<ReserveStockItemInput> = mutableListOf(),
+) : Serializable {
+
+    fun addItems(items: ReserveStockItemInput): ReserveStockInput {
+        this.items += items
+        return this
+    }
+}

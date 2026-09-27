@@ -11,19 +11,19 @@ class InMemoryEventPublisher : EventPublisher {
         return events
     }
 
-    override fun onOrderCancelledNotificationSent(event: OrderCancelledNotificationSent) {
-        events.add(event)
-    }
-
-    override fun onNotificationDeliveryFailed(event: NotificationDeliveryFailed) {
-        events.add(event)
-    }
-
     override fun onStockUnavailableNotificationSent(event: StockUnavailableNotificationSent) {
         events.add(event)
     }
 
+    override fun onOrderCancelledNotificationSent(event: OrderCancelledNotificationSent) {
+        events.add(event)
+    }
+
     override fun onOrderConfirmationSent(event: OrderConfirmationSent) {
+        events.add(event)
+    }
+
+    override fun onNotificationDeliveryFailed(event: NotificationDeliveryFailed) {
         events.add(event)
     }
 }

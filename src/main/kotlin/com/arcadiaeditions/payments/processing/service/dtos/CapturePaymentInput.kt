@@ -8,4 +8,4 @@ import java.time.*
 
 /** CapturePaymentInput. */
 @org.jmolecules.ddd.annotation.ValueObject
-data class CapturePaymentInput(@NotNull val paymentId: String, @NotNull val orderId: String) : Serializable {}
+data class CapturePaymentInput(@NotNull val orderId: String) : Serializable {}

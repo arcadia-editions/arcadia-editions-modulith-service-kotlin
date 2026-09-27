@@ -9,6 +9,18 @@ import org.springframework.stereotype.Component
 @org.jmolecules.architecture.layered.InfrastructureLayer
 class DefaultEventPublisher(private val applicationEventPublisher: ApplicationEventPublisher) : EventPublisher {
 
+    override fun onOrderConfirmedItem(event: OrderConfirmedItem) {
+        applicationEventPublisher.publishEvent(event)
+    }
+
+    override fun onOrderConfirmedShippingAddress(event: OrderConfirmedShippingAddress) {
+        applicationEventPublisher.publishEvent(event)
+    }
+
+    override fun onStockUnavailableItem(event: StockUnavailableItem) {
+        applicationEventPublisher.publishEvent(event)
+    }
+
     override fun onOrderCreated(event: OrderCreated) {
         applicationEventPublisher.publishEvent(event)
     }

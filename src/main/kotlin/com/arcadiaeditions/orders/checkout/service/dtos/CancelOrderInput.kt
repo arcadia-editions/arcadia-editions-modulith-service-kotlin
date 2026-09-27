@@ -7,4 +7,5 @@ import java.math.*
 import java.time.*
 
 /** CancelOrderInput. */
-@org.jmolecules.ddd.annotation.ValueObject data class CancelOrderInput(@NotNull val orderId: String) : Serializable {}
+@org.jmolecules.ddd.annotation.ValueObject
+data class CancelOrderInput(@NotNull val orderId: String, @NotNull val reason: String) : Serializable {}

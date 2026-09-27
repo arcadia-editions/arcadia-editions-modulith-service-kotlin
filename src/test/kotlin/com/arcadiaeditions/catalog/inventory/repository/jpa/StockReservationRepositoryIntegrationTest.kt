@@ -40,6 +40,7 @@ class StockReservationRepositoryIntegrationTest : BaseRepositoryIntegrationTest(
         stockReservation.status = ReservationStatus.values()[0]
         stockReservation.reservedAt = Instant.now()
         stockReservation.expiresAt = Instant.now()
+        stockReservation.confirmedAt = Instant.now()
         stockReservation.releasedAt = Instant.now()
         stockReservation.releaseReason = StockReleaseReason.values()[0]
 
@@ -65,6 +66,7 @@ class StockReservationRepositoryIntegrationTest : BaseRepositoryIntegrationTest(
         stockReservation.status = ReservationStatus.values()[0]
         stockReservation.reservedAt = Instant.now()
         stockReservation.expiresAt = Instant.now()
+        stockReservation.confirmedAt = Instant.now()
         stockReservation.releasedAt = Instant.now()
         stockReservation.releaseReason = StockReleaseReason.values()[0]
 
@@ -76,6 +78,7 @@ class StockReservationRepositoryIntegrationTest : BaseRepositoryIntegrationTest(
         Assertions.assertEquals(ReservationStatus.values()[0], updated.status)
         Assertions.assertEquals(Instant.now(), updated.reservedAt)
         Assertions.assertEquals(Instant.now(), updated.expiresAt)
+        Assertions.assertEquals(Instant.now(), updated.confirmedAt)
         Assertions.assertEquals(Instant.now(), updated.releasedAt)
         Assertions.assertEquals(StockReleaseReason.values()[0], updated.releaseReason)
     }

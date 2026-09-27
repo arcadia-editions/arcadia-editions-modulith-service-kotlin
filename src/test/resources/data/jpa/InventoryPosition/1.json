@@ -1,8 +1,4 @@
 {
-  "id": 1,
-  "version": 0,
-  "sku": "AE-EDN-001",
-  "availableQuantity": 80,
-  "reservedQuantity": 5,
-  "soldQuantity": 15
+    "id": 1,
+    "version": 0
 }

@@ -1,18 +1,4 @@
 {
-  "id": 1,
-  "version": 0,
-  "paymentId": "PAY-001",
-  "orderId": "ORD-001",
-  "customerId": "CUST-001",
-  "amount": 49.99,
-  "currency": "EUR",
-  "status": "AUTHORIZED",
-  "providerReference": "psp_txn_001",
-  "attemptCount": 1,
-  "authorizedAt": "2026-09-26T13:00:00Z",
-  "declinedAt": null,
-  "failedAt": null,
-  "capturedAt": null,
-  "voidedAt": null,
-  "failureReason": null
+    "id": 1,
+    "version": 0
 }

@@ -15,7 +15,7 @@ data class NotificationDeliveryFailed(
     var notificationId: String? = null,
     var orderId: String? = null,
     var customerId: String? = null,
-    var sku: String? = null,
+    var skus: MutableList<String>? = mutableListOf(),
     var type: NotificationType? = null,
     var channel: NotificationChannel? = null,
     var recipient: String? = null,
@@ -25,5 +25,10 @@ data class NotificationDeliveryFailed(
 
     companion object {
         private const val serialVersionUID: Long = 1L
+    }
+
+    fun addSkus(skus: String): NotificationDeliveryFailed {
+        this.skus?.add(skus)
+        return this
     }
 }

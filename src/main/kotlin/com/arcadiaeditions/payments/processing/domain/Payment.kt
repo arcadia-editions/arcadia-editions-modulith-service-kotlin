@@ -24,6 +24,9 @@ data class Payment(
     @NotNull @Column(name = "payment_id", nullable = false, unique = true) var paymentId: String? = null,
     @NotNull @Column(name = "order_id", nullable = false, unique = true) var orderId: String? = null,
     @NotNull @Column(name = "customer_id", nullable = false) var customerId: String? = null,
+
+    /** Carried so PaymentCaptured can drive the order confirmation e-mail. */
+    @NotNull @Column(name = "customer_email", nullable = false) var customerEmail: String? = null,
     @NotNull @Column(name = "amount", nullable = false) var amount: BigDecimal? = null,
     @NotNull @Column(name = "currency", nullable = false) var currency: String? = null,
     @NotNull

@@ -12,15 +12,17 @@ import java.util.*
 @org.jmolecules.event.annotation.DomainEvent
 @org.jmolecules.architecture.layered.DomainLayer
 data class StockReservationConfirmed(
-    var reservationId: String? = null,
     var orderId: String? = null,
-    var sku: String? = null,
-    var quantity: Integer? = null,
-    var reason: StockReleaseReason? = null,
-    var releasedAt: Instant? = null,
+    var confirmedAt: Instant? = null,
+    var items: MutableList<StockReservationConfirmedItem>? = mutableListOf(),
 ) : Serializable {
 
     companion object {
         private const val serialVersionUID: Long = 1L
+    }
+
+    fun addItems(items: StockReservationConfirmedItem): StockReservationConfirmed {
+        this.items?.add(items)
+        return this
     }
 }

@@ -11,6 +11,7 @@ import java.time.*
 data class AuthorizePaymentInput(
     @NotNull val orderId: String,
     @NotNull val customerId: String,
+    @NotNull val customerEmail: String,
     @NotNull val amount: BigDecimal,
     @NotNull val currency: String,
     @NotNull val paymentMethodId: String,

@@ -8,5 +8,4 @@ import java.time.*
 
 /** VoidPaymentInput. */
 @org.jmolecules.ddd.annotation.ValueObject
-data class VoidPaymentInput(@NotNull val paymentId: String, @NotNull val orderId: String, @NotNull val reason: String) :
-    Serializable {}
+data class VoidPaymentInput(@NotNull val orderId: String, @NotNull val reason: String) : Serializable {}

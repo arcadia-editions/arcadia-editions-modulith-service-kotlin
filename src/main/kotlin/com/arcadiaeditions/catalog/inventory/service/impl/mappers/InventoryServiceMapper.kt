@@ -16,12 +16,19 @@ interface InventoryServiceMapper {
     }
 
     // input mappings
-    // ReserveStockInputnull-StockReservation confirmStockReservation
+    // ReserveStockInputnull-StockReservation reserveStock
 
     fun asStockReservation(input: ReserveStockInput): StockReservation
 
     @Mapping(target = "id", ignore = true)
     fun update(@MappingTarget entity: StockReservation, input: ReserveStockInput): StockReservation
+
+    // ConfirmStockReservationInputnull-StockReservation confirmStockReservation
+
+    fun asStockReservation(input: ConfirmStockReservationInput): StockReservation
+
+    @Mapping(target = "id", ignore = true)
+    fun update(@MappingTarget entity: StockReservation, input: ConfirmStockReservationInput): StockReservation
 
     // ReleaseStockInputnull-StockReservation releaseStock
 
@@ -31,6 +38,6 @@ interface InventoryServiceMapper {
     fun update(@MappingTarget entity: StockReservation, input: ReleaseStockInput): StockReservation
 
     // output mappings
-    // StockReservation-StockReservedResult reserveStock
-    fun asStockReservedResult(entity: StockReservation): StockReservedResult
+    // StockReservation-ReserveStockResult reserveStock
+    fun asReserveStockResult(entity: StockReservation): ReserveStockResult
 }

@@ -5,6 +5,12 @@ import com.arcadiaeditions.orders.checkout.domain.events.*
 
 interface EventPublisher {
 
+    fun onOrderConfirmedItem(event: OrderConfirmedItem)
+
+    fun onOrderConfirmedShippingAddress(event: OrderConfirmedShippingAddress)
+
+    fun onStockUnavailableItem(event: StockUnavailableItem)
+
     fun onOrderCreated(event: OrderCreated)
 
     fun onStockUnavailable(event: StockUnavailable)

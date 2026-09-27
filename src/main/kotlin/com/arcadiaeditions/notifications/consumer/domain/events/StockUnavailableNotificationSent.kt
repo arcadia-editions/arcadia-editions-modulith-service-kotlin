@@ -13,8 +13,9 @@ import java.util.*
 @org.jmolecules.architecture.layered.DomainLayer
 data class StockUnavailableNotificationSent(
     var notificationId: String? = null,
+    var orderId: String? = null,
     var customerId: String? = null,
-    var sku: String? = null,
+    var skus: MutableList<String>? = mutableListOf(),
     var channel: NotificationChannel? = null,
     var recipient: String? = null,
     var sentAt: Instant? = null,
@@ -22,5 +23,10 @@ data class StockUnavailableNotificationSent(
 
     companion object {
         private const val serialVersionUID: Long = 1L
+    }
+
+    fun addSkus(skus: String): StockUnavailableNotificationSent {
+        this.skus?.add(skus)
+        return this
     }
 }

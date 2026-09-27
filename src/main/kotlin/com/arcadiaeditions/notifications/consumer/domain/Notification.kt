@@ -24,7 +24,7 @@ data class Notification(
     @NotNull @Column(name = "notification_id", nullable = false, unique = true) var notificationId: String? = null,
     @NotNull @Column(name = "customer_id", nullable = false) var customerId: String? = null,
     @Column(name = "order_id") var orderId: String? = null,
-    @Column(name = "sku") var sku: String? = null,
+    @Column(name = "skus") var skus: MutableList<String> = mutableListOf(),
     @NotNull @Column(name = "type", nullable = false) @Enumerated(EnumType.STRING) var type: NotificationType? = null,
     @NotNull
     @Column(name = "channel", nullable = false)

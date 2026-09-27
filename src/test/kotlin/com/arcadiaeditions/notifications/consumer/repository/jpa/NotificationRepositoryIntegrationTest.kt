@@ -4,6 +4,7 @@ import com.arcadiaeditions.common.BaseRepositoryIntegrationTest
 import com.arcadiaeditions.notifications.consumer.domain.*
 import jakarta.persistence.EntityManager
 import java.time.*
+import java.util.List
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -36,7 +37,7 @@ class NotificationRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         notification.notificationId = ""
         notification.customerId = ""
         notification.orderId = ""
-        notification.sku = ""
+        notification.skus = List.of("")
         notification.type = NotificationType.values()[0]
         notification.channel = NotificationChannel.values()[0]
         notification.status = NotificationStatus.values()[0]
@@ -66,7 +67,7 @@ class NotificationRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         notification.notificationId = ""
         notification.customerId = ""
         notification.orderId = ""
-        notification.sku = ""
+        notification.skus = List.of("")
         notification.type = NotificationType.values()[0]
         notification.channel = NotificationChannel.values()[0]
         notification.status = NotificationStatus.values()[0]
@@ -82,7 +83,7 @@ class NotificationRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         Assertions.assertEquals("", updated.notificationId)
         Assertions.assertEquals("", updated.customerId)
         Assertions.assertEquals("", updated.orderId)
-        Assertions.assertEquals("", updated.sku)
+        Assertions.assertEquals(List.of(""), updated.skus)
         Assertions.assertEquals(NotificationType.values()[0], updated.type)
         Assertions.assertEquals(NotificationChannel.values()[0], updated.channel)
         Assertions.assertEquals(NotificationStatus.values()[0], updated.status)

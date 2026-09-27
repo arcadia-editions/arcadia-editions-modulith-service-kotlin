@@ -1,13 +1,4 @@
 {
-  "id": 1,
-  "version": 0,
-  "sku": "AE-EDN-001",
-  "name": "Arcadia First Edition",
-  "description": "Signed limited print of the Arcadia First Edition cover art",
-  "price": 49.99,
-  "currency": "EUR",
-  "editionSize": 100,
-  "trackingMode": "QUANTITY",
-  "launchAt": "2026-09-26T13:00:00Z",
-  "status": "PUBLISHED"
+    "id": 1,
+    "version": 0
 }

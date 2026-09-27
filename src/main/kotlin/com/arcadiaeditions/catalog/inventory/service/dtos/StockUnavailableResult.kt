@@ -10,7 +10,11 @@ import java.time.*
 @org.jmolecules.ddd.annotation.ValueObject
 data class StockUnavailableResult(
     val orderId: String?,
-    val sku: String?,
-    val requestedQuantity: Integer?,
-    val availableQuantity: Integer?,
-) : Serializable {}
+    val unavailableItems: MutableList<StockUnavailableLine> = mutableListOf(),
+) : Serializable {
+
+    fun addUnavailableItems(unavailableItems: StockUnavailableLine): StockUnavailableResult {
+        this.unavailableItems += unavailableItems
+        return this
+    }
+}

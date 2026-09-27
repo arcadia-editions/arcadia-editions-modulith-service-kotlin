@@ -23,6 +23,8 @@ config {
     implementEventListeners true
     includeEmitEventsImplementation true
 
+    --force
+
     plugins {
         /** Generates a Backend Application from the ZDL model. (Headless Core) */
         BackendApplicationDefaultPlugin {

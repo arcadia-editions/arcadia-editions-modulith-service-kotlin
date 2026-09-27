@@ -31,7 +31,7 @@ open class OrdersCheckoutServiceImpl(
     private val eventsMapper: EventsMapper = EventsMapper.INSTANCE
 
     override fun startOrderCheckout(input: StartOrderCheckoutInput): Order {
-        // TODO: call CatalogInventoryZdl InventoryService.reserveStock(ReserveStockInput) -> StockReservedResult
+        // TODO: call CatalogInventoryZdl InventoryService.reserveStock(ReserveStockInput) -> ReserveStockResult
 
         log.debug("Request startOrderCheckout: {}", input)
 
@@ -44,7 +44,8 @@ open class OrdersCheckoutServiceImpl(
     }
 
     override fun confirmOrder(input: ConfirmOrderInput): Order {
-        // TODO: call CatalogInventoryZdl InventoryService.confirmStockReservation(ReserveStockInput) -> Unit
+        // TODO: call CatalogInventoryZdl InventoryService.confirmStockReservation(ConfirmStockReservationInput) ->
+        // StockReservation
         //       then emit one of: StockReservationConfirmed
 
         log.debug("Request confirmOrder: {}", input)

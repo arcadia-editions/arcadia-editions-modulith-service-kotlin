@@ -9,10 +9,13 @@ import java.time.*
 /** StockReservedResult. */
 @org.jmolecules.ddd.annotation.ValueObject
 data class StockReservedResult(
-    val reservationId: String?,
     val orderId: String?,
-    val sku: String?,
-    val quantity: Integer?,
-    val reservedAt: Instant?,
     val expiresAt: Instant?,
-) : Serializable {}
+    val reservations: MutableList<StockReservedLine> = mutableListOf(),
+) : Serializable {
+
+    fun addReservations(reservations: StockReservedLine): StockReservedResult {
+        this.reservations += reservations
+        return this
+    }
+}

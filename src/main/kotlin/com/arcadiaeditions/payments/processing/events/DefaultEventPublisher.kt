@@ -21,15 +21,15 @@ class DefaultEventPublisher(private val applicationEventPublisher: ApplicationEv
         applicationEventPublisher.publishEvent(event)
     }
 
-    override fun onPaymentCaptured(event: PaymentCaptured) {
-        applicationEventPublisher.publishEvent(event)
-    }
-
     override fun onPaymentRetried(event: PaymentRetried) {
         applicationEventPublisher.publishEvent(event)
     }
 
     override fun onPaymentFailed(event: PaymentFailed) {
+        applicationEventPublisher.publishEvent(event)
+    }
+
+    override fun onPaymentCaptured(event: PaymentCaptured) {
         applicationEventPublisher.publishEvent(event)
     }
 

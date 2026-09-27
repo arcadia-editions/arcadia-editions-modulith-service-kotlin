@@ -26,10 +26,29 @@ data class Order(
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
     var status: OrderStatus = OrderStatus.CREATED,
-    @NotNull @Column(name = "items", nullable = false) var items: MutableList<String> = mutableListOf(),
+
+    /** Customer snapshot taken at checkout (there is no customers bounded context yet). */
+    @NotNull @Column(name = "customer_id", nullable = false) var customerId: String? = null,
+    @NotNull
+    @Size(max = 254)
+    @Column(name = "customer_email", nullable = false, length = 254)
+    var customerEmail: String? = null,
+    @NotNull @Column(name = "payment_method_id", nullable = false) var paymentMethodId: String? = null,
+    @NotNull
+    @Size(min = 1)
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "items")
+    var items: MutableList<OrderItem> = mutableListOf(),
+    @NotNull
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "shipping_address")
+    var shippingAddress: ShippingAddress? = null,
+    @NotNull @Column(name = "total_amount", nullable = false) var totalAmount: BigDecimal? = null,
+    @NotNull @Size(max = 3) @Column(name = "currency", nullable = false, length = 3) var currency: String? = null,
     @Column(name = "created_at") var createdAt: Instant? = null,
     @Column(name = "confirmed_at") var confirmedAt: Instant? = null,
     @Column(name = "cancelled_at") var cancelledAt: Instant? = null,
+    @Column(name = "cancellation_reason") var cancellationReason: String? = null,
 ) : Serializable {
 
     companion object {

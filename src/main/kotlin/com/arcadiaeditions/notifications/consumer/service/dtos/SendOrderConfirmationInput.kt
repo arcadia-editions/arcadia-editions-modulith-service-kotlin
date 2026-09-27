@@ -11,5 +11,5 @@ import java.time.*
 data class SendOrderConfirmationInput(
     @NotNull val orderId: String,
     @NotNull val customerId: String,
-    @NotNull val email: String,
+    @NotNull val customerEmail: String,
 ) : Serializable {}

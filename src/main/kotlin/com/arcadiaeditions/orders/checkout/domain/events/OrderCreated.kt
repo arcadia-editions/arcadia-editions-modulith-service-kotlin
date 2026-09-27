@@ -11,7 +11,15 @@ import java.util.*
 @org.springframework.modulith.NamedInterface("events.OrderCreated")
 @org.jmolecules.event.annotation.DomainEvent
 @org.jmolecules.architecture.layered.DomainLayer
-data class OrderCreated(var orderId: String? = null, var version: Integer? = null) : Serializable {
+data class OrderCreated(
+    var orderId: String? = null,
+    var version: Integer? = null,
+    var customerId: String? = null,
+    var customerEmail: String? = null,
+    var paymentMethodId: String? = null,
+    var amount: BigDecimal? = null,
+    var currency: String? = null,
+) : Serializable {
 
     companion object {
         private const val serialVersionUID: Long = 1L

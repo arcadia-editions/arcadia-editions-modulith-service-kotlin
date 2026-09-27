@@ -29,7 +29,8 @@ open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
 
     fun reloadTestData() {
 
-        val testDataLoader = TestDataLoader(listOf(Order::class.java))
+        val testDataLoader =
+            TestDataLoader(listOf(Order::class.java, OrderItem::class.java, ShippingAddress::class.java))
         val orders = _orders ?: testDataLoader.loadCollectionTestDataAsObjects(Order::class.java)
         orderRepository().deleteAll()
         orderRepository().saveAll(orders)

@@ -9,19 +9,19 @@ import org.springframework.stereotype.Component
 @org.jmolecules.architecture.layered.InfrastructureLayer
 class DefaultEventPublisher(private val applicationEventPublisher: ApplicationEventPublisher) : EventPublisher {
 
-    override fun onOrderCancelledNotificationSent(event: OrderCancelledNotificationSent) {
-        applicationEventPublisher.publishEvent(event)
-    }
-
-    override fun onNotificationDeliveryFailed(event: NotificationDeliveryFailed) {
-        applicationEventPublisher.publishEvent(event)
-    }
-
     override fun onStockUnavailableNotificationSent(event: StockUnavailableNotificationSent) {
         applicationEventPublisher.publishEvent(event)
     }
 
+    override fun onOrderCancelledNotificationSent(event: OrderCancelledNotificationSent) {
+        applicationEventPublisher.publishEvent(event)
+    }
+
     override fun onOrderConfirmationSent(event: OrderConfirmationSent) {
+        applicationEventPublisher.publishEvent(event)
+    }
+
+    override fun onNotificationDeliveryFailed(event: NotificationDeliveryFailed) {
         applicationEventPublisher.publishEvent(event)
     }
 }

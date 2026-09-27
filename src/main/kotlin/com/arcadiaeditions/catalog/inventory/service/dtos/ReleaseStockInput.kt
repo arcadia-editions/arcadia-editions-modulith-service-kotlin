@@ -8,10 +8,4 @@ import java.time.*
 
 /** ReleaseStockInput. */
 @org.jmolecules.ddd.annotation.ValueObject
-data class ReleaseStockInput(
-    val reservationId: String?,
-    @NotNull val orderId: String,
-    @NotNull val sku: String,
-    @NotNull val quantity: Integer,
-    @NotNull val reason: StockReleaseReason,
-) : Serializable {}
+data class ReleaseStockInput(@NotNull val orderId: String, @NotNull val reason: StockReleaseReason) : Serializable {}

@@ -12,5 +12,5 @@ data class SendOrderCancelledNotificationInput(
     @NotNull val orderId: String,
     @NotNull val customerId: String,
     @NotNull val reason: String,
-    @NotNull val email: String,
+    @NotNull val customerEmail: String,
 ) : Serializable {}

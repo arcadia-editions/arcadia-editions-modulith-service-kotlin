@@ -36,6 +36,7 @@ class PaymentRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         payment.paymentId = ""
         payment.orderId = ""
         payment.customerId = ""
+        payment.customerEmail = ""
         payment.amount = BigDecimal.valueOf(0)
         payment.currency = ""
         payment.status = PaymentStatus.values()[0]
@@ -65,6 +66,7 @@ class PaymentRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         payment.paymentId = ""
         payment.orderId = ""
         payment.customerId = ""
+        payment.customerEmail = ""
         payment.amount = BigDecimal.valueOf(0)
         payment.currency = ""
         payment.status = PaymentStatus.values()[0]
@@ -81,6 +83,7 @@ class PaymentRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         Assertions.assertEquals("", updated.paymentId)
         Assertions.assertEquals("", updated.orderId)
         Assertions.assertEquals("", updated.customerId)
+        Assertions.assertEquals("", updated.customerEmail)
         Assertions.assertEquals(BigDecimal.valueOf(0), updated.amount)
         Assertions.assertEquals("", updated.currency)
         Assertions.assertEquals(PaymentStatus.values()[0], updated.status)

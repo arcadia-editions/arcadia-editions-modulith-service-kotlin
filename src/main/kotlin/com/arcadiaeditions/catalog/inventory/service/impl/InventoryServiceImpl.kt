@@ -30,33 +30,28 @@ open class InventoryServiceImpl(
 
     private val eventsMapper: EventsMapper = EventsMapper.INSTANCE
 
-    override fun reserveStock(input: ReserveStockInput): StockReservedResult {
+    override fun reserveStock(input: ReserveStockInput): ReserveStockResult {
 
         log.debug("Request reserveStock: {}", input)
 
         val stockReservation = inventoryServiceMapper.update(StockReservation(), input)
         // TODO: implement this method
-        return inventoryServiceMapper.asStockReservedResult(stockReservation)
+        return inventoryServiceMapper.asReserveStockResult(stockReservation)
     }
 
-    override fun releaseStock(input: ReleaseStockInput): StockReservation {
+    override fun releaseStock(input: ReleaseStockInput): List<StockReservation> {
 
         log.debug("Request releaseStock: {}", input)
 
-        val stockReservation = inventoryServiceMapper.update(StockReservation(), input)
-        // TODO: implement this method
-        // emit events
-        eventPublisher.onStockReleased(eventsMapper.asStockReleased(stockReservation))
-        return stockReservation
+        val stockReservations = stockReservationRepository.findAll()
+        return stockReservations
     }
 
-    override fun confirmStockReservation(input: ReserveStockInput): Unit {
+    override fun confirmStockReservation(input: ConfirmStockReservationInput): List<StockReservation> {
 
         log.debug("Request confirmStockReservation: {}", input)
 
-        val stockReservation = StockReservation()
-        // TODO: implement this method
-        // emit events
-        eventPublisher.onStockReservationConfirmed(eventsMapper.asStockReservationConfirmed(input))
+        val stockReservations = stockReservationRepository.findAll()
+        return stockReservations
     }
 }

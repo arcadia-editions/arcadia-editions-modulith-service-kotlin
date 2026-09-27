@@ -27,7 +27,24 @@ open class OrdersCheckoutApiIntegrationTest : BaseWebTestClientTest() {
         fun testStartOrderCheckout_201() {
         val requestBody = """
             {
-              "items" : [ "items-uk8rc5gioj0b84ty4biv" ]
+              "customerId" : "customerId-kh5nk5bzthzqf91",
+              "customerEmail" : "alisha.muller@gmail.com",
+              "paymentMethodId" : "paymentMethodId-gp5zsgzeku",
+              "currency" : "currency-ved4s2a",
+              "items" : [ {
+                "sku" : "sku-v0urwnlikr1mcs55pq",
+                "quantity" : 67,
+                "unitPrice" : 28
+              } ],
+              "shippingAddress" : {
+                "name" : "name-z0evug11h57379kt82vz",
+                "line1" : "line1-vbtagjy9op5l6zm5",
+                "line2" : "line2-ayzxkxm3y54t80xy",
+                "city" : "Lynchbury",
+                "region" : "region-zmk6gg",
+                "postalCode" : "postalCode-r",
+                "country" : "Guernsey"
+              }
             }
         """
 
@@ -43,11 +60,28 @@ open class OrdersCheckoutApiIntegrationTest : BaseWebTestClientTest() {
             .jsonPath("$.version").isNotEmpty()
             .jsonPath("$.orderId").isNotEmpty()
             .jsonPath("$.status").isNotEmpty()
+            .jsonPath("$.customerId").isNotEmpty()
+            .jsonPath("$.customerEmail").isNotEmpty()
+            .jsonPath("$.paymentMethodId").isNotEmpty()
             .jsonPath("$.items").isNotEmpty()
                 .jsonPath("$.items").isArray()
+                    .jsonPath("$.items[0].sku").isNotEmpty()
+                    .jsonPath("$.items[0].quantity").isNotEmpty()
+                    .jsonPath("$.items[0].unitPrice").isNotEmpty()
+            .jsonPath("$.shippingAddress").isNotEmpty()
+                    .jsonPath("$.shippingAddress.name").isNotEmpty()
+                    .jsonPath("$.shippingAddress.line1").isNotEmpty()
+                    .jsonPath("$.shippingAddress.line2").isNotEmpty()
+                    .jsonPath("$.shippingAddress.city").isNotEmpty()
+                    .jsonPath("$.shippingAddress.region").isNotEmpty()
+                    .jsonPath("$.shippingAddress.postalCode").isNotEmpty()
+                    .jsonPath("$.shippingAddress.country").isNotEmpty()
+            .jsonPath("$.totalAmount").isNotEmpty()
+            .jsonPath("$.currency").isNotEmpty()
             .jsonPath("$.createdAt").isNotEmpty()
             .jsonPath("$.confirmedAt").isNotEmpty()
             .jsonPath("$.cancelledAt").isNotEmpty()
+            .jsonPath("$.cancellationReason").isNotEmpty()
         }
 
 }
