@@ -1,0 +1,14 @@
+{
+  "id": 301,
+  "version": 0,
+  "reservationId": "RES-007",
+  "orderId": "ORD-005",
+  "sku": "AE-PRT-002",
+  "quantity": 1,
+  "status": "RELEASED",
+  "reservedAt": "2026-09-26T07:00:00Z",
+  "expiresAt": "2026-09-26T07:10:00Z",
+  "confirmedAt": null,
+  "releasedAt": "2026-09-26T07:02:00Z",
+  "releaseReason": "PAYMENT_DECLINED"
+}

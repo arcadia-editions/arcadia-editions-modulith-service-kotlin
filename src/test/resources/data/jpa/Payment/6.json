@@ -1,0 +1,19 @@
+{
+  "id": 251,
+  "version": 0,
+  "paymentId": "PAY-006",
+  "orderId": "ORD-006",
+  "customerId": "CUST-003",
+  "customerEmail": "italo@example.com",
+  "amount": 49.99,
+  "currency": "EUR",
+  "status": "VOIDED",
+  "providerReference": "psp_txn_006",
+  "attemptCount": 1,
+  "authorizedAt": "2026-09-26T06:01:00Z",
+  "declinedAt": null,
+  "failedAt": null,
+  "capturedAt": null,
+  "voidedAt": "2026-09-26T06:25:00Z",
+  "failureReason": "FULFILLMENT_FAILED"
+}

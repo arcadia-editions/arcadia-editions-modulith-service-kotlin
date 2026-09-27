@@ -1,0 +1,18 @@
+{
+  "id": 51,
+  "version": 0,
+  "notificationId": "NOT-002",
+  "customerId": "CUST-003",
+  "orderId": "ORD-005",
+  "skus": [],
+  "type": "ORDER_CANCELLED",
+  "channel": "EMAIL",
+  "status": "SENT",
+  "subject": "Your Arcadia Editions order ORD-005 was cancelled",
+  "body": "Your payment was declined, so order ORD-005 was cancelled. No charge was made.",
+  "recipient": "italo@example.com",
+  "createdAt": "2026-09-26T07:02:00Z",
+  "sentAt": "2026-09-26T07:03:00Z",
+  "failedAt": null,
+  "failureReason": null
+}

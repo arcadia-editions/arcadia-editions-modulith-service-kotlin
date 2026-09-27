@@ -8,6 +8,8 @@ spring.sql.init.mode: always
 # Also write the DDL Hibernate runs to target/ddl/schema.sql (input for test data generation).
 # It is written while the EntityManagerFactory boots, before data.sql runs, so it works even if data.sql is broken.
 spring.jpa.properties:
+  # setting any schema-generation action disables ddl-auto, so the database action must be explicit too
+  jakarta.persistence.schema-generation.database.action: drop-and-create
   jakarta.persistence.schema-generation.scripts.action: create
   jakarta.persistence.schema-generation.scripts.create-target: target/ddl/schema.sql
   hibernate.hbm2ddl.schema-generation.script.append: false

@@ -1,4 +1,29 @@
 {
-    "id": 1,
-    "version": 0
+  "id": 1,
+  "version": 0,
+  "fulfillmentId": "FUL-002",
+  "orderId": "ORD-002",
+  "customerId": "CUST-002",
+  "status": "SCHEDULED",
+  "shippingAddress": {
+    "name": "Carmen Laforet",
+    "line1": "Calle de Alcala 45",
+    "line2": "3B",
+    "city": "Madrid",
+    "region": "Madrid",
+    "postalCode": "28014",
+    "country": "ES"
+  },
+  "items": [
+    {
+      "sku": "AE-EDN-001",
+      "quantity": 1
+    }
+  ],
+  "carrierCode": "DHL",
+  "trackingNumber": null,
+  "scheduledAt": "2026-09-26T09:05:00Z",
+  "readyAt": null,
+  "failedAt": null,
+  "failureReason": null
 }

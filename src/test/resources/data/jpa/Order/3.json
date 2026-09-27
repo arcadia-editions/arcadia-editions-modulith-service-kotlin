@@ -1,0 +1,36 @@
+{
+  "id": 101,
+  "version": 0,
+  "orderId": "ORD-003",
+  "status": "CONFIRMED",
+  "customerId": "CUST-001",
+  "customerEmail": "ada@example.com",
+  "paymentMethodId": "pm_card_visa",
+  "items": [
+    {
+      "sku": "AE-EDN-001",
+      "quantity": 1,
+      "unitPrice": 49.99
+    },
+    {
+      "sku": "AE-PRT-002",
+      "quantity": 1,
+      "unitPrice": 25.0
+    }
+  ],
+  "shippingAddress": {
+    "name": "Ada Lovelace",
+    "line1": "12 Marylebone Rd",
+    "line2": null,
+    "city": "London",
+    "region": null,
+    "postalCode": "NW1 5LR",
+    "country": "GB"
+  },
+  "totalAmount": 74.99,
+  "currency": "EUR",
+  "createdAt": "2026-09-26T08:00:00Z",
+  "confirmedAt": "2026-09-26T08:01:00Z",
+  "cancelledAt": null,
+  "cancellationReason": null
+}

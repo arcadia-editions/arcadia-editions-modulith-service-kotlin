@@ -1,0 +1,19 @@
+{
+  "id": 51,
+  "version": 0,
+  "paymentId": "PAY-002",
+  "orderId": "ORD-002",
+  "customerId": "CUST-002",
+  "customerEmail": "carmen@example.com",
+  "amount": 49.99,
+  "currency": "EUR",
+  "status": "AUTHORIZED",
+  "providerReference": "psp_txn_002",
+  "attemptCount": 1,
+  "authorizedAt": "2026-09-26T09:01:00Z",
+  "declinedAt": null,
+  "failedAt": null,
+  "capturedAt": null,
+  "voidedAt": null,
+  "failureReason": null
+}

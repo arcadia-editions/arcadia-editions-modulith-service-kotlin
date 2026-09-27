@@ -1,0 +1,29 @@
+{
+  "id": 101,
+  "version": 0,
+  "fulfillmentId": "FUL-006",
+  "orderId": "ORD-006",
+  "customerId": "CUST-003",
+  "status": "FAILED",
+  "shippingAddress": {
+    "name": "Italo Calvino",
+    "line1": "Via Po 18",
+    "line2": null,
+    "city": "Torino",
+    "region": "TO",
+    "postalCode": "10123",
+    "country": "IT"
+  },
+  "items": [
+    {
+      "sku": "AE-EDN-001",
+      "quantity": 1
+    }
+  ],
+  "carrierCode": "DHL",
+  "trackingNumber": null,
+  "scheduledAt": "2026-09-26T06:05:00Z",
+  "readyAt": null,
+  "failedAt": "2026-09-26T06:20:00Z",
+  "failureReason": "Carrier pickup unavailable"
+}

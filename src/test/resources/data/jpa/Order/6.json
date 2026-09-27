@@ -1,0 +1,31 @@
+{
+  "id": 251,
+  "version": 0,
+  "orderId": "ORD-006",
+  "status": "CANCELLED",
+  "customerId": "CUST-003",
+  "customerEmail": "italo@example.com",
+  "paymentMethodId": "pm_card_visa",
+  "items": [
+    {
+      "sku": "AE-EDN-001",
+      "quantity": 1,
+      "unitPrice": 49.99
+    }
+  ],
+  "shippingAddress": {
+    "name": "Italo Calvino",
+    "line1": "Via Po 18",
+    "line2": null,
+    "city": "Torino",
+    "region": "TO",
+    "postalCode": "10123",
+    "country": "IT"
+  },
+  "totalAmount": 49.99,
+  "currency": "EUR",
+  "createdAt": "2026-09-26T06:00:00Z",
+  "confirmedAt": "2026-09-26T06:01:00Z",
+  "cancelledAt": "2026-09-26T06:31:00Z",
+  "cancellationReason": "PAYMENT_VOIDED"
+}

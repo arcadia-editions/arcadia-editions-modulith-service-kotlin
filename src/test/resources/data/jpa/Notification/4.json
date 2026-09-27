@@ -1,0 +1,20 @@
+{
+  "id": 151,
+  "version": 0,
+  "notificationId": "NOT-004",
+  "customerId": "CUST-004",
+  "orderId": "ORD-007",
+  "skus": [
+    "AE-EDN-003"
+  ],
+  "type": "STOCK_UNAVAILABLE",
+  "channel": "EMAIL",
+  "status": "FAILED",
+  "subject": "Arcadia Collector Box is sold out",
+  "body": "Sorry, AE-EDN-003 sold out before we could reserve it for you.",
+  "recipient": "jorge@example.com",
+  "createdAt": "2026-09-26T10:20:00Z",
+  "sentAt": null,
+  "failedAt": "2026-09-26T10:21:00Z",
+  "failureReason": "SMTP 550 mailbox unavailable"
+}

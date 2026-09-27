@@ -1,0 +1,31 @@
+{
+  "id": 51,
+  "version": 0,
+  "orderId": "ORD-002",
+  "status": "CONFIRMED",
+  "customerId": "CUST-002",
+  "customerEmail": "carmen@example.com",
+  "paymentMethodId": "pm_card_visa",
+  "items": [
+    {
+      "sku": "AE-EDN-001",
+      "quantity": 1,
+      "unitPrice": 49.99
+    }
+  ],
+  "shippingAddress": {
+    "name": "Carmen Laforet",
+    "line1": "Calle de Alcala 45",
+    "line2": "3B",
+    "city": "Madrid",
+    "region": "Madrid",
+    "postalCode": "28014",
+    "country": "ES"
+  },
+  "totalAmount": 49.99,
+  "currency": "EUR",
+  "createdAt": "2026-09-26T09:00:00Z",
+  "confirmedAt": "2026-09-26T09:01:00Z",
+  "cancelledAt": null,
+  "cancellationReason": null
+}

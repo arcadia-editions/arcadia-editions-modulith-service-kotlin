@@ -1,0 +1,13 @@
+{
+  "id": 201,
+  "version": 0,
+  "sku": "AE-EDN-000",
+  "name": "Arcadia Preview Zine",
+  "description": "Preview zine, no longer sold",
+  "price": 9.99,
+  "currency": "EUR",
+  "editionSize": 500,
+  "trackingMode": "QUANTITY",
+  "launchAt": "2026-01-10T00:00:00Z",
+  "status": "RETIRED"
+}

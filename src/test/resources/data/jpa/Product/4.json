@@ -1,0 +1,13 @@
+{
+  "id": 151,
+  "version": 0,
+  "sku": "AE-EDN-004",
+  "name": "Arcadia Second Edition",
+  "description": "Upcoming second edition drop",
+  "price": 59.99,
+  "currency": "EUR",
+  "editionSize": 150,
+  "trackingMode": "QUANTITY",
+  "launchAt": "2026-10-15T00:00:00Z",
+  "status": "DRAFT"
+}

@@ -1,0 +1,19 @@
+{
+  "id": 101,
+  "version": 0,
+  "paymentId": "PAY-003",
+  "orderId": "ORD-003",
+  "customerId": "CUST-001",
+  "customerEmail": "ada@example.com",
+  "amount": 74.99,
+  "currency": "EUR",
+  "status": "CAPTURED",
+  "providerReference": "psp_txn_003",
+  "attemptCount": 1,
+  "authorizedAt": "2026-09-26T08:01:00Z",
+  "declinedAt": null,
+  "failedAt": null,
+  "capturedAt": "2026-09-26T08:30:00Z",
+  "voidedAt": null,
+  "failureReason": null
+}

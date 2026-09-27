@@ -1,0 +1,13 @@
+{
+  "id": 101,
+  "version": 0,
+  "sku": "AE-EDN-003",
+  "name": "Arcadia Collector Box",
+  "description": "Collector box with slipcase and enamel pin (sold out)",
+  "price": 79.0,
+  "currency": "EUR",
+  "editionSize": 50,
+  "trackingMode": "QUANTITY",
+  "launchAt": "2026-09-20T00:00:00Z",
+  "status": "PUBLISHED"
+}

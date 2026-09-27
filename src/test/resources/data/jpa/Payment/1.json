@@ -1,4 +1,19 @@
 {
-    "id": 1,
-    "version": 0
+  "id": 1,
+  "version": 0,
+  "paymentId": "PAY-001",
+  "orderId": "ORD-001",
+  "customerId": "CUST-001",
+  "customerEmail": "ada@example.com",
+  "amount": 99.99,
+  "currency": "EUR",
+  "status": "AUTHORIZATION_REQUESTED",
+  "providerReference": null,
+  "attemptCount": 1,
+  "authorizedAt": null,
+  "declinedAt": null,
+  "failedAt": null,
+  "capturedAt": null,
+  "voidedAt": null,
+  "failureReason": null
 }
