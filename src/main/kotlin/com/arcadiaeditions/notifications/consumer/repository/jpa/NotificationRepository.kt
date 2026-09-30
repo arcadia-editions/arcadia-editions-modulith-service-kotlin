@@ -12,4 +12,11 @@ import org.springframework.stereotype.Repository
 @Repository
 @org.jmolecules.ddd.annotation.Repository
 @org.jmolecules.architecture.layered.InfrastructureLayer
-interface NotificationRepository : JpaRepository<Notification, Long> {}
+interface NotificationRepository : JpaRepository<Notification, Long> {
+    fun findByNotificationId(notificationId: String): Notification?
+
+    // G-NC-02: idempotency key for send*Notification is (orderId, type) - not unique, since a
+    // legitimate FAILED attempt can be retried in place, but at most one row per (orderId, type)
+    // should ever reach SENT.
+    fun findByOrderIdAndType(orderId: String, type: NotificationType): Notification?
+}

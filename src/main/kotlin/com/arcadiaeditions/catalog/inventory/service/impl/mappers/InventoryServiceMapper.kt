@@ -3,9 +3,8 @@ package com.arcadiaeditions.catalog.inventory.service.impl.mappers
 import com.arcadiaeditions.catalog.inventory.domain.*
 import com.arcadiaeditions.catalog.inventory.service.dtos.*
 import com.arcadiaeditions.common.mappers.BaseMapper
+import java.time.Instant
 import org.mapstruct.Mapper
-import org.mapstruct.Mapping
-import org.mapstruct.MappingTarget
 import org.mapstruct.factory.Mappers
 
 @Mapper(uses = [BaseMapper::class])
@@ -15,29 +14,27 @@ interface InventoryServiceMapper {
         val INSTANCE: InventoryServiceMapper = Mappers.getMapper(InventoryServiceMapper::class.java)
     }
 
-    // input mappings
-    // ReserveStockInputnull-StockReservation reserveStock
-
-    fun asStockReservation(input: ReserveStockInput): StockReservation
-
-    @Mapping(target = "id", ignore = true)
-    fun update(@MappingTarget entity: StockReservation, input: ReserveStockInput): StockReservation
-
-    // ConfirmStockReservationInputnull-StockReservation confirmStockReservation
-
-    fun asStockReservation(input: ConfirmStockReservationInput): StockReservation
-
-    @Mapping(target = "id", ignore = true)
-    fun update(@MappingTarget entity: StockReservation, input: ConfirmStockReservationInput): StockReservation
-
-    // ReleaseStockInputnull-StockReservation releaseStock
-
-    fun asStockReservation(input: ReleaseStockInput): StockReservation
-
-    @Mapping(target = "id", ignore = true)
-    fun update(@MappingTarget entity: StockReservation, input: ReleaseStockInput): StockReservation
-
     // output mappings
-    // StockReservation-ReserveStockResult reserveStock
-    fun asReserveStockResult(entity: StockReservation): ReserveStockResult
+    // G-CI-01: reservationId/sku/quantity/reservedAt all match by name -> auto-mapped, no warnings.
+    fun asStockReservedLine(stockReservation: StockReservation): StockReservedLine
+
+    // reserveStock has no single entity as its source (it reserves N lines for an order), so the
+    // RESERVED outcome is composed manually from the order id/expiry plus the saved reservations
+    // (skill: "add an overload that takes the extra source").
+    fun asStockReservedResult(
+        orderId: String?,
+        expiresAt: Instant?,
+        reservations: List<StockReservation>,
+    ): StockReservedResult {
+        val result = StockReservedResult(orderId = orderId, expiresAt = expiresAt)
+        reservations.forEach { result.addReservations(asStockReservedLine(it)) }
+        return result
+    }
+
+    fun asReserveStockResult(orderId: String?, expiresAt: Instant?, reservations: List<StockReservation>): ReserveStockResult =
+        ReserveStockResult(
+            outcome = ReserveStockOutcome.RESERVED,
+            reserved = asStockReservedResult(orderId, expiresAt, reservations),
+            unavailable = null,
+        )
 }

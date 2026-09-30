@@ -6,6 +6,9 @@ import com.arcadiaeditions.catalog.products.events.*
 import com.arcadiaeditions.catalog.products.service.*
 import com.arcadiaeditions.catalog.products.service.impl.*
 import com.arcadiaeditions.config.TestDataLoader
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
@@ -16,7 +19,13 @@ import org.springframework.context.annotation.Profile
 open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
 
     private val eventPublisher = InMemoryEventPublisher()
-    protected val productCatalogService = ProductCatalogServiceImpl(productRepository(), eventPublisher)
+
+    // X-06: fixed clock so tests can assert on exact timestamps.
+    protected val clock: Clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC)
+
+    protected val productCatalogService = ProductCatalogServiceImpl(productRepository(), eventPublisher, clock)
+
+    @Bean open fun clock(): Clock = clock
 
     @Bean
     open fun <T : ProductCatalogService> productCatalogService(): T {

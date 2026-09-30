@@ -7,4 +7,7 @@ import java.time.*
 import java.util.*
 
 class InventoryPositionRepositoryInMemory :
-    InMemoryJpaRepository<InventoryPosition, Long>(), InventoryPositionRepository {}
+    InMemoryJpaRepository<InventoryPosition, Long>(), InventoryPositionRepository {
+
+    override fun findBySku(sku: String): InventoryPosition? = findByUniqueField("sku", sku)
+}

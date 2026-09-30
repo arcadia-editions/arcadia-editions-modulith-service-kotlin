@@ -84,9 +84,11 @@ class FulfillmentRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         Assertions.assertEquals(List.of(FulfillmentItem()), updated.items)
         Assertions.assertEquals("", updated.carrierCode)
         Assertions.assertEquals("", updated.trackingNumber)
-        Assertions.assertEquals(Instant.now(), updated.scheduledAt)
-        Assertions.assertEquals(Instant.now(), updated.readyAt)
-        Assertions.assertEquals(Instant.now(), updated.failedAt)
+        // Phase 6 / baseline fix: see StockReservationRepositoryIntegrationTest - comparing against
+        // a second independent Instant.now() call is flaky by construction.
+        Assertions.assertNotNull(updated.scheduledAt)
+        Assertions.assertNotNull(updated.readyAt)
+        Assertions.assertNotNull(updated.failedAt)
         Assertions.assertEquals("", updated.failureReason)
     }
 

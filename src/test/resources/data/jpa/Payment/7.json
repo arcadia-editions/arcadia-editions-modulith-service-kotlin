@@ -1,0 +1,19 @@
+{
+  "id": 301,
+  "version": 0,
+  "paymentId": "PAY-007",
+  "orderId": "ORD-008",
+  "customerId": "CUST-004",
+  "customerEmail": "jorge@example.com",
+  "amount": 39.99,
+  "currency": "EUR",
+  "status": "FAILED",
+  "providerReference": null,
+  "attemptCount": 3,
+  "authorizedAt": null,
+  "declinedAt": null,
+  "failedAt": "2026-09-26T11:06:00Z",
+  "capturedAt": null,
+  "voidedAt": null,
+  "failureReason": "PROVIDER_TIMEOUT"
+}

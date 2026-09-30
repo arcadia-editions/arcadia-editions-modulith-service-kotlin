@@ -86,9 +86,11 @@ class OrderRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         Assertions.assertEquals(ShippingAddress(), updated.shippingAddress)
         Assertions.assertEquals(BigDecimal.valueOf(0), updated.totalAmount)
         Assertions.assertEquals("", updated.currency)
-        Assertions.assertEquals(Instant.now(), updated.createdAt)
-        Assertions.assertEquals(Instant.now(), updated.confirmedAt)
-        Assertions.assertEquals(Instant.now(), updated.cancelledAt)
+        // Phase 6 / baseline fix: see StockReservationRepositoryIntegrationTest - comparing against
+        // a second independent Instant.now() call is flaky by construction.
+        Assertions.assertNotNull(updated.createdAt)
+        Assertions.assertNotNull(updated.confirmedAt)
+        Assertions.assertNotNull(updated.cancelledAt)
         Assertions.assertEquals("", updated.cancellationReason)
     }
 

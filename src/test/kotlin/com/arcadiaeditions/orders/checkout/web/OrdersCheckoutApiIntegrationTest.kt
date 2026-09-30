@@ -25,16 +25,19 @@ open class OrdersCheckoutApiIntegrationTest : BaseWebTestClientTest() {
         */
         @Test
         fun testStartOrderCheckout_201() {
+        // G-FT-03: the sku must be one InventoryService actually has stock for and the quantity must
+        // be within that stock (fixture InventoryPosition AE-PRT-002, 247 available), otherwise
+        // startOrderCheckout now correctly throws StockUnavailableException (409) instead of 201.
         val requestBody = """
             {
               "customerId" : "customerId-kh5nk5bzthzqf91",
               "customerEmail" : "alisha.muller@gmail.com",
               "paymentMethodId" : "paymentMethodId-gp5zsgzeku",
-              "currency" : "currency-ved4s2a",
+              "currency" : "EUR",
               "items" : [ {
-                "sku" : "sku-v0urwnlikr1mcs55pq",
-                "quantity" : 67,
-                "unitPrice" : 28
+                "sku" : "AE-PRT-002",
+                "quantity" : 1,
+                "unitPrice" : 25.00
               } ],
               "shippingAddress" : {
                 "name" : "name-z0evug11h57379kt82vz",
@@ -79,9 +82,10 @@ open class OrdersCheckoutApiIntegrationTest : BaseWebTestClientTest() {
             .jsonPath("$.totalAmount").isNotEmpty()
             .jsonPath("$.currency").isNotEmpty()
             .jsonPath("$.createdAt").isNotEmpty()
-            .jsonPath("$.confirmedAt").isNotEmpty()
-            .jsonPath("$.cancelledAt").isNotEmpty()
-            .jsonPath("$.cancellationReason").isNotEmpty()
+            // G-FT-03: a freshly created order (status CREATED) has not been confirmed/cancelled yet.
+            .jsonPath("$.confirmedAt").isEmpty()
+            .jsonPath("$.cancelledAt").isEmpty()
+            .jsonPath("$.cancellationReason").isEmpty()
         }
 
 }

@@ -12,4 +12,6 @@ import org.springframework.stereotype.Repository
 @Repository
 @org.jmolecules.ddd.annotation.Repository
 @org.jmolecules.architecture.layered.InfrastructureLayer
-interface OrderRepository : JpaRepository<Order, Long> {}
+interface OrderRepository : JpaRepository<Order, Long> {
+    fun findByOrderId(orderId: String): Order?
+}

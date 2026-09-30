@@ -12,4 +12,8 @@ import org.springframework.stereotype.Repository
 @Repository
 @org.jmolecules.ddd.annotation.Repository
 @org.jmolecules.architecture.layered.InfrastructureLayer
-interface StockReservationRepository : JpaRepository<StockReservation, Long> {}
+interface StockReservationRepository : JpaRepository<StockReservation, Long> {
+    fun findByOrderId(orderId: String): List<StockReservation>
+
+    fun findByReservationId(reservationId: String): StockReservation?
+}

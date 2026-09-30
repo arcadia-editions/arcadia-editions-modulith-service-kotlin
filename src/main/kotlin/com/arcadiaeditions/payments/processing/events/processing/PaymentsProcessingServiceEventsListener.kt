@@ -15,8 +15,9 @@ import org.springframework.stereotype.Component
 @org.jmolecules.architecture.layered.InterfaceLayer
 class PaymentsProcessingServiceEventsListener(
     private val paymentsProcessingService: PaymentsProcessingService,
-    private val mapper: PaymentsProcessingServiceEventsListenerMapper,
 ) {
+
+    private val mapper: PaymentsProcessingServiceEventsListenerMapper = PaymentsProcessingServiceEventsListenerMapper.INSTANCE
 
     @ApplicationModuleListener
     fun retryPayment(event: PaymentFailed) {

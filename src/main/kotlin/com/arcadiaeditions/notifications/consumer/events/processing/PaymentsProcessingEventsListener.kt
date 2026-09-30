@@ -15,8 +15,9 @@ import org.springframework.stereotype.Component
 @org.jmolecules.architecture.layered.InterfaceLayer
 class PaymentsProcessingEventsListener(
     private val notificationsConsumerService: NotificationsConsumerService,
-    private val mapper: PaymentsProcessingEventsListenerMapper,
 ) {
+
+    private val mapper: PaymentsProcessingEventsListenerMapper = PaymentsProcessingEventsListenerMapper.INSTANCE
 
     @ApplicationModuleListener
     fun onPaymentCaptured(event: com.arcadiaeditions.payments.processing.domain.events.PaymentCaptured) {

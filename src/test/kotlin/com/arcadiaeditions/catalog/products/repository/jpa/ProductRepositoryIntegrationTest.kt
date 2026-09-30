@@ -75,7 +75,9 @@ class ProductRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         Assertions.assertEquals("", updated.currency)
         Assertions.assertEquals(0 as Integer, updated.editionSize)
         Assertions.assertEquals(InventoryTrackingMode.values()[0], updated.trackingMode)
-        Assertions.assertEquals(Instant.now(), updated.launchAt)
+        // Phase 6 / baseline fix: see StockReservationRepositoryIntegrationTest - comparing against
+        // a second independent Instant.now() call is flaky by construction.
+        Assertions.assertNotNull(updated.launchAt)
         Assertions.assertEquals(ProductStatus.values()[0], updated.status)
     }
 

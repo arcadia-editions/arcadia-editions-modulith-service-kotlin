@@ -19,12 +19,16 @@
 -- | ORD-005 | CUST-003 | CANCELLED | RES-007 RELEASED      | PAY-005 DECLINED            | -             | NOT-002 CANCELLED SENT     |
 -- | ORD-006 | CUST-003 | CANCELLED | RES-008 RELEASED*     | PAY-006 VOIDED              | FUL-006 FAILED| NOT-003 CANCELLED PENDING  |
 -- | ORD-007 | CUST-004 | (none)**  | -                     | -                           | -             | NOT-004 STOCK_UNAV. FAILED |
+-- | ORD-008 | CUST-004 | (none)*** | -                     | PAY-007 FAILED (attempt 3)  | -             | -                          |
 --  *  released from CONFIRMED (compensation after fulfillment failure)
 --  ** stock unavailable: per the ZFL, no order record is created (M-05 / Q-03 still open)
+--  *** payments-only fixture: retryPayment/capturePayment/voidPayment never call orders-checkout,
+--      so PAY-007's order does not need a checkout_order row.
 --
 -- Used by: confirmOrder/cancelOrder (ORD-001, ORD-004), reserveStock unavailable branch (AE-EDN-003, 0 available),
--- retryPayment (PAY-004), capturePayment/voidPayment (PAY-002), releaseStock (RES-001/002/006, RES-003..005),
--- markReadyToShip (FUL-002), product publish/update (AE-EDN-004 DRAFT), retire (AE-EDN-001/002/003).
+-- retryPayment (PAY-004 attempt 1->2, PAY-007 attempt 3 exhausted), capturePayment/voidPayment (PAY-002),
+-- releaseStock (RES-001/002/006, RES-003..005), markReadyToShip (FUL-002), product publish/update
+-- (AE-EDN-004 DRAFT), retire (AE-EDN-001/002/003).
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------
@@ -110,7 +114,7 @@ INSERT INTO checkout_order (id, version, order_id, status, customer_id, customer
 VALUES (nextval('checkout_order_seq'), 0, 'ORD-006', 'CANCELLED', 'CUST-003', 'italo@example.com', 'pm_card_visa', '[{"sku": "AE-EDN-001", "quantity": 1, "unitPrice": 49.99}]'::jsonb, '{"name": "Italo Calvino", "line1": "Via Po 18", "line2": null, "city": "Torino", "region": "TO", "postalCode": "10123", "country": "IT"}'::jsonb, 49.99, 'EUR', '2026-09-26T06:00:00Z', '2026-09-26T06:01:00Z', '2026-09-26T06:31:00Z', 'PAYMENT_VOIDED');
 
 -- ---------------------------------------------------------------------------
--- Payments / Processing: payment (6 rows, ids 1, 51, 101, 151, 201, 251)
+-- Payments / Processing: payment (7 rows, ids 1, 51, 101, 151, 201, 251, 301)
 -- ---------------------------------------------------------------------------
 -- 1. AUTHORIZATION_REQUESTED ORD-001
 INSERT INTO payment (id, version, payment_id, order_id, customer_id, customer_email, amount, currency, status, provider_reference, attempt_count, authorized_at, declined_at, failed_at, captured_at, voided_at, failure_reason)
@@ -130,6 +134,9 @@ VALUES (nextval('payment_seq'), 0, 'PAY-005', 'ORD-005', 'CUST-003', 'italo@exam
 -- 6. VOIDED ORD-006
 INSERT INTO payment (id, version, payment_id, order_id, customer_id, customer_email, amount, currency, status, provider_reference, attempt_count, authorized_at, declined_at, failed_at, captured_at, voided_at, failure_reason)
 VALUES (nextval('payment_seq'), 0, 'PAY-006', 'ORD-006', 'CUST-003', 'italo@example.com', 49.99, 'EUR', 'VOIDED', 'psp_txn_006', 1, '2026-09-26T06:01:00Z', NULL, NULL, NULL, '2026-09-26T06:25:00Z', 'FULFILLMENT_FAILED');
+-- 7. FAILED ORD-008, 3rd attempt already spent (G-PP-03/Q-05: retryPayment -> RETRY_EXHAUSTED)
+INSERT INTO payment (id, version, payment_id, order_id, customer_id, customer_email, amount, currency, status, provider_reference, attempt_count, authorized_at, declined_at, failed_at, captured_at, voided_at, failure_reason)
+VALUES (nextval('payment_seq'), 0, 'PAY-007', 'ORD-008', 'CUST-004', 'jorge@example.com', 39.99, 'EUR', 'FAILED', NULL, 3, NULL, NULL, '2026-09-26T11:06:00Z', NULL, NULL, 'PROVIDER_TIMEOUT');
 
 -- ---------------------------------------------------------------------------
 -- Fulfillment / Shipping: fulfillment (3 rows, ids 1, 51, 101)

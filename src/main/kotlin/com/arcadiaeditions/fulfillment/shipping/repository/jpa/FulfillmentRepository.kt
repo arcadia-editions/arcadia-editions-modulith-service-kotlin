@@ -12,4 +12,8 @@ import org.springframework.stereotype.Repository
 @Repository
 @org.jmolecules.ddd.annotation.Repository
 @org.jmolecules.architecture.layered.InfrastructureLayer
-interface FulfillmentRepository : JpaRepository<Fulfillment, Long> {}
+interface FulfillmentRepository : JpaRepository<Fulfillment, Long> {
+    fun findByFulfillmentId(fulfillmentId: String): Fulfillment?
+
+    fun findByOrderId(orderId: String): Fulfillment?
+}

@@ -12,4 +12,6 @@ import org.springframework.stereotype.Repository
 @Repository
 @org.jmolecules.ddd.annotation.Repository
 @org.jmolecules.architecture.layered.InfrastructureLayer
-interface InventoryPositionRepository : JpaRepository<InventoryPosition, Long> {}
+interface InventoryPositionRepository : JpaRepository<InventoryPosition, Long> {
+    fun findBySku(sku: String): InventoryPosition?
+}

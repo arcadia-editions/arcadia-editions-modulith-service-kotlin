@@ -7,6 +7,7 @@ import com.arcadiaeditions.catalog.products.repository.jpa.*
 import com.arcadiaeditions.catalog.products.service.*
 import com.arcadiaeditions.catalog.products.service.dtos.*
 import com.arcadiaeditions.catalog.products.service.impl.mappers.*
+import com.arcadiaeditions.common.DomainRejectionException
 import java.math.*
 import java.time.*
 import org.slf4j.Logger
@@ -23,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional
 open class ProductCatalogServiceImpl(
     private val productRepository: ProductRepository,
     private val eventPublisher: EventPublisher,
+    // X-06: wired for consistency with the other services' timestamps.
+    private val clock: Clock,
 ) : ProductCatalogService {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass)
@@ -31,9 +34,19 @@ open class ProductCatalogServiceImpl(
 
     private val eventsMapper: EventsMapper = EventsMapper.INSTANCE
 
+    /**
+     * G-CP-02: creates a new product with sku uniqueness check.
+     * Rejects duplicate SKU with a domain rejection (409).
+     */
     override fun createProduct(input: CreateProductInput): Product {
 
         log.debug("[CRUD] Request to save Product: {}", input)
+
+        // Check for duplicate SKU
+        if (productRepository.findBySku(input.sku) != null) {
+            throw DomainRejectionException("Product already exists for sku: ${input.sku}")
+        }
+
         var product = productCatalogServiceMapper.update(Product(), input)
         product = productRepository.save(product)
         // TODO: may need to reload the entity to fetch relationships 'mapped by id'
@@ -55,6 +68,10 @@ open class ProductCatalogServiceImpl(
             ?.let { productRepository.save(it) } ?: throw NoSuchElementException("Product not found with id: $id")
     }
 
+    /**
+     * G-CP-01: publishes a product and emits ProductPublished with productId (String from entity id)
+     * and publishedAt timestamp.
+     */
     override fun publishProduct(id: Long): Product {
 
         log.debug("Request publishProduct: {}", id)
@@ -65,10 +82,15 @@ open class ProductCatalogServiceImpl(
         existingProduct.status = ProductStatus.PUBLISHED
         val product = productRepository.save(existingProduct)
         // emit events
-        eventPublisher.onProductPublished(eventsMapper.asProductPublished(product))
+        val now = Instant.now(clock)
+        eventPublisher.onProductPublished(eventsMapper.asProductPublished(product, now))
         return product
     }
 
+    /**
+     * G-CP-01: retires a product and emits ProductRetired with productId (String from entity id)
+     * and retiredAt timestamp.
+     */
     override fun retireProduct(id: Long): Product {
 
         log.debug("Request retireProduct: {}", id)
@@ -79,7 +101,8 @@ open class ProductCatalogServiceImpl(
         existingProduct.status = ProductStatus.RETIRED
         val product = productRepository.save(existingProduct)
         // emit events
-        eventPublisher.onProductRetired(eventsMapper.asProductRetired(product))
+        val now = Instant.now(clock)
+        eventPublisher.onProductRetired(eventsMapper.asProductRetired(product, now))
         return product
     }
 }

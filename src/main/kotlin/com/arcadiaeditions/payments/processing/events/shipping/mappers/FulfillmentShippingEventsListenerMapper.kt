@@ -1,12 +1,22 @@
 package com.arcadiaeditions.payments.processing.events.shipping.mappers
 
+import com.arcadiaeditions.common.mappers.BaseMapper
 import com.arcadiaeditions.payments.processing.domain.events.*
+import org.mapstruct.Mapper
+import org.mapstruct.factory.Mappers
 
 /**
- * Regenerated mapping contract for FulfillmentShippingEventsListener. Customize the mappings in the generated-once
- * FulfillmentShippingEventsListenerMapStructMapper.
+ * MapStruct mapper for FulfillmentShippingEventsListener: event -> command input.
+ *
+ * This file is generated once. Add @Mapping annotations or concrete methods here when MapStruct cannot infer a
+ * conversion.
  */
+@Mapper(uses = [BaseMapper::class])
 interface FulfillmentShippingEventsListenerMapper {
+
+    companion object {
+        val INSTANCE: FulfillmentShippingEventsListenerMapper = Mappers.getMapper(FulfillmentShippingEventsListenerMapper::class.java)
+    }
 
     fun asCapturePaymentInput(
         event: com.arcadiaeditions.fulfillment.shipping.domain.events.FulfillmentScheduled

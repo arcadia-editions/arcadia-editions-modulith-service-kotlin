@@ -15,8 +15,9 @@ import org.springframework.stereotype.Component
 @org.jmolecules.architecture.layered.InterfaceLayer
 class CatalogInventoryEventsListener(
     private val ordersCheckoutService: OrdersCheckoutService,
-    private val mapper: CatalogInventoryEventsListenerMapper,
 ) {
+
+    private val mapper: CatalogInventoryEventsListenerMapper = CatalogInventoryEventsListenerMapper.INSTANCE
 
     @ApplicationModuleListener
     fun onStockReleased(event: com.arcadiaeditions.catalog.inventory.domain.events.StockReleased) {

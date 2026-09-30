@@ -15,8 +15,9 @@ import org.springframework.stereotype.Component
 @org.jmolecules.architecture.layered.InterfaceLayer
 class PaymentsProcessingEventsListener(
     private val inventoryService: InventoryService,
-    private val mapper: PaymentsProcessingEventsListenerMapper,
 ) {
+
+    private val mapper: PaymentsProcessingEventsListenerMapper = PaymentsProcessingEventsListenerMapper.INSTANCE
 
     @ApplicationModuleListener
     fun onPaymentDeclined(event: com.arcadiaeditions.payments.processing.domain.events.PaymentDeclined) {

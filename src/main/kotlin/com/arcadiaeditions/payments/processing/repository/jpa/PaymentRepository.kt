@@ -12,4 +12,8 @@ import org.springframework.stereotype.Repository
 @Repository
 @org.jmolecules.ddd.annotation.Repository
 @org.jmolecules.architecture.layered.InfrastructureLayer
-interface PaymentRepository : JpaRepository<Payment, Long> {}
+interface PaymentRepository : JpaRepository<Payment, Long> {
+    fun findByPaymentId(paymentId: String): Payment?
+
+    fun findByOrderId(orderId: String): Payment?
+}

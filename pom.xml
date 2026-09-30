@@ -15,7 +15,7 @@
 
 
 	<properties>
-		<java.version>24</java.version>
+		<java.version>25</java.version>
 		<kotlin.version>2.3.21</kotlin.version>
 
 		<spring-boot.version>${project.parent.version}</spring-boot.version>
@@ -432,6 +432,30 @@
 						<version>0.0.1</version>
 					</dependency>
 				</dependencies>
+			</plugin>
+			<!-- X-08: fail fast with a clear message instead of "release version 24 not supported" from JDK < 25. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<version>3.5.0</version>
+				<executions>
+					<execution>
+						<id>enforce-java-version</id>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<requireJavaVersion>
+									<version>[25,)</version>
+									<message>This project requires JDK 25+ (kotlinc targets jvmTarget ${java.version}, which
+										needs `release version 24 not supported` fixed by building with JDK 25). Set
+										JAVA_HOME to a JDK 25 install.</message>
+								</requireJavaVersion>
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>

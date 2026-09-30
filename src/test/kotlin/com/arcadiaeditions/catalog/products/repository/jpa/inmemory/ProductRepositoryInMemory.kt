@@ -6,4 +6,6 @@ import java.math.*
 import java.time.*
 import java.util.*
 
-class ProductRepositoryInMemory : InMemoryJpaRepository<Product, Long>(), ProductRepository {}
+class ProductRepositoryInMemory : InMemoryJpaRepository<Product, Long>(), ProductRepository {
+    override fun findBySku(sku: String): Product? = findByUniqueField("sku", sku)
+}

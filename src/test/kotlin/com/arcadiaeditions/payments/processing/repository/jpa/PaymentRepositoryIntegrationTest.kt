@@ -89,11 +89,13 @@ class PaymentRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         Assertions.assertEquals(PaymentStatus.values()[0], updated.status)
         Assertions.assertEquals("", updated.providerReference)
         Assertions.assertEquals(0 as Integer, updated.attemptCount)
-        Assertions.assertEquals(Instant.now(), updated.authorizedAt)
-        Assertions.assertEquals(Instant.now(), updated.declinedAt)
-        Assertions.assertEquals(Instant.now(), updated.failedAt)
-        Assertions.assertEquals(Instant.now(), updated.capturedAt)
-        Assertions.assertEquals(Instant.now(), updated.voidedAt)
+        // Phase 6 / baseline fix: see StockReservationRepositoryIntegrationTest - comparing against
+        // a second independent Instant.now() call is flaky by construction.
+        Assertions.assertNotNull(updated.authorizedAt)
+        Assertions.assertNotNull(updated.declinedAt)
+        Assertions.assertNotNull(updated.failedAt)
+        Assertions.assertNotNull(updated.capturedAt)
+        Assertions.assertNotNull(updated.voidedAt)
         Assertions.assertEquals("", updated.failureReason)
     }
 

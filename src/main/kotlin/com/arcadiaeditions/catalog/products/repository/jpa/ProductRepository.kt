@@ -12,4 +12,6 @@ import org.springframework.stereotype.Repository
 @Repository
 @org.jmolecules.ddd.annotation.Repository
 @org.jmolecules.architecture.layered.InfrastructureLayer
-interface ProductRepository : JpaRepository<Product, Long> {}
+interface ProductRepository : JpaRepository<Product, Long> {
+    fun findBySku(sku: String): Product?
+}

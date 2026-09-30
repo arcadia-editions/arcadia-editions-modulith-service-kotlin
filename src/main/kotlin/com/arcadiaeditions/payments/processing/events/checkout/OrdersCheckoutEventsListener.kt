@@ -15,8 +15,9 @@ import org.springframework.stereotype.Component
 @org.jmolecules.architecture.layered.InterfaceLayer
 class OrdersCheckoutEventsListener(
     private val paymentsProcessingService: PaymentsProcessingService,
-    private val mapper: OrdersCheckoutEventsListenerMapper,
 ) {
+
+    private val mapper: OrdersCheckoutEventsListenerMapper = OrdersCheckoutEventsListenerMapper.INSTANCE
 
     @ApplicationModuleListener
     fun onOrderCreated(event: com.arcadiaeditions.orders.checkout.domain.events.OrderCreated) {

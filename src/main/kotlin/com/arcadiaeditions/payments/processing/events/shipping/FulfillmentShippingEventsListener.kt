@@ -15,8 +15,9 @@ import org.springframework.stereotype.Component
 @org.jmolecules.architecture.layered.InterfaceLayer
 class FulfillmentShippingEventsListener(
     private val paymentsProcessingService: PaymentsProcessingService,
-    private val mapper: FulfillmentShippingEventsListenerMapper,
 ) {
+
+    private val mapper: FulfillmentShippingEventsListenerMapper = FulfillmentShippingEventsListenerMapper.INSTANCE
 
     @ApplicationModuleListener
     fun onFulfillmentScheduled(event: com.arcadiaeditions.fulfillment.shipping.domain.events.FulfillmentScheduled) {

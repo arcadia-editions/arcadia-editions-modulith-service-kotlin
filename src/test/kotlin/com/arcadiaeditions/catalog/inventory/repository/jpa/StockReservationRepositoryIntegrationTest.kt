@@ -76,10 +76,14 @@ class StockReservationRepositoryIntegrationTest : BaseRepositoryIntegrationTest(
         Assertions.assertEquals("", updated.sku)
         Assertions.assertEquals(0 as Integer, updated.quantity)
         Assertions.assertEquals(ReservationStatus.values()[0], updated.status)
-        Assertions.assertEquals(Instant.now(), updated.reservedAt)
-        Assertions.assertEquals(Instant.now(), updated.expiresAt)
-        Assertions.assertEquals(Instant.now(), updated.confirmedAt)
-        Assertions.assertEquals(Instant.now(), updated.releasedAt)
+        // Phase 6 / baseline fix: the generated assertion compared the saved timestamp against a
+        // second, independent Instant.now() call - flaky by construction (sub-millisecond drift
+        // between the two calls), not a fixture or behavior issue. assertNotNull still proves the
+        // field was persisted.
+        Assertions.assertNotNull(updated.reservedAt)
+        Assertions.assertNotNull(updated.expiresAt)
+        Assertions.assertNotNull(updated.confirmedAt)
+        Assertions.assertNotNull(updated.releasedAt)
         Assertions.assertEquals(StockReleaseReason.values()[0], updated.releaseReason)
     }
 
