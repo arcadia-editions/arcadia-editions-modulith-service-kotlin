@@ -87,11 +87,10 @@ review: [ ]
       tests: NotificationsConsumerServiceTest
       blocked by: T-01
       fixes: .zenwave/handoff/place-order-flow/reports/review-S0.md (SHOULD FIX T-01: inject the Clock into NotificationsConsumerServiceImpl)
-- [ ] T-13 advanced AFK Flow test completed: from startOrderCheckout to OrderConfirmationSent across the five modules (Spring Modulith Scenario, Testcontainers)
+- [ ] T-13 advanced AFK Flow test completed: from startOrderCheckout to OrderConfirmationSent across the five modules (Spring Modulith Scenario, Testcontainers); add a fixed/mutable test Clock @Bean, Spring contexts get Clock.systemUTC() (review-S0 NOTE; T-32 reuses it)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:73-192, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-06, data/jpa/InventoryPosition/1.json
       tests: PlaceOrderFlowCompletedIntegrationTest
-      note: Spring contexts get Clock.systemUTC(); add a fixed/mutable Clock @Bean for tests (review-S0 NOTE; T-32 needs it too)
       blocked by: T-06, T-09, T-10, T-11, T-12
 
 ## S2 stockGone
