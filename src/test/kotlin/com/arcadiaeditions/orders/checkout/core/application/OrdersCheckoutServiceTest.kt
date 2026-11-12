@@ -31,6 +31,14 @@ class OrdersCheckoutServiceTest {
     }
 
     @Test
+    fun servicesUseTheFixedClockTest() {
+        org.junit.jupiter.api.Assertions.assertEquals(
+            com.arcadiaeditions.config.TestClock.NOW,
+            context.clock.instant(),
+        )
+    }
+
+    @Test
     fun startOrderCheckoutTest() { // TODO: implement this test
     }
 

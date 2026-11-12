@@ -15,8 +15,9 @@ import org.springframework.context.annotation.Profile
 @Profile("in-memory")
 open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
 
+    val clock: java.time.Clock = com.arcadiaeditions.config.TestClock.FIXED
     private val eventPublisher = InMemoryEventPublisher()
-    protected val inventoryService = InventoryServiceImpl(stockReservationRepository(), eventPublisher)
+    protected val inventoryService = InventoryServiceImpl(stockReservationRepository(), eventPublisher, clock)
     protected val inventoryBackofficeService =
         InventoryBackofficeServiceImpl(inventoryPositionRepository(), eventPublisher)
 

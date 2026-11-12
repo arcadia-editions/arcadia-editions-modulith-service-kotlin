@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional
 open class PaymentsProcessingServiceImpl(
     private val paymentRepository: PaymentRepository,
     private val eventPublisher: EventPublisher,
+    private val clock: java.time.Clock,
 ) : PaymentsProcessingService {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass)

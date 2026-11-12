@@ -15,8 +15,9 @@ import org.springframework.context.annotation.Profile
 @Profile("in-memory")
 open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
 
+    val clock: java.time.Clock = com.arcadiaeditions.config.TestClock.FIXED
     private val eventPublisher = InMemoryEventPublisher()
-    protected val ordersCheckoutService = OrdersCheckoutServiceImpl(orderRepository(), eventPublisher)
+    protected val ordersCheckoutService = OrdersCheckoutServiceImpl(orderRepository(), eventPublisher, clock)
 
     @Bean
     open fun <T : OrdersCheckoutService> ordersCheckoutService(): T {

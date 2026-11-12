@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional
 open class OrdersCheckoutServiceImpl(
     private val orderRepository: OrderRepository,
     private val eventPublisher: EventPublisher,
+    private val clock: java.time.Clock,
 ) : OrdersCheckoutService {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass)
