@@ -88,12 +88,12 @@ review: [ ]
       test data: data.sql C-07, data/jpa/InventoryPosition/3.json
       tests: OrdersCheckoutServiceTest
       blocked by: T-05
-- [!] T-15 bounded AFK Web: the start-checkout answer when stock is unavailable
+- [ ] T-15 bounded AFK Web: start-checkout when stock is unavailable answers 409 Conflict with a StockUnavailable body (orderId, unavailableItems), no Order (P-03 A; contract not edited)
       model: ../arcadia-editions-modulith-api/orders-checkout-openapi.yml:32-52, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:95-98
       test data: data.sql C-07
       tests: OrdersCheckoutApiControllerTest, OrdersCheckoutApiIntegrationTest
       blocked by: T-06, T-14
-      blocked: P-03 (accepted A; waits on the OpenAPI change and regeneration)
+      adr: docs/proposals/P-03.md (decision A, code only)
 - [ ] T-16 bounded AFK sendStockUnavailableNotification on StockUnavailable: Notification STOCK_UNAVAILABLE with the skus, SENT, emit StockUnavailableNotificationSent; no duplicate on redelivery
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:199-202, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:67-76, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:92-94, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:112-121
       test data: data.sql C-07
