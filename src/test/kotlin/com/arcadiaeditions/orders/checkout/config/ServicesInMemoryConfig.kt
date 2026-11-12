@@ -17,7 +17,9 @@ open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
 
     val clock: java.time.Clock = com.arcadiaeditions.config.TestClock.FIXED
     private val eventPublisher = InMemoryEventPublisher()
-    protected val ordersCheckoutService = OrdersCheckoutServiceImpl(orderRepository(), eventPublisher, clock)
+    val inventoryContext = com.arcadiaeditions.catalog.inventory.config.ServicesInMemoryConfig()
+    protected val ordersCheckoutService =
+        OrdersCheckoutServiceImpl(orderRepository(), inventoryContext.inventoryService(), eventPublisher, clock)
 
     @Bean
     open fun <T : OrdersCheckoutService> ordersCheckoutService(): T {
@@ -36,6 +38,7 @@ open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
         orderRepository().deleteAll()
         orderRepository().saveAll(orders)
         eventPublisher.getEvents().clear()
+        inventoryContext.reloadTestData()
     }
 
     @Bean
