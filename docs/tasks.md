@@ -13,11 +13,12 @@ branch: afk/place-order-flow
 ## S0 Baseline
 review: [ ]
 
-- [ ] T-01 mechanical AFK Inject a java.time.Clock bean (system clock; tests fix it at 2026-10-01T12:00:00Z) and use it for every Instant the services set
+- [x] T-01 mechanical AFK Inject a java.time.Clock bean (system clock; tests fix it at 2026-10-01T12:00:00Z) and use it for every Instant the services set
       tests: OrdersCheckoutServiceTest, InventoryServiceTest, PaymentsProcessingServiceTest
-- [ ] T-02 bounded AFK ArchitectureTest: the archetype's single hexagonal/onion rule does not fit a modulith whose modules use Layered, SimpleDomain, Hexagonal and CleanHexagonal layouts; check each module with jMolecules and Spring Modulith ApplicationModules.verify() instead
+      done: claude-sonnet sonnet
+- [/] T-02 bounded AFK ArchitectureTest: the archetype's single hexagonal/onion rule does not fit a modulith whose modules use Layered, SimpleDomain, Hexagonal and CleanHexagonal layouts; check each module with jMolecules and Spring Modulith ApplicationModules.verify() instead
       tests: ArchitectureTest, JMoleculesArchitectureTest
-- [ ] T-03 mechanical AFK Generated repository updateTest: compare Instants at database precision (micros), not Instant.now() identity
+- [/] T-03 mechanical AFK Generated repository updateTest: compare Instants at database precision (micros), not Instant.now() identity
       tests: mvn -q verify -Dit.test='*RepositoryIntegrationTest' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false
 
 ## S1 completed (tracer bullet)
