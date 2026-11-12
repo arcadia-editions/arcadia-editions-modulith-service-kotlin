@@ -11,15 +11,17 @@ failed twice, or is already busy (Codex runs one job at a time).
 
 | Work | First | Then | Then |
 |---|---|---|---|
-| mechanical (follows a pattern already in the code) | grok | claude-sonnet | codex-terra |
-| bounded (fully described by the model and the test data) | claude-sonnet | codex-terra | claude-opus |
-| advanced (several contexts, a scheduler, an external API) | codex-sol | claude-opus | claude-sonnet |
-| review (one slice, full suite) | claude-opus | codex-sol | claude-sonnet |
+| mechanical (follows a pattern already in the code) | grok | claude-sonnet | |
+| bounded (fully described by the model and the test data) | claude-sonnet | claude-opus | |
+| advanced (several contexts, a scheduler, an external API) | claude-opus | claude-sonnet | |
+| review (one slice, full suite) | claude-opus | claude-sonnet | |
 
 A review is done by a worker that implemented none of the slice when there is one. If there is none, an implementer
 reviews it and the orchestrator says so in its report.
 
 ## Workers
+
+Codex is not used (the person, 2026-11-12): no task or review goes to codex-terra or codex-sol.
 
 | Name | How it runs | Model | Notes |
 |---|---|---|---|

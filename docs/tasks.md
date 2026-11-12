@@ -27,7 +27,7 @@ path: StartOrderCheckout > startOrderCheckout > reserveStock[StockReservedResult
       > capturePayment[PaymentCaptured] > sendOrderConfirmation > end completed
 review: [ ]
 
-- [ ] T-04 bounded AFK reserveStock: all lines available -> one StockReservation per line RESERVED (expiresAt = now + 10m), available -> reserved, outcome RESERVED with the reserved lines; any line short -> outcome UNAVAILABLE with the short lines, nothing reserved
+- [/] T-04 bounded AFK reserveStock: all lines available -> one StockReservation per line RESERVED (expiresAt = now + 10m), available -> reserved, outcome RESERVED with the reserved lines; any line short -> outcome UNAVAILABLE with the short lines, nothing reserved
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:95-99, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:52-59, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:74-105, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:111
       test data: data.sql C-02, data/jpa/InventoryPosition/1.json, data/jpa/InventoryPosition/3.json
       tests: InventoryServiceTest
