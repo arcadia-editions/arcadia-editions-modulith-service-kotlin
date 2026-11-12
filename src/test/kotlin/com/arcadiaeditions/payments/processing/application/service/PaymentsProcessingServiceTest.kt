@@ -159,7 +159,60 @@ class PaymentsProcessingServiceTest {
     }
 
     @Test
-    fun capturePaymentTest() { // TODO: implement this test
+    fun capturePaymentTest() {
+        // C-04: ORD-004 Payment AUTHORIZED (PSP-AUTH-004), FulfillmentScheduled emitted
+        val payment = paymentsProcessingService.capturePayment(CapturePaymentInput(orderId = "ORD-004"))
+
+        val saved = savedPayment("ORD-004")
+        org.junit.jupiter.api.Assertions.assertEquals(saved.id, payment.id)
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.CAPTURED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, saved.capturedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(Instant.parse("2026-10-01T11:20:30Z"), saved.authorizedAt)
+        org.junit.jupiter.api.Assertions.assertEquals("PSP-AUTH-004", saved.providerReference)
+        org.junit.jupiter.api.Assertions.assertEquals(1, saved.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertNull(saved.failedAt)
+        org.junit.jupiter.api.Assertions.assertNull(saved.failureReason)
+        org.junit.jupiter.api.Assertions.assertNull(saved.voidedAt)
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
+        val event = events[0] as PaymentCaptured
+        org.junit.jupiter.api.Assertions.assertEquals("ORD-004", event.orderId)
+        org.junit.jupiter.api.Assertions.assertEquals("CUST-004", event.customerId)
+        org.junit.jupiter.api.Assertions.assertEquals("customer04@example.com", event.customerEmail)
+        org.junit.jupiter.api.Assertions.assertEquals(0, java.math.BigDecimal("49.99").compareTo(event.amount))
+        org.junit.jupiter.api.Assertions.assertEquals("EUR", event.currency)
+        org.junit.jupiter.api.Assertions.assertEquals("PSP-AUTH-004", event.providerReference)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, event.capturedAt)
+    }
+
+    @Test
+    fun capturePaymentRedeliveryTest() {
+        // C-05: ORD-005 Payment already CAPTURED at 11:13
+        val payment = paymentsProcessingService.capturePayment(CapturePaymentInput(orderId = "ORD-005"))
+
+        val saved = savedPayment("ORD-005")
+        org.junit.jupiter.api.Assertions.assertEquals(saved.id, payment.id)
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.CAPTURED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(Instant.parse("2026-10-01T11:13:00Z"), saved.capturedAt)
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+    }
+
+    @Test
+    fun capturePaymentInvalidTransitionTest() {
+        // C-01: ORD-001 Payment AUTHORIZATION_REQUESTED
+        org.junit.jupiter.api.Assertions.assertThrows(PaymentTransitions.InvalidStateTransitionException::class.java) {
+            paymentsProcessingService.capturePayment(CapturePaymentInput(orderId = "ORD-001"))
+        }
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.AUTHORIZATION_REQUESTED, savedPayment("ORD-001").status)
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+    }
+
+    @Test
+    fun capturePaymentNotFoundTest() {
+        org.junit.jupiter.api.Assertions.assertThrows(NoSuchElementException::class.java) {
+            paymentsProcessingService.capturePayment(CapturePaymentInput(orderId = "ORD-MISSING"))
+        }
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
     }
 
     @Test
