@@ -113,21 +113,36 @@ open class PaymentsProcessingServiceImpl(
 
         log.debug("Request capturePayment: {}", input)
 
-        // TODO CUSTOM_REQUIRED: load the Payment this transition applies to, e.g. by a correlation key in the input
-        val foundPayment: Payment? = emptyList<Payment>().firstOrNull()
-        return foundPayment
-            ?.let { existingPayment ->
-                PaymentTransitions.ensureCanCapturePayment(existingPayment)
-                paymentsProcessingServiceMapper.update(existingPayment, input)
-                existingPayment.status = PaymentStatus.CAPTURED
-                existingPayment
+        val payment =
+            paymentRepository.findByOrderId(input.orderId)
+                ?: throw NoSuchElementException("Payment not found for order: ${input.orderId}")
+        // redelivery of FulfillmentScheduled: already captured, nothing to do
+        if (payment.status == PaymentStatus.CAPTURED) return payment
+        PaymentTransitions.ensureCanCapturePayment(payment)
+
+        val result =
+            paymentProcessor.capture(
+                CaptureRequest(
+                    orderId = payment.orderId!!,
+                    providerReference = payment.providerReference,
+                    amount = payment.amount!!,
+                    currency = payment.currency!!,
+                )
+            )
+        when (result.outcome) {
+            PaymentProcessorOutcome.APPROVED -> {
+                // A-01 (P-02): CAPTURED is set here, as the outcome of PaymentCaptured
+                payment.status = PaymentStatus.CAPTURED
+                payment.capturedAt = Instant.now(clock)
+                val saved = paymentRepository.save(payment)
+                eventPublisher.onPaymentCaptured(eventsMapper.asPaymentCaptured(saved))
+                return saved
             }
-            ?.let { paymentRepository.save(it) }
-            ?.also {
-                // emit events
-                eventPublisher.onPaymentCaptured(eventsMapper.asPaymentCaptured(it))
-                eventPublisher.onPaymentCaptureFailed(eventsMapper.asPaymentCaptureFailed(it))
-            } ?: throw NoSuchElementException("Payment not found")
+            // the PaymentCaptureFailed branch (CAPTURE_FAILED) is T-29
+            PaymentProcessorOutcome.DECLINED,
+            PaymentProcessorOutcome.FAILED ->
+                throw UnsupportedOperationException("capturePayment refused by the processor: not implemented (T-29)")
+        }
     }
 
     override fun voidPayment(input: VoidPaymentInput): Payment {

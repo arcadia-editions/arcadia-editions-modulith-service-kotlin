@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component
 /**
  * Deterministic stand-in for the payment processor, driven by the processor's test payment method ids:
  * `pm_card_chargeDeclined` declines, `pm_card_processorError` fails, any other (e.g. `pm_card_visa`) is approved.
+ * Captures always succeed, keeping the authorization reference, unless a test sets [captureRefusal].
  * A real processor adapter is a separate task.
  */
 @Component
@@ -19,10 +20,19 @@ class FakePaymentProcessor : PaymentProcessor {
         const val PROCESSOR_TIMEOUT = "processor_timeout"
     }
 
+    /** Test hook: when set, every capture answers this refusal instead of capturing. */
+    @Volatile var captureRefusal: PaymentProcessorResult? = null
+
     override fun authorize(request: AuthorizationRequest): PaymentProcessorResult =
         when (request.paymentMethodId) {
             DECLINED_PAYMENT_METHOD -> PaymentProcessorResult.declined(CARD_DECLINED)
             PROCESSOR_ERROR_PAYMENT_METHOD -> PaymentProcessorResult.failed(PROCESSOR_TIMEOUT)
             else -> PaymentProcessorResult.approved("PSP-AUTH-" + request.orderId.removePrefix("ORD-"))
         }
+
+    override fun capture(request: CaptureRequest): PaymentProcessorResult =
+        captureRefusal
+            ?: PaymentProcessorResult.approved(
+                request.providerReference ?: ("PSP-AUTH-" + request.orderId.removePrefix("ORD-"))
+            )
 }

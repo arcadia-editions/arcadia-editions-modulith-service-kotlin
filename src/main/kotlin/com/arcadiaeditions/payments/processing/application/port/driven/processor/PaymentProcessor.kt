@@ -12,12 +12,23 @@ interface PaymentProcessor {
 
     /** Places an authorization hold on the payment method. Never throws for a processor outcome: see [outcome]. */
     fun authorize(request: AuthorizationRequest): PaymentProcessorResult
+
+    /** Captures a previously authorized hold. Never throws for a processor outcome: see [outcome]. */
+    fun capture(request: CaptureRequest): PaymentProcessorResult
 }
 
 data class AuthorizationRequest(
     val orderId: String,
     val customerId: String,
     val paymentMethodId: String,
+    val amount: BigDecimal,
+    val currency: String,
+)
+
+data class CaptureRequest(
+    val orderId: String,
+    /** Reference of the authorization hold to capture (Payment.providerReference). */
+    val providerReference: String?,
     val amount: BigDecimal,
     val currency: String,
 )

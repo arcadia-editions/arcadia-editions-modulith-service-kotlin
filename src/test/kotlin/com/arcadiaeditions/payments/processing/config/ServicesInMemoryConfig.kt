@@ -38,7 +38,11 @@ open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
         paymentRepository().deleteAll()
         paymentRepository().saveAll(payments)
         eventPublisher.getEvents().clear()
+        paymentProcessor.captureRefusal = null
     }
+
+    /** The fake processor, for tests that make it refuse (e.g. `captureRefusal`). */
+    fun paymentProcessor(): FakePaymentProcessor = paymentProcessor
 
     @Bean
     fun eventPublisher(): InMemoryEventPublisher {
