@@ -33,7 +33,7 @@ review: [ ]
       tests: InventoryServiceTest
       blocked by: T-01
       done: claude-sonnet sonnet
-- [ ] T-05 bounded AFK startOrderCheckout: call reserveStock in-process; on RESERVED create the Order CREATED (orderId, totalAmount = sum of quantity x unitPrice) and emit OrderCreated (amount = totalAmount)
+- [/] T-05 bounded AFK startOrderCheckout: call reserveStock in-process; on RESERVED create the Order CREATED (orderId, totalAmount = sum of quantity x unitPrice) and emit OrderCreated (amount = totalAmount)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:73-89, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:61-80, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:95-98, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:114-123
       test data: data/jpa/InventoryPosition/1.json
       tests: OrdersCheckoutServiceTest
