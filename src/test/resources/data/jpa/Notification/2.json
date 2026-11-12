@@ -1,0 +1,20 @@
+{
+    "id": 51,
+    "version": 0,
+    "notificationId": "NTF-007",
+    "customerId": "CUST-007",
+    "orderId": "ORD-007",
+    "skus": [
+        "SKU-003"
+    ],
+    "type": "STOCK_UNAVAILABLE",
+    "channel": "EMAIL",
+    "status": "SENT",
+    "subject": "Sorry, this edition is sold out",
+    "body": "Sorry, this edition is sold out: ORD-007",
+    "recipient": "customer07@example.com",
+    "createdAt": "2026-10-01T11:06:00Z",
+    "sentAt": "2026-10-01T11:06:05Z",
+    "failedAt": null,
+    "failureReason": null
+}

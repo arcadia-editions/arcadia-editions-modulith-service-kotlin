@@ -1,0 +1,18 @@
+{
+    "id": 101,
+    "version": 0,
+    "notificationId": "NTF-008",
+    "customerId": "CUST-008",
+    "orderId": "ORD-008",
+    "skus": [],
+    "type": "ORDER_CANCELLED",
+    "channel": "EMAIL",
+    "status": "SENT",
+    "subject": "Your Arcadia Editions order was cancelled",
+    "body": "Your Arcadia Editions order was cancelled: ORD-008 (PAYMENT_DECLINED)",
+    "recipient": "customer08@example.com",
+    "createdAt": "2026-10-01T10:36:00Z",
+    "sentAt": "2026-10-01T10:36:05Z",
+    "failedAt": null,
+    "failureReason": null
+}

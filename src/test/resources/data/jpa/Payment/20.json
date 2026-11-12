@@ -1,0 +1,19 @@
+{
+    "id": 951,
+    "version": 0,
+    "orderId": "ORD-021",
+    "customerId": "CUST-021",
+    "paymentMethodId": "pm_card_chargeDeclined",
+    "customerEmail": "customer21@example.com",
+    "amount": 49.99,
+    "currency": "EUR",
+    "status": "DECLINED",
+    "providerReference": null,
+    "attemptCount": 1,
+    "authorizedAt": null,
+    "declinedAt": "2026-10-01T10:40:30Z",
+    "failedAt": null,
+    "capturedAt": null,
+    "voidedAt": null,
+    "failureReason": "card_declined"
+}

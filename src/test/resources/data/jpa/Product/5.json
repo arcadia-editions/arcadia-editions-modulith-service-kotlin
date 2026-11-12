@@ -1,0 +1,13 @@
+{
+    "id": 201,
+    "version": 0,
+    "sku": "SKU-005",
+    "name": "Old Maps, Retired",
+    "description": "Out of print",
+    "price": 60.0,
+    "currency": "EUR",
+    "editionSize": 100,
+    "trackingMode": "QUANTITY",
+    "launchAt": "2025-10-01T12:00:00Z",
+    "status": "RETIRED"
+}

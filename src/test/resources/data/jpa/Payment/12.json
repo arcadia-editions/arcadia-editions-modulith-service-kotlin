@@ -1,0 +1,19 @@
+{
+    "id": 551,
+    "version": 0,
+    "orderId": "ORD-013",
+    "customerId": "CUST-013",
+    "paymentMethodId": "pm_card_visa",
+    "customerEmail": "customer13@example.com",
+    "amount": 49.99,
+    "currency": "EUR",
+    "status": "FAILED",
+    "providerReference": null,
+    "attemptCount": 3,
+    "authorizedAt": null,
+    "declinedAt": null,
+    "failedAt": "2026-10-01T11:57:30Z",
+    "capturedAt": null,
+    "voidedAt": null,
+    "failureReason": "processor_timeout"
+}

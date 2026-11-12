@@ -1,0 +1,19 @@
+{
+    "id": 451,
+    "version": 0,
+    "orderId": "ORD-011",
+    "customerId": "CUST-011",
+    "paymentMethodId": "pm_card_visa",
+    "customerEmail": "customer11@example.com",
+    "amount": 49.99,
+    "currency": "EUR",
+    "status": "AUTHORIZATION_REQUESTED",
+    "providerReference": null,
+    "attemptCount": 1,
+    "authorizedAt": null,
+    "declinedAt": null,
+    "failedAt": null,
+    "capturedAt": null,
+    "voidedAt": null,
+    "failureReason": null
+}

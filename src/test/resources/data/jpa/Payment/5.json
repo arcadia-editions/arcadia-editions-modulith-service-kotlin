@@ -1,0 +1,19 @@
+{
+    "id": 201,
+    "version": 0,
+    "orderId": "ORD-005",
+    "customerId": "CUST-005",
+    "paymentMethodId": "pm_card_visa",
+    "customerEmail": "customer05@example.com",
+    "amount": 120.0,
+    "currency": "EUR",
+    "status": "CAPTURED",
+    "providerReference": "PSP-AUTH-005",
+    "attemptCount": 1,
+    "authorizedAt": "2026-10-01T11:10:30Z",
+    "declinedAt": null,
+    "failedAt": null,
+    "capturedAt": "2026-10-01T11:13:00Z",
+    "voidedAt": null,
+    "failureReason": null
+}

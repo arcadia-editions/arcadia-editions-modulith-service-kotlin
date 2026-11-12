@@ -1,4 +1,13 @@
 {
     "id": 1,
-    "version": 0
+    "version": 0,
+    "sku": "SKU-001",
+    "name": "Arcadia Atlas, First Edition",
+    "description": "Numbered first edition, cloth bound",
+    "price": 49.99,
+    "currency": "EUR",
+    "editionSize": 500,
+    "trackingMode": "QUANTITY",
+    "launchAt": "2026-09-01T12:00:00Z",
+    "status": "PUBLISHED"
 }

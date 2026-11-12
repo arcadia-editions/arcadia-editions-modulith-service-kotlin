@@ -1,0 +1,18 @@
+{
+    "id": 201,
+    "version": 0,
+    "notificationId": "NTF-010",
+    "customerId": "CUST-010",
+    "orderId": "ORD-010",
+    "skus": [],
+    "type": "ORDER_CANCELLED",
+    "channel": "EMAIL",
+    "status": "SENT",
+    "subject": "Your Arcadia Editions order was cancelled",
+    "body": "Your Arcadia Editions order was cancelled: ORD-010 (PAYMENT_VOIDED)",
+    "recipient": "customer10@example.com",
+    "createdAt": "2026-10-01T10:16:00Z",
+    "sentAt": "2026-10-01T10:16:05Z",
+    "failedAt": null,
+    "failureReason": null
+}

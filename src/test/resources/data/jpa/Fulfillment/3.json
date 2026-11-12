@@ -1,0 +1,29 @@
+{
+    "id": 101,
+    "version": 0,
+    "fulfillmentId": "FUL-006",
+    "orderId": "ORD-006",
+    "customerId": "CUST-006",
+    "status": "READY_TO_SHIP",
+    "shippingAddress": {
+        "name": "Alex Example",
+        "line1": "Calle Ficticia 1",
+        "line2": "2B",
+        "city": "Madrid",
+        "region": "Madrid",
+        "postalCode": "28001",
+        "country": "ES"
+    },
+    "items": [
+        {
+            "sku": "SKU-001",
+            "quantity": 1
+        }
+    ],
+    "carrierCode": "DHL",
+    "trackingNumber": "TRK000006",
+    "scheduledAt": "2026-10-01T10:02:00Z",
+    "readyAt": "2026-10-01T11:00:00Z",
+    "failedAt": null,
+    "failureReason": null
+}

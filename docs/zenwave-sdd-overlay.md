@@ -24,7 +24,7 @@ repositories must be cloned next to this one.
 | Domain summary | none yet: `../arcadia-editions-architecture/README.md` and `zenwave-architecture.yml` |
 | Board of the flow in progress | `docs/tasks.md` (archived boards in `docs/tasks/`) |
 | Model gap proposals | `docs/proposals/` |
-| Test data and scenario matrix | `<after test data: src/test/resources/data.sql, and what its header holds: the chains, the fixed test "now" and how tests read it (a Clock)>` |
+| Test data and scenario matrix | `src/test/resources/data.sql` (header: scenario and coverage matrices, chains `C-01`..`C-21`, assumptions `A-01`..`A-08`, the fixed test "now" `2026-10-01T12:00:00Z` read by tests through a fixed `Clock`) and `src/test/resources/data/jpa/<Entity>/<n>.json` |
 | Generation script | `zenwave-scripts.zw` (projects generated with ZenWave SDK) |
 
 Required sibling clones: `../arcadia-editions-architecture` (ZFL), `../arcadia-editions-modulith-api` (ZDL, OpenAPI).
@@ -71,7 +71,8 @@ mkdir -p target && mvn -q -DskipTests clean compile 2>&1 | tee target/compile.lo
 # focused tests of a task (the implementer runs only these)
 mvn -q test -Dtest='TestClass'   # the task's tests:
 # full suite with integration tests and containers (once per slice review)
-# <after generation: full suite takes about N minutes, needs Docker / Testcontainers / ...>
+# about 4 minutes; needs Docker (Testcontainers starts docker-compose: postgres, kafka). Add -Dmaven.test.failure.ignore=true
+# to reach the failsafe ITs while unit tests still fail (baseline 2026-11-12)
 mvn -q verify
 # lint the models
 bash .zenwave/bin/lint-zdl.sh --strict ../arcadia-editions-modulith-api/*-domain-model.zdl
@@ -85,3 +86,12 @@ The orchestrator gives the workers the focused command (with the task's `tests:`
 
 - Naming conventions (ids, channels, topics): business ids are `String` (`orderId`, `reservationId`, `sku`); events named in past tense, see the ZDLs
 - Decisions already taken that the models don't show: `../arcadia-editions-architecture/docs/case-study-decisions.md`
+
+## Known failing tests at the baseline (2026-11-12)
+
+| Test | Cause | Fixed by |
+|---|---|---|
+| `ArchitectureTest.respectsLayersForHexagonalArchitecture`, `.respectsOnionArchitecture` | archetype rule for one layout; modules mix layouts, cross-module event types | T-02 |
+| `OrdersCheckoutApiControllerTest.startOrderCheckoutTest`, `.getOrderTest` | startOrderCheckout unimplemented (null orderId); getOrder with id 0 | T-06 |
+| `OrdersCheckoutApiIntegrationTest.testStartOrderCheckout_201`, `.testGetOrder_200`, `.testGetOrder_400` | web/service not implemented | T-06 |
+| `*RepositoryIntegrationTest.updateTest` (flaky, any entity with an `Instant`) | asserts `Instant.now()` against the value read back at DB precision | T-03 |

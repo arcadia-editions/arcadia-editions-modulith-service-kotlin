@@ -1,0 +1,13 @@
+{
+    "id": 151,
+    "version": 0,
+    "sku": "SKU-004",
+    "name": "Northern Tales, Upcoming",
+    "description": "Not yet published",
+    "price": 35.0,
+    "currency": "EUR",
+    "editionSize": 200,
+    "trackingMode": "QUANTITY",
+    "launchAt": "2026-10-15T12:00:00Z",
+    "status": "DRAFT"
+}

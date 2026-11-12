@@ -1,0 +1,36 @@
+{
+    "id": 51,
+    "version": 0,
+    "orderId": "ORD-002",
+    "status": "CREATED",
+    "customerId": "CUST-002",
+    "customerEmail": "customer02@example.com",
+    "paymentMethodId": "pm_card_visa",
+    "items": [
+        {
+            "sku": "SKU-001",
+            "quantity": 2,
+            "unitPrice": 49.99
+        },
+        {
+            "sku": "SKU-002",
+            "quantity": 1,
+            "unitPrice": 120.0
+        }
+    ],
+    "shippingAddress": {
+        "name": "Alex Example",
+        "line1": "Calle Ficticia 1",
+        "line2": "2B",
+        "city": "Madrid",
+        "region": "Madrid",
+        "postalCode": "28001",
+        "country": "ES"
+    },
+    "totalAmount": 219.98,
+    "currency": "EUR",
+    "createdAt": "2026-10-01T11:57:00Z",
+    "confirmedAt": null,
+    "cancelledAt": null,
+    "cancellationReason": null
+}

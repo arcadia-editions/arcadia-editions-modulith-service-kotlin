@@ -1,0 +1,13 @@
+{
+    "id": 51,
+    "version": 0,
+    "sku": "SKU-002",
+    "name": "The Cartographer, Signed Edition",
+    "description": "Signed by the author",
+    "price": 120.0,
+    "currency": "EUR",
+    "editionSize": 50,
+    "trackingMode": "SERIALIZED",
+    "launchAt": "2026-09-11T12:00:00Z",
+    "status": "PUBLISHED"
+}

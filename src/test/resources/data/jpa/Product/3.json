@@ -1,0 +1,13 @@
+{
+    "id": 101,
+    "version": 0,
+    "sku": "SKU-003",
+    "name": "Lanterns, Limited Drop",
+    "description": "Limited drop, sold out",
+    "price": 75.0,
+    "currency": "EUR",
+    "editionSize": 10,
+    "trackingMode": "QUANTITY",
+    "launchAt": "2026-09-21T12:00:00Z",
+    "status": "PUBLISHED"
+}

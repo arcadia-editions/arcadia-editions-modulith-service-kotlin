@@ -1,0 +1,29 @@
+{
+    "id": 151,
+    "version": 0,
+    "fulfillmentId": "FUL-010",
+    "orderId": "ORD-010",
+    "customerId": "CUST-010",
+    "status": "FAILED",
+    "shippingAddress": {
+        "name": "Alex Example",
+        "line1": "Calle Ficticia 1",
+        "line2": "2B",
+        "city": "Madrid",
+        "region": "Madrid",
+        "postalCode": "28001",
+        "country": "ES"
+    },
+    "items": [
+        {
+            "sku": "SKU-001",
+            "quantity": 1
+        }
+    ],
+    "carrierCode": null,
+    "trackingNumber": null,
+    "scheduledAt": null,
+    "readyAt": null,
+    "failedAt": "2026-10-01T10:12:00Z",
+    "failureReason": "warehouse_damage"
+}

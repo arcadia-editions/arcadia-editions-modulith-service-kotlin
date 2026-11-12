@@ -1,0 +1,31 @@
+{
+    "id": 351,
+    "version": 0,
+    "orderId": "ORD-009",
+    "status": "CANCELLED",
+    "customerId": "CUST-009",
+    "customerEmail": "customer09@example.com",
+    "paymentMethodId": "pm_card_visa",
+    "items": [
+        {
+            "sku": "SKU-002",
+            "quantity": 1,
+            "unitPrice": 120.0
+        }
+    ],
+    "shippingAddress": {
+        "name": "Alex Example",
+        "line1": "Calle Ficticia 1",
+        "line2": "2B",
+        "city": "Madrid",
+        "region": "Madrid",
+        "postalCode": "28001",
+        "country": "ES"
+    },
+    "totalAmount": 120.0,
+    "currency": "EUR",
+    "createdAt": "2026-10-01T10:20:00Z",
+    "confirmedAt": null,
+    "cancelledAt": "2026-10-01T10:25:20Z",
+    "cancellationReason": "PAYMENT_RETRY_EXHAUSTED"
+}
