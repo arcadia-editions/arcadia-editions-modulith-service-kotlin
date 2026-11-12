@@ -51,11 +51,12 @@ review: [ ]
       test data: data.sql C-01
       tests: PaymentsProcessingServiceTest
       blocked by: T-01
-- [/] T-08 bounded AFK confirmStockReservation: every RESERVED reservation of the orderId -> CONFIRMED (confirmedAt), reserved -> sold, emit StockReservationConfirmed with the items; already CONFIRMED does nothing
+- [x] T-08 bounded AFK confirmStockReservation: every RESERVED reservation of the orderId -> CONFIRMED (confirmedAt), reserved -> sold, emit StockReservationConfirmed with the items; already CONFIRMED does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:155-158, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:61-64, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:120-122, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:138-147
       test data: data.sql C-02, data.sql C-03
       tests: InventoryServiceTest
       blocked by: T-04
+      done: claude-sonnet sonnet
 - [ ] T-09 bounded AFK confirmOrder on PaymentAuthorized: load the Order by orderId, guard CREATED, call confirmStockReservation, set CONFIRMED (confirmedAt), emit OrderConfirmed with items and shipping address; an already CONFIRMED order does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:146-150, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:82-84, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:100-103, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:138-157
       test data: data.sql C-02, data.sql C-03
