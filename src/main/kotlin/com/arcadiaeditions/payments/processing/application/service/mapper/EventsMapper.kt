@@ -4,6 +4,7 @@ import com.arcadiaeditions.common.mappers.BaseMapper
 import com.arcadiaeditions.payments.processing.application.port.driving.dto.*
 import com.arcadiaeditions.payments.processing.domain.*
 import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 import org.mapstruct.factory.Mappers
 
 @Mapper(uses = [BaseMapper::class])
@@ -13,6 +14,7 @@ interface EventsMapper {
         val INSTANCE: EventsMapper = Mappers.getMapper(EventsMapper::class.java)
     }
 
+    @Mapping(target = "reason", source = "failureReason")
     fun asPaymentDeclined(payment: Payment): com.arcadiaeditions.payments.processing.domain.event.PaymentDeclined
 
     fun asPaymentRetryExhausted(
@@ -31,5 +33,6 @@ interface EventsMapper {
 
     fun asPaymentVoided(payment: Payment): com.arcadiaeditions.payments.processing.domain.event.PaymentVoided
 
+    @Mapping(target = "reason", source = "failureReason")
     fun asPaymentFailed(payment: Payment): com.arcadiaeditions.payments.processing.domain.event.PaymentFailed
 }

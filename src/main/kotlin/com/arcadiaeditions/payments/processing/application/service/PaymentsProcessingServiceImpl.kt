@@ -2,6 +2,7 @@ package com.arcadiaeditions.payments.processing.application.service
 
 import com.arcadiaeditions.payments.processing.application.port.driven.event.*
 import com.arcadiaeditions.payments.processing.application.port.driven.jpa.*
+import com.arcadiaeditions.payments.processing.application.port.driven.processor.*
 import com.arcadiaeditions.payments.processing.application.port.driving.*
 import com.arcadiaeditions.payments.processing.application.port.driving.dto.*
 import com.arcadiaeditions.payments.processing.application.service.mapper.*
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional
 open class PaymentsProcessingServiceImpl(
     private val paymentRepository: PaymentRepository,
     private val eventPublisher: EventPublisher,
+    private val paymentProcessor: PaymentProcessor,
     private val clock: java.time.Clock,
 ) : PaymentsProcessingService {
 
@@ -36,13 +38,54 @@ open class PaymentsProcessingServiceImpl(
 
         log.debug("Request authorizePayment: {}", input)
 
+        // redelivery: the orderId already has a Payment (reuse of a FAILED one on PaymentRetried is T-23, P-01 D)
+        paymentRepository.findByOrderId(input.orderId)?.let {
+            return it
+        }
+
         val payment = paymentsProcessingServiceMapper.update(Payment(), input)
-        // TODO: implement this method
-        // emit events
-        eventPublisher.onPaymentAuthorized(eventsMapper.asPaymentAuthorized(payment))
-        eventPublisher.onPaymentDeclined(eventsMapper.asPaymentDeclined(payment))
-        eventPublisher.onPaymentFailed(eventsMapper.asPaymentFailed(payment))
-        return payment
+        payment.status = PaymentStatus.AUTHORIZATION_REQUESTED
+        payment.attemptCount = 1 as Integer
+        val requested = paymentRepository.save(payment)
+
+        val result =
+            paymentProcessor.authorize(
+                AuthorizationRequest(
+                    orderId = input.orderId,
+                    customerId = input.customerId,
+                    paymentMethodId = input.paymentMethodId,
+                    amount = input.amount,
+                    currency = input.currency,
+                )
+            )
+        // A-01 (P-02): the outcome state is set here, though the ZDL transition only names AUTHORIZATION_REQUESTED
+        val now = Instant.now(clock)
+        when (result.outcome) {
+            PaymentProcessorOutcome.APPROVED -> {
+                requested.status = PaymentStatus.AUTHORIZED
+                requested.providerReference = result.providerReference
+                requested.authorizedAt = now
+            }
+            PaymentProcessorOutcome.DECLINED -> {
+                requested.status = PaymentStatus.DECLINED
+                requested.declinedAt = now
+                requested.failureReason = result.reason
+            }
+            PaymentProcessorOutcome.FAILED -> {
+                requested.status = PaymentStatus.FAILED
+                requested.failedAt = now
+                requested.failureReason = result.reason
+            }
+        }
+        val saved = paymentRepository.save(requested)
+
+        // emit only the outcome's event
+        when (result.outcome) {
+            PaymentProcessorOutcome.APPROVED -> eventPublisher.onPaymentAuthorized(eventsMapper.asPaymentAuthorized(saved))
+            PaymentProcessorOutcome.DECLINED -> eventPublisher.onPaymentDeclined(eventsMapper.asPaymentDeclined(saved))
+            PaymentProcessorOutcome.FAILED -> eventPublisher.onPaymentFailed(eventsMapper.asPaymentFailed(saved))
+        }
+        return saved
     }
 
     override fun retryPayment(input: RetryPaymentInput): Payment {

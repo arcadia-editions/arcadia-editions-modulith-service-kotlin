@@ -2,6 +2,7 @@ package com.arcadiaeditions.payments.processing.config
 
 import com.arcadiaeditions.config.TestDataLoader
 import com.arcadiaeditions.payments.processing.adapter.driven.event.*
+import com.arcadiaeditions.payments.processing.adapter.driven.processor.*
 import com.arcadiaeditions.payments.processing.application.port.driving.*
 import com.arcadiaeditions.payments.processing.application.service.*
 import com.arcadiaeditions.payments.processing.domain.*
@@ -17,7 +18,9 @@ open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
 
     val clock: java.time.Clock = com.arcadiaeditions.config.TestClock.FIXED
     private val eventPublisher = InMemoryEventPublisher()
-    protected val paymentsProcessingService = PaymentsProcessingServiceImpl(paymentRepository(), eventPublisher, clock)
+    private val paymentProcessor = FakePaymentProcessor()
+    protected val paymentsProcessingService =
+        PaymentsProcessingServiceImpl(paymentRepository(), eventPublisher, paymentProcessor, clock)
 
     @Bean
     open fun <T : PaymentsProcessingService> paymentsProcessingService(): T {
