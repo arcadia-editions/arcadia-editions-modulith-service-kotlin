@@ -6,7 +6,7 @@ branch: afk/place-order-flow
 
 <!-- Built by zenwave-tasks-from-code-and-models on 2026-11-12 from code generated with kotlin-backend-application
      2.9.0-SNAPSHOT and models service-all 0.9.0. Test data: src/test/resources/data.sql header (chains C-01..C-21,
-     assumptions A-01..A-08, fixed now 2026-10-01T12:00:00Z). Open proposals: P-01 (blocks T-23), P-02 (blocks none,
+     assumptions A-01..A-08, fixed now 2026-10-01T12:00:00Z). Proposals: P-01 accepted D (T-23 follows it); open: P-02 (blocks none,
      assumption A-01), P-03 (blocks T-15). External systems (payment processor, warehouse, e-mail) are ports with fake
      adapters driven by the fixtures' test ids (pm_card_visa, pm_card_chargeDeclined, ...); T-33 picks the real ones. -->
 
@@ -140,12 +140,12 @@ review: [ ]
       test data: data.sql C-12, data.sql C-13
       tests: PaymentsProcessingServiceTest
       blocked by: T-07
-- [!] T-23 bounded AFK authorizePayment on PaymentRetried: authorize the existing FAILED payment again
+- [ ] T-23 bounded AFK authorizePayment on PaymentRetried (P-01 accepted D): load the existing FAILED Payment by orderId, take amount, currency, customerEmail and paymentMethodId from it, authorize it again through the PaymentProcessor port; with no Payment create it as on OrderCreated; any other state does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:132-140, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:56-63, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:85-87, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:133-139
       test data: data.sql C-12
       tests: PaymentsProcessingServiceTest
+      adr: docs/proposals/P-01.md (decision D)
       blocked by: T-22
-      blocked: P-01
 - [ ] T-24 bounded AFK Flow test retry: a processor error on the first attempt (fake pm_card_processorErrorOnce), authorized on the retry, ends in OrderConfirmationSent
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:108-140, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-12

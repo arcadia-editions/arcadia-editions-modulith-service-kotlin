@@ -52,7 +52,7 @@
 -- payments authorizePayment redelivery -> C-01
 -- payments retryPayment from FAILED below limit -> C-12
 -- payments retryPayment from FAILED at limit -> C-13
--- payments authorizePayment from PaymentRetried -> blocked by P-01 (PaymentRetried lacks amount/currency/email/paymentMethodId); C-12 holds them
+-- payments authorizePayment from PaymentRetried -> C-12 (P-01 accepted D: reuse the FAILED Payment, it holds amount/currency/email/paymentMethodId)
 -- payments capturePayment from AUTHORIZED -> C-04 (AUTHORIZED is target of no @transition: P-02)
 -- payments capturePayment captured/capture-failed -> stub-driven
 -- payments capturePayment redelivery -> C-05

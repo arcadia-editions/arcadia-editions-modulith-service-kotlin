@@ -85,7 +85,8 @@ The orchestrator gives the workers the focused command (with the task's `tests:`
 ## Project rules
 
 - Naming conventions (ids, channels, topics): business ids are `String` (`orderId`, `reservationId`, `sku`); events named in past tense, see the ZDLs
-- Decisions already taken that the models don't show: `../arcadia-editions-architecture/docs/case-study-decisions.md`
+- Decisions already taken that the models don't show: `../arcadia-editions-architecture/docs/case-study-decisions.md`, `docs/proposals/P-01.md` (decision D: authorizePayment reuses a FAILED Payment on PaymentRetried)
+- Known lint warnings: 4 `zdl.data-lineage` on `payments-processing-domain-model.zdl:85` (accepted, P-01 D)
 
 ## Known failing tests at the baseline (2026-11-12)
 
