@@ -1,7 +1,7 @@
 # PlaceOrderFlow: tasks
 
 flow: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl
-baseline:
+baseline: baseline/place-order-flow-1
 branch: afk/place-order-flow
 
 <!-- Built by zenwave-tasks-from-code-and-models on 2026-11-12 from code generated with kotlin-backend-application
