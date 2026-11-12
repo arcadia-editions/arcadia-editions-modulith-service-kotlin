@@ -45,12 +45,12 @@ review: [ ]
       test data: data.sql C-01, data/jpa/Order/1.json
       tests: OrdersCheckoutApiControllerTest, OrdersCheckoutApiIntegrationTest
       blocked by: T-05
-- [ ] T-07 advanced AFK authorizePayment on OrderCreated: create the Payment AUTHORIZATION_REQUESTED (attemptCount 1), ask a PaymentProcessor port (fake: pm_card_visa authorizes, pm_card_chargeDeclined declines, pm_card_processorError fails), set AUTHORIZED + providerReference / DECLINED / FAILED (A-01) and emit only that outcome's event; an OrderCreated for an orderId that already has a Payment does nothing
+- [/] T-07 advanced AFK authorizePayment on OrderCreated: create the Payment AUTHORIZATION_REQUESTED (attemptCount 1), ask a PaymentProcessor port (fake: pm_card_visa authorizes, pm_card_chargeDeclined declines, pm_card_processorError fails), set AUTHORIZED + providerReference / DECLINED / FAILED (A-01) and emit only that outcome's event; an OrderCreated for an orderId that already has a Payment does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:108-117, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:56-63, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:84-87, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:104-131
       test data: data.sql C-01
       tests: PaymentsProcessingServiceTest
       blocked by: T-01
-- [ ] T-08 bounded AFK confirmStockReservation: every RESERVED reservation of the orderId -> CONFIRMED (confirmedAt), reserved -> sold, emit StockReservationConfirmed with the items; already CONFIRMED does nothing
+- [/] T-08 bounded AFK confirmStockReservation: every RESERVED reservation of the orderId -> CONFIRMED (confirmedAt), reserved -> sold, emit StockReservationConfirmed with the items; already CONFIRMED does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:155-158, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:61-64, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:120-122, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:138-147
       test data: data.sql C-02, data.sql C-03
       tests: InventoryServiceTest
