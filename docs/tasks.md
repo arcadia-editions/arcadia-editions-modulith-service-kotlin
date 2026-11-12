@@ -65,11 +65,12 @@ review: [ ]
       tests: InventoryServiceTest
       blocked by: T-04
       done: claude-sonnet sonnet
-- [/] T-09 bounded AFK confirmOrder on PaymentAuthorized: load the Order by orderId, guard CREATED, call confirmStockReservation, set CONFIRMED (confirmedAt), emit OrderConfirmed with items and shipping address; an already CONFIRMED order does nothing
+- [x] T-09 bounded AFK confirmOrder on PaymentAuthorized: load the Order by orderId, guard CREATED, call confirmStockReservation, set CONFIRMED (confirmedAt), emit OrderConfirmed with items and shipping address; an already CONFIRMED order does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:146-150, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:82-84, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:100-103, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:138-157
       test data: data.sql C-02, data.sql C-03
       tests: OrdersCheckoutServiceTest
       blocked by: T-05, T-08
+      done: claude-sonnet sonnet
 - [x] T-10 bounded AFK scheduleFulfillment on OrderConfirmed: ask a Warehouse port (fake: schedules), create the Fulfillment SCHEDULED (fulfillmentId, items, address, scheduledAt), emit FulfillmentScheduled; a second OrderConfirmed for the order does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:166-170, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:57-84, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:91-97
       test data: data.sql C-03, data.sql C-04
