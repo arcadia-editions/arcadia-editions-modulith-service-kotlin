@@ -63,4 +63,9 @@ src/test/resources/data/*
 ## Commands of this project
 
 The orchestrator and the workers use the ones in `docs/zenwave-sdd-overlay.md`. Only set here what is specific to
-unattended work: nothing by default.
+unattended work:
+
+- Docker is shared with the sibling project `arcadia-editions-modulith-service-java` (its own AFK loop), and the
+  compose file binds fixed ports (5432, 9092, 2181, 8081). One Testcontainers job at a time across both projects:
+  workers run only unit tests; the orchestrator runs integration tests and slice reviews when `docker ps` shows no
+  other compose project.
