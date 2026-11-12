@@ -28,3 +28,5 @@ build/
 !**/src/test/**/build/
 
 .vscode/
+.zenwave/work/
+.zenwave/handoff/
