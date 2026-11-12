@@ -12,4 +12,7 @@ import org.springframework.stereotype.Repository
 @Repository
 @org.jmolecules.ddd.annotation.Repository
 @org.jmolecules.architecture.layered.InfrastructureLayer
-interface NotificationRepository : JpaRepository<Notification, Long> {}
+interface NotificationRepository : JpaRepository<Notification, Long> {
+
+    fun findByOrderIdAndType(orderId: String, type: NotificationType): Notification?
+}
