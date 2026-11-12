@@ -11,7 +11,7 @@ branch: afk/place-order-flow
      adapters driven by the fixtures' test ids (pm_card_visa, pm_card_chargeDeclined, ...); T-33 picks the real ones. -->
 
 ## S0 Baseline
-review: [ ]
+review: [ ] (round 1 FIX: reports/review-S0.md)
 
 - [x] T-01 mechanical AFK Inject a java.time.Clock bean (system clock; tests fix it at 2026-10-01T12:00:00Z) and use it for every Instant the services set
       tests: OrdersCheckoutServiceTest, InventoryServiceTest, PaymentsProcessingServiceTest
@@ -22,6 +22,13 @@ review: [ ]
 - [x] T-03 mechanical AFK Generated repository updateTest: compare Instants at database precision (micros), not Instant.now() identity
       tests: mvn -q verify -Dit.test='*RepositoryIntegrationTest' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false
       done: claude-sonnet sonnet (green verified by orchestrator: worker's run hit a port conflict)
+- [ ] T-34 bounded AFK ArchitectureTest tolerance: accept only the 4 known module cycles (catalog>payments>fulfillment>orders>catalog, catalog>payments>orders>catalog, fulfillment>orders>payments>fulfillment, orders>payments>orders) and only the enumerated jMolecules layered Infrastructure->Domain messages of catalog.inventory and notifications.consumer; any other Modulith message fails; drop allowEmptyShould(true) where the package exists; correct the comments (cause, count, "code layout, not models")
+      tests: ArchitectureTest
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S0.md (FIX FIRST T-02, SHOULD FIX comment, NOTE allowEmptyShould)
+      adr: docs/proposals/P-04.md
+- [ ] T-35 mechanical AFK Repository updateTest: flush, clear and reload by id before asserting, so Instants are compared as read back from the database
+      tests: mvn -q verify -Dit.test='*RepositoryIntegrationTest' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S0.md (SHOULD FIX T-03)
 
 ## S1 completed (tracer bullet)
 path: StartOrderCheckout > startOrderCheckout > reserveStock[StockReservedResult] > OrderCreated > authorizePayment[authorized]
@@ -68,6 +75,7 @@ review: [ ]
       test data: data.sql C-03, data.sql C-04
       tests: FulfillmentShippingServiceTest
       blocked by: T-01
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S0.md (SHOULD FIX T-01: inject the Clock into FulfillmentShippingServiceImpl)
 - [/] T-11 advanced AFK capturePayment on FulfillmentScheduled: load the Payment by orderId, guard AUTHORIZED, capture through the PaymentProcessor port (fake: captures), set CAPTURED (capturedAt), emit PaymentCaptured with customerEmail; an already CAPTURED payment does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:178-182, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:71-74, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:93-95, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:150-159
       test data: data.sql C-04, data.sql C-05
@@ -78,10 +86,12 @@ review: [ ]
       test data: data.sql C-05, data.sql C-06
       tests: NotificationsConsumerServiceTest
       blocked by: T-01
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S0.md (SHOULD FIX T-01: inject the Clock into NotificationsConsumerServiceImpl)
 - [ ] T-13 advanced AFK Flow test completed: from startOrderCheckout to OrderConfirmationSent across the five modules (Spring Modulith Scenario, Testcontainers)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:73-192, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-06, data/jpa/InventoryPosition/1.json
       tests: PlaceOrderFlowCompletedIntegrationTest
+      note: Spring contexts get Clock.systemUTC(); add a fixed/mutable Clock @Bean for tests (review-S0 NOTE; T-32 needs it too)
       blocked by: T-06, T-09, T-10, T-11, T-12
 
 ## S2 stockGone
