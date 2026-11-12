@@ -5,6 +5,7 @@ import com.arcadiaeditions.common.BaseRepositoryIntegrationTest
 import jakarta.persistence.EntityManager
 import java.math.BigDecimal
 import java.time.*
+import java.time.temporal.ChronoUnit
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -55,6 +56,7 @@ class ProductRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
 
     @Test
     fun updateTest() {
+        val now = Instant.now().truncatedTo(ChronoUnit.MICROS)
         val id = 1L
         val product = productRepository.findByIdOrNull(id) ?: throw NoSuchElementException(" not found with id: $id")
         product.sku = ""
@@ -64,7 +66,7 @@ class ProductRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         product.currency = ""
         product.editionSize = 0 as Integer
         product.trackingMode = InventoryTrackingMode.values()[0]
-        product.launchAt = Instant.now()
+        product.launchAt = now
         product.status = ProductStatus.values()[0]
 
         val updated = productRepository.save(product)
@@ -75,7 +77,7 @@ class ProductRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         Assertions.assertEquals("", updated.currency)
         Assertions.assertEquals(0 as Integer, updated.editionSize)
         Assertions.assertEquals(InventoryTrackingMode.values()[0], updated.trackingMode)
-        Assertions.assertEquals(Instant.now(), updated.launchAt)
+        Assertions.assertEquals(now, updated.launchAt)
         Assertions.assertEquals(ProductStatus.values()[0], updated.status)
     }
 

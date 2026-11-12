@@ -6,6 +6,7 @@ import com.arcadiaeditions.orders.checkout.core.outbound.jpa.OrderRepository
 import jakarta.persistence.EntityManager
 import java.math.BigDecimal
 import java.time.*
+import java.time.temporal.ChronoUnit
 import java.util.List
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -61,6 +62,7 @@ class OrderRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
 
     @Test
     fun updateTest() {
+        val now = Instant.now().truncatedTo(ChronoUnit.MICROS)
         val id = 1L
         val order = orderRepository.findByIdOrNull(id) ?: throw NoSuchElementException(" not found with id: $id")
         order.orderId = ""
@@ -72,9 +74,9 @@ class OrderRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         order.shippingAddress = ShippingAddress()
         order.totalAmount = BigDecimal.valueOf(0)
         order.currency = ""
-        order.createdAt = Instant.now()
-        order.confirmedAt = Instant.now()
-        order.cancelledAt = Instant.now()
+        order.createdAt = now
+        order.confirmedAt = now
+        order.cancelledAt = now
         order.cancellationReason = ""
 
         val updated = orderRepository.save(order)
@@ -87,9 +89,9 @@ class OrderRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         Assertions.assertEquals(ShippingAddress(), updated.shippingAddress)
         Assertions.assertEquals(BigDecimal.valueOf(0), updated.totalAmount)
         Assertions.assertEquals("", updated.currency)
-        Assertions.assertEquals(Instant.now(), updated.createdAt)
-        Assertions.assertEquals(Instant.now(), updated.confirmedAt)
-        Assertions.assertEquals(Instant.now(), updated.cancelledAt)
+        Assertions.assertEquals(now, updated.createdAt)
+        Assertions.assertEquals(now, updated.confirmedAt)
+        Assertions.assertEquals(now, updated.cancelledAt)
         Assertions.assertEquals("", updated.cancellationReason)
     }
 

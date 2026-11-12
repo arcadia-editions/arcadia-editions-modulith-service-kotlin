@@ -4,6 +4,7 @@ import com.arcadiaeditions.common.BaseRepositoryIntegrationTest
 import com.arcadiaeditions.fulfillment.shipping.domain.*
 import jakarta.persistence.EntityManager
 import java.time.*
+import java.time.temporal.ChronoUnit
 import java.util.List
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -59,6 +60,7 @@ class FulfillmentRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
 
     @Test
     fun updateTest() {
+        val now = Instant.now().truncatedTo(ChronoUnit.MICROS)
         val id = 1L
         val fulfillment =
             fulfillmentRepository.findByIdOrNull(id) ?: throw NoSuchElementException(" not found with id: $id")
@@ -70,9 +72,9 @@ class FulfillmentRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         fulfillment.items = List.of(FulfillmentItem())
         fulfillment.carrierCode = ""
         fulfillment.trackingNumber = ""
-        fulfillment.scheduledAt = Instant.now()
-        fulfillment.readyAt = Instant.now()
-        fulfillment.failedAt = Instant.now()
+        fulfillment.scheduledAt = now
+        fulfillment.readyAt = now
+        fulfillment.failedAt = now
         fulfillment.failureReason = ""
 
         val updated = fulfillmentRepository.save(fulfillment)
@@ -84,9 +86,9 @@ class FulfillmentRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         Assertions.assertEquals(List.of(FulfillmentItem()), updated.items)
         Assertions.assertEquals("", updated.carrierCode)
         Assertions.assertEquals("", updated.trackingNumber)
-        Assertions.assertEquals(Instant.now(), updated.scheduledAt)
-        Assertions.assertEquals(Instant.now(), updated.readyAt)
-        Assertions.assertEquals(Instant.now(), updated.failedAt)
+        Assertions.assertEquals(now, updated.scheduledAt)
+        Assertions.assertEquals(now, updated.readyAt)
+        Assertions.assertEquals(now, updated.failedAt)
         Assertions.assertEquals("", updated.failureReason)
     }
 

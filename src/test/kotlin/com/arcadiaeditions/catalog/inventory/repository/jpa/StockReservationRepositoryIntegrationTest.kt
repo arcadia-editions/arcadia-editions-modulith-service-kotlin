@@ -4,6 +4,7 @@ import com.arcadiaeditions.catalog.inventory.domain.*
 import com.arcadiaeditions.common.BaseRepositoryIntegrationTest
 import jakarta.persistence.EntityManager
 import java.time.*
+import java.time.temporal.ChronoUnit
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -56,6 +57,7 @@ class StockReservationRepositoryIntegrationTest : BaseRepositoryIntegrationTest(
 
     @Test
     fun updateTest() {
+        val now = Instant.now().truncatedTo(ChronoUnit.MICROS)
         val id = 1L
         val stockReservation =
             stockReservationRepository.findByIdOrNull(id) ?: throw NoSuchElementException(" not found with id: $id")
@@ -64,10 +66,10 @@ class StockReservationRepositoryIntegrationTest : BaseRepositoryIntegrationTest(
         stockReservation.sku = ""
         stockReservation.quantity = 0 as Integer
         stockReservation.status = ReservationStatus.values()[0]
-        stockReservation.reservedAt = Instant.now()
-        stockReservation.expiresAt = Instant.now()
-        stockReservation.confirmedAt = Instant.now()
-        stockReservation.releasedAt = Instant.now()
+        stockReservation.reservedAt = now
+        stockReservation.expiresAt = now
+        stockReservation.confirmedAt = now
+        stockReservation.releasedAt = now
         stockReservation.releaseReason = StockReleaseReason.values()[0]
 
         val updated = stockReservationRepository.save(stockReservation)
@@ -76,10 +78,10 @@ class StockReservationRepositoryIntegrationTest : BaseRepositoryIntegrationTest(
         Assertions.assertEquals("", updated.sku)
         Assertions.assertEquals(0 as Integer, updated.quantity)
         Assertions.assertEquals(ReservationStatus.values()[0], updated.status)
-        Assertions.assertEquals(Instant.now(), updated.reservedAt)
-        Assertions.assertEquals(Instant.now(), updated.expiresAt)
-        Assertions.assertEquals(Instant.now(), updated.confirmedAt)
-        Assertions.assertEquals(Instant.now(), updated.releasedAt)
+        Assertions.assertEquals(now, updated.reservedAt)
+        Assertions.assertEquals(now, updated.expiresAt)
+        Assertions.assertEquals(now, updated.confirmedAt)
+        Assertions.assertEquals(now, updated.releasedAt)
         Assertions.assertEquals(StockReleaseReason.values()[0], updated.releaseReason)
     }
 
