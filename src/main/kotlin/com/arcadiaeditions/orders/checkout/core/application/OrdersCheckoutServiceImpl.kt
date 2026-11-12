@@ -8,6 +8,7 @@ import com.arcadiaeditions.orders.checkout.core.inbound.dtos.*
 import com.arcadiaeditions.orders.checkout.core.outbound.events.*
 import com.arcadiaeditions.orders.checkout.core.outbound.jpa.*
 import com.arcadiaeditions.catalog.inventory.domain.ReserveStockOutcome
+import com.arcadiaeditions.catalog.inventory.service.dtos.ConfirmStockReservationInput
 import com.arcadiaeditions.catalog.inventory.service.dtos.ReserveStockInput
 import com.arcadiaeditions.catalog.inventory.service.dtos.ReserveStockItemInput
 import java.math.*
@@ -66,26 +67,21 @@ open class OrdersCheckoutServiceImpl(
     }
 
     override fun confirmOrder(input: ConfirmOrderInput): Order {
-        // TODO: call CatalogInventoryZdl InventoryService.confirmStockReservation(ConfirmStockReservationInput) ->
-        // StockReservation
-        //       then emit one of: StockReservationConfirmed
 
         log.debug("Request confirmOrder: {}", input)
 
-        // TODO CUSTOM_REQUIRED: load the Order this transition applies to, e.g. by a correlation key in the input
-        val foundOrder: Order? = emptyList<Order>().firstOrNull()
-        return foundOrder
-            ?.let { existingOrder ->
-                OrderTransitions.ensureCanConfirmOrder(existingOrder)
-                ordersCheckoutServiceMapper.update(existingOrder, input)
-                existingOrder.status = OrderStatus.CONFIRMED
-                existingOrder
-            }
-            ?.let { orderRepository.save(it) }
-            ?.also {
-                // emit events
-                eventPublisher.onOrderConfirmed(eventsMapper.asOrderConfirmed(it))
-            } ?: throw NoSuchElementException("Order not found")
+        val order = orderRepository.findByOrderId(input.orderId) ?: throw NoSuchElementException("Order not found")
+        // redelivery: an already CONFIRMED order does nothing
+        if (order.status == OrderStatus.CONFIRMED) {
+            return order
+        }
+        OrderTransitions.ensureCanConfirmOrder(order)
+        inventoryService.confirmStockReservation(ConfirmStockReservationInput(orderId = input.orderId))
+        order.status = OrderStatus.CONFIRMED
+        order.confirmedAt = Instant.now(clock)
+        val saved = orderRepository.save(order)
+        eventPublisher.onOrderConfirmed(eventsMapper.asOrderConfirmed(saved))
+        return saved
     }
 
     override fun cancelOrder(input: CancelOrderInput): Order {

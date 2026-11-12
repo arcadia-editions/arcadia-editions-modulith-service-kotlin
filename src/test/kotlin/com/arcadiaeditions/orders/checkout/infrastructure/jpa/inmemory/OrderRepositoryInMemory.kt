@@ -6,4 +6,7 @@ import java.math.*
 import java.time.*
 import java.util.*
 
-class OrderRepositoryInMemory : InMemoryJpaRepository<Order, Long>(), OrderRepository {}
+class OrderRepositoryInMemory : InMemoryJpaRepository<Order, Long>(), OrderRepository {
+
+    override fun findByOrderId(orderId: String): Order? = findAll().firstOrNull { it.orderId == orderId }
+}
