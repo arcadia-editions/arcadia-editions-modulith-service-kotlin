@@ -70,12 +70,13 @@ review: [ ]
       test data: data.sql C-02, data.sql C-03
       tests: OrdersCheckoutServiceTest
       blocked by: T-05, T-08
-- [/] T-10 bounded AFK scheduleFulfillment on OrderConfirmed: ask a Warehouse port (fake: schedules), create the Fulfillment SCHEDULED (fulfillmentId, items, address, scheduledAt), emit FulfillmentScheduled; a second OrderConfirmed for the order does nothing
+- [x] T-10 bounded AFK scheduleFulfillment on OrderConfirmed: ask a Warehouse port (fake: schedules), create the Fulfillment SCHEDULED (fulfillmentId, items, address, scheduledAt), emit FulfillmentScheduled; a second OrderConfirmed for the order does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:166-170, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:57-84, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:91-97
       test data: data.sql C-03, data.sql C-04
       tests: FulfillmentShippingServiceTest
       blocked by: T-01
       fixes: .zenwave/handoff/place-order-flow/reports/review-S0.md (SHOULD FIX T-01: inject the Clock into FulfillmentShippingServiceImpl)
+      done: claude-sonnet sonnet
 - [/] T-11 advanced AFK capturePayment on FulfillmentScheduled: load the Payment by orderId, guard AUTHORIZED, capture through the PaymentProcessor port (fake: captures), set CAPTURED (capturedAt), emit PaymentCaptured with customerEmail; an already CAPTURED payment does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:178-182, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:71-74, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:93-95, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:150-159
       test data: data.sql C-04, data.sql C-05
