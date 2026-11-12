@@ -52,7 +52,7 @@ review: [ ]
       tests: OrdersCheckoutServiceTest
       blocked by: T-04
       done: claude-sonnet sonnet
-- [ ] T-06 mechanical AFK Web: POST /orders/start-checkout answers 201 with the Order, GET /orders/{id} 200 or 404
+- [/] T-06 mechanical AFK Web: POST /orders/start-checkout answers 201 with the Order, GET /orders/{id} 200 or 404
       model: ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:92-111, ../arcadia-editions-modulith-api/orders-checkout-openapi.yml:32-70
       test data: data.sql C-01, data/jpa/Order/1.json
       tests: OrdersCheckoutApiControllerTest, OrdersCheckoutApiIntegrationTest
@@ -117,7 +117,7 @@ review: [ ]
       tests: OrdersCheckoutApiControllerTest, OrdersCheckoutApiIntegrationTest
       blocked by: T-06, T-14
       adr: docs/proposals/P-03.md (decision A, code only)
-- [ ] T-16 bounded AFK sendStockUnavailableNotification on StockUnavailable: Notification STOCK_UNAVAILABLE with the skus, SENT, emit StockUnavailableNotificationSent; no duplicate on redelivery
+- [/] T-16 bounded AFK sendStockUnavailableNotification on StockUnavailable: Notification STOCK_UNAVAILABLE with the skus, SENT, emit StockUnavailableNotificationSent; no duplicate on redelivery
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:199-202, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:67-76, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:92-94, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:112-121
       test data: data.sql C-07
       tests: NotificationsConsumerServiceTest
