@@ -12,4 +12,7 @@ import org.springframework.stereotype.Repository
 @Repository
 @org.jmolecules.ddd.annotation.Repository
 @org.jmolecules.architecture.hexagonal.SecondaryPort
-interface PaymentRepository : JpaRepository<Payment, Long> {}
+interface PaymentRepository : JpaRepository<Payment, Long> {
+
+    fun findByOrderId(orderId: String): Payment?
+}
