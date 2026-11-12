@@ -8,6 +8,7 @@ import com.arcadiaeditions.orders.checkout.core.inbound.dtos.*
 import com.arcadiaeditions.orders.checkout.core.outbound.jpa.*
 import com.arcadiaeditions.orders.checkout.infrastructure.jpa.inmemory.*
 import com.arcadiaeditions.config.TestClock
+import com.arcadiaeditions.orders.checkout.core.domain.events.OrderConfirmed
 import com.arcadiaeditions.orders.checkout.core.domain.events.OrderCreated
 import com.arcadiaeditions.orders.checkout.infrastructure.events.InMemoryEventPublisher
 import java.math.BigDecimal
@@ -98,7 +99,48 @@ class OrdersCheckoutServiceTest {
     }
 
     @Test
-    fun confirmOrderTest() { // TODO: implement this test
+    fun confirmOrderTest() {
+        // C-02: Order CREATED, 2 reservations RESERVED
+        val order = ordersCheckoutService.confirmOrder(ConfirmOrderInput("ORD-002"))
+
+        assertEquals(OrderStatus.CONFIRMED, order.status)
+        assertEquals(TestClock.NOW, order.confirmedAt)
+        assertEquals(OrderStatus.CONFIRMED, orderRepository.findAll().first { it.orderId == "ORD-002" }.status)
+
+        val reservations =
+            context.inventoryContext.stockReservationRepository().findAll().filter { it.orderId == "ORD-002" }
+        assertEquals(2, reservations.size)
+        assertTrue(reservations.all { it.status == com.arcadiaeditions.catalog.inventory.domain.ReservationStatus.CONFIRMED })
+
+        val events = (context.eventPublisher() as InMemoryEventPublisher).getEvents()
+        assertEquals(1, events.size)
+        val confirmed = events[0] as OrderConfirmed
+        assertEquals("ORD-002", confirmed.orderId)
+        assertEquals("CUST-002", confirmed.customerId)
+        assertEquals(TestClock.NOW, confirmed.confirmedAt)
+        assertEquals(listOf("SKU-001", "SKU-002"), confirmed.items!!.map { it.sku })
+        assertEquals(listOf(2, 1), confirmed.items!!.map { it.quantity!!.toInt() })
+        assertEquals("Madrid", confirmed.shippingAddress!!.city)
+        assertEquals("Calle Ficticia 1", confirmed.shippingAddress!!.line1)
+    }
+
+    @Test
+    fun confirmOrderAlreadyConfirmedDoesNothingTest() {
+        // C-03: Order CONFIRMED (redelivery)
+        val before = orderRepository.findAll().first { it.orderId == "ORD-003" }.confirmedAt
+
+        val order = ordersCheckoutService.confirmOrder(ConfirmOrderInput("ORD-003"))
+
+        assertEquals(OrderStatus.CONFIRMED, order.status)
+        assertEquals(before, order.confirmedAt)
+        assertTrue((context.eventPublisher() as InMemoryEventPublisher).getEvents().isEmpty())
+    }
+
+    @Test
+    fun confirmOrderNotFoundTest() {
+        org.junit.jupiter.api.Assertions.assertThrows(NoSuchElementException::class.java) {
+            ordersCheckoutService.confirmOrder(ConfirmOrderInput("ORD-NOPE"))
+        }
     }
 
     @Test
