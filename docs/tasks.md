@@ -35,11 +35,12 @@ review: [ ]
       tests: InventoryServiceTest
       blocked by: T-01
       done: claude-sonnet sonnet
-- [/] T-05 bounded AFK startOrderCheckout: call reserveStock in-process; on RESERVED create the Order CREATED (orderId, totalAmount = sum of quantity x unitPrice) and emit OrderCreated (amount = totalAmount)
+- [x] T-05 bounded AFK startOrderCheckout: call reserveStock in-process; on RESERVED create the Order CREATED (orderId, totalAmount = sum of quantity x unitPrice) and emit OrderCreated (amount = totalAmount)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:73-89, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:61-80, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:95-98, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:114-123
       test data: data/jpa/InventoryPosition/1.json
       tests: OrdersCheckoutServiceTest
       blocked by: T-04
+      done: claude-sonnet sonnet
 - [ ] T-06 mechanical AFK Web: POST /orders/start-checkout answers 201 with the Order, GET /orders/{id} 200 or 404
       model: ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:92-111, ../arcadia-editions-modulith-api/orders-checkout-openapi.yml:32-70
       test data: data.sql C-01, data/jpa/Order/1.json
