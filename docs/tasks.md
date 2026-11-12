@@ -93,7 +93,7 @@ review: [ ]
       test data: data.sql C-07
       tests: OrdersCheckoutApiControllerTest, OrdersCheckoutApiIntegrationTest
       blocked by: T-06, T-14
-      blocked: P-03
+      blocked: P-03 (accepted A; waits on the OpenAPI change and regeneration)
 - [ ] T-16 bounded AFK sendStockUnavailableNotification on StockUnavailable: Notification STOCK_UNAVAILABLE with the skus, SENT, emit StockUnavailableNotificationSent; no duplicate on redelivery
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:199-202, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:67-76, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:92-94, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:112-121
       test data: data.sql C-07
