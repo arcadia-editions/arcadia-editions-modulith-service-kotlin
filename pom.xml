@@ -18,15 +18,6 @@
 		<java.version>24</java.version>
 		<kotlin.version>2.3.21</kotlin.version>
 
-		<basePackage>com.arcadiaeditions</basePackage>
-		<openApiApiPackage>${basePackage}.adapters.web</openApiApiPackage>
-		<openApiModelPackage>${basePackage}.adapters.web.model</openApiModelPackage>
-
-		<asyncapi.inputSpec>${project.basedir}/src/main/resources/public/apis/asyncapi.yml</asyncapi.inputSpec>
-		<asyncApiModelPackage>${basePackage}.events.dtos</asyncApiModelPackage>
-		<asyncApiProducerApiPackage>${basePackage}.events</asyncApiProducerApiPackage>
-		<asyncApiConsumerApiPackage>${basePackage}.commands</asyncApiConsumerApiPackage>
-
 		<spring-boot.version>${project.parent.version}</spring-boot.version>
 		<spring-cloud.version>2025.1.0</spring-cloud.version>
 		<spring-modulith.version>2.0.0</spring-modulith.version>
@@ -35,7 +26,7 @@
 
 		<jmolecules-bom.version>2025.0.2</jmolecules-bom.version>
 
-		<zenwave.version>2.7.1</zenwave.version>
+		<arcadia-models.version>0.9.0</arcadia-models.version>
 		<openapi-generator-maven-plugin.version>7.17.0</openapi-generator-maven-plugin.version>
 
 		<jakarta.validation-api.version>3.1.1</jakarta.validation-api.version>
@@ -45,6 +36,23 @@
 		<springdoc-openapi-starter-webmvc-ui.version>2.8.3</springdoc-openapi-starter-webmvc-ui.version>
 		<spotless-maven-plugin.version>2.44.3</spotless-maven-plugin.version>
 	</properties>
+
+	<!-- arcadia-editions-architecture models jar (service-all), also needed by openapi-generator-maven-plugin.
+	     Credentials: <server><id>github</id> in ~/.m2/settings.xml -->
+	<repositories>
+		<repository>
+			<id>github</id>
+			<url>https://maven.pkg.github.com/arcadia-editions/arcadia-editions-architecture</url>
+			<snapshots><enabled>false</enabled></snapshots>
+		</repository>
+	</repositories>
+	<pluginRepositories>
+		<pluginRepository>
+			<id>github</id>
+			<url>https://maven.pkg.github.com/arcadia-editions/arcadia-editions-architecture</url>
+			<snapshots><enabled>false</enabled></snapshots>
+		</pluginRepository>
+	</pluginRepositories>
 
 	<dependencyManagement>
 		<dependencies>
@@ -203,6 +211,12 @@
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 			<version>${springdoc-openapi-starter-webmvc-ui.version}</version>
 		</dependency>
+		<!-- arcadia-editions-architecture models: ZDL + OpenAPI (GitHub Packages) -->
+		<dependency>
+			<groupId>com.arcadiaeditions.modulith.application.arcadia-editions-modulith</groupId>
+			<artifactId>service-all</artifactId>
+			<version>${arcadia-models.version}</version>
+		</dependency>
 
 		<!-- test -->
 		<dependency>
@@ -258,8 +272,8 @@
 		<testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
 		<plugins>
 			<!-- `extensions` replaces maven-compiler's default executions so kotlinc runs before javac (generated
-			     AsyncAPI sources are Java). Sources come from the project's compile source roots, which the
-			     openapi and zenwave plugins register for their generated code. -->
+			     OpenAPI sources are Java). Sources come from the project's compile source roots, which the
+			     openapi plugin registers for its generated code. -->
 			<plugin>
 				<groupId>org.jetbrains.kotlin</groupId>
 				<artifactId>kotlin-maven-plugin</artifactId>
@@ -405,11 +419,11 @@
 						</goals>
 						<phase>generate-sources</phase>
 						<configuration>
-							<inputSpec>${project.basedir}/src/main/resources/public/apis/openapi.yml</inputSpec>
+							<inputSpec>com/arcadiaeditions/modulith/application/arcadia-editions-modulith/orders-checkout-openapi.yml</inputSpec>
 							<skipIfSpecIsUnchanged>true</skipIfSpecIsUnchanged>
 							<generatorName>kotlin-spring</generatorName>
-							<apiPackage>${openApiApiPackage}</apiPackage>
-							<modelPackage>${openApiModelPackage}</modelPackage>
+							<apiPackage>com.arcadiaeditions.orders.checkout.adapters.web</apiPackage>
+							<modelPackage>com.arcadiaeditions.orders.checkout.adapters.web.dtos</modelPackage>
 							<modelNameSuffix>DTO</modelNameSuffix>
 							<addCompileSourceRoot>true</addCompileSourceRoot>
 							<generateSupportingFiles>false</generateSupportingFiles>
@@ -433,66 +447,15 @@
 						</configuration>
 					</execution>
 				</executions>
+				<dependencies>
+					<dependency>
+						<groupId>com.arcadiaeditions.modulith.application.arcadia-editions-modulith</groupId>
+						<artifactId>service-all</artifactId>
+						<version>${arcadia-models.version}</version>
+					</dependency>
+				</dependencies>
 			</plugin>
 		</plugins>
 	</build>
-
-	<profiles>
-		<profile>
-			<id>asyncapi-code-generation</id>
-			<activation>
-				<file>
-					<exists>${asyncapi.inputSpec}</exists>
-				</file>
-			</activation>
-			<build>
-				<plugins>
-					<plugin>
-						<groupId>io.zenwave360.sdk</groupId>
-						<artifactId>zenwave-sdk-maven-plugin</artifactId>
-						<version>${zenwave.version}</version>
-						<configuration>
-							<inputSpec>${asyncapi.inputSpec}</inputSpec>
-							<skip>false</skip>
-							<addCompileSourceRoot>true</addCompileSourceRoot>
-							<addTestCompileSourceRoot>true</addTestCompileSourceRoot>
-							<!-- <authentication> -->
-							<!--     <authentication><key>API_KEY</key><value>XXX</value></authentication> -->
-							<!-- </authentication> -->
-						</configuration>
-						<executions>
-							<execution>
-								<id>generate-asyncapi</id>
-								<phase>generate-sources</phase>
-								<goals>
-									<goal>generate</goal>
-								</goals>
-								<configuration>
-									<generatorName>AsyncAPIGenerator</generatorName>
-									<configOptions>
-										<role>provider</role>
-										<transactionalOutbox>modulith</transactionalOutbox>
-										<includeApplicationEventListener>true</includeApplicationEventListener>
-										<!-- <modelPackage> is required for json-schema payloads, drop it when payloads are avro -->
-										<modelPackage>${asyncApiModelPackage}</modelPackage>
-										<producerApiPackage>${asyncApiProducerApiPackage}</producerApiPackage>
-										<consumerApiPackage>${asyncApiConsumerApiPackage}</consumerApiPackage>
-										<!-- for avro payloads: <avroCompilerProperties.imports>${asyncapi.avro.imports}</avroCompilerProperties.imports> -->
-									</configOptions>
-								</configuration>
-							</execution>
-						</executions>
-						<dependencies>
-							<dependency>
-								<groupId>io.zenwave360.sdk.plugins</groupId>
-								<artifactId>asyncapi-generator</artifactId>
-								<version>${zenwave.version}</version>
-							</dependency>
-						</dependencies>
-					</plugin>
-				</plugins>
-			</build>
-		</profile>
-	</profiles>
 
 </project>
