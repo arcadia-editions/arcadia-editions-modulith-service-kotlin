@@ -22,11 +22,11 @@ review: [ ] (round 1 FIX: reports/review-S0.md)
 - [x] T-03 mechanical AFK Generated repository updateTest: compare Instants at database precision (micros), not Instant.now() identity
       tests: mvn -q verify -Dit.test='*RepositoryIntegrationTest' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false
       done: claude-sonnet sonnet (green verified by orchestrator: worker's run hit a port conflict)
-- [ ] T-34 bounded AFK ArchitectureTest tolerance: accept only the 4 known module cycles (catalog>payments>fulfillment>orders>catalog, catalog>payments>orders>catalog, fulfillment>orders>payments>fulfillment, orders>payments>orders) and only the enumerated jMolecules layered Infrastructure->Domain messages of catalog.inventory and notifications.consumer; any other Modulith message fails; drop allowEmptyShould(true) where the package exists; correct the comments (cause, count, "code layout, not models")
+- [/] T-34 bounded AFK ArchitectureTest tolerance: accept only the 4 known module cycles (catalog>payments>fulfillment>orders>catalog, catalog>payments>orders>catalog, fulfillment>orders>payments>fulfillment, orders>payments>orders) and only the enumerated jMolecules layered Infrastructure->Domain messages of catalog.inventory and notifications.consumer; any other Modulith message fails; drop allowEmptyShould(true) where the package exists; correct the comments (cause, count, "code layout, not models")
       tests: ArchitectureTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S0.md (FIX FIRST T-02, SHOULD FIX comment, NOTE allowEmptyShould)
       adr: docs/proposals/P-04.md
-- [ ] T-35 mechanical AFK Repository updateTest: flush, clear and reload by id before asserting, so Instants are compared as read back from the database
+- [/] T-35 mechanical AFK Repository updateTest: flush, clear and reload by id before asserting, so Instants are compared as read back from the database
       tests: mvn -q verify -Dit.test='*RepositoryIntegrationTest' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false
       fixes: .zenwave/handoff/place-order-flow/reports/review-S0.md (SHOULD FIX T-03)
 
@@ -78,12 +78,13 @@ review: [ ]
       blocked by: T-01
       fixes: .zenwave/handoff/place-order-flow/reports/review-S0.md (SHOULD FIX T-01: inject the Clock into FulfillmentShippingServiceImpl)
       done: claude-sonnet sonnet
-- [/] T-11 advanced AFK capturePayment on FulfillmentScheduled: load the Payment by orderId, guard AUTHORIZED, capture through the PaymentProcessor port (fake: captures), set CAPTURED (capturedAt), emit PaymentCaptured with customerEmail; an already CAPTURED payment does nothing
+- [x] T-11 advanced AFK capturePayment on FulfillmentScheduled: load the Payment by orderId, guard AUTHORIZED, capture through the PaymentProcessor port (fake: captures), set CAPTURED (capturedAt), emit PaymentCaptured with customerEmail; an already CAPTURED payment does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:178-182, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:71-74, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:93-95, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:150-159
       test data: data.sql C-04, data.sql C-05
       tests: PaymentsProcessingServiceTest
       blocked by: T-07
-- [ ] T-12 bounded AFK sendOrderConfirmation on PaymentCaptured: create the Notification ORDER_CONFIRMATION by EMAIL to customerEmail through an EmailSender port (fake), SENT (sentAt) (A-01), emit OrderConfirmationSent; no second notification for the same order and type
+      done: claude-opus opus
+- [/] T-12 bounded AFK sendOrderConfirmation on PaymentCaptured: create the Notification ORDER_CONFIRMATION by EMAIL to customerEmail through an EmailSender port (fake), SENT (sentAt) (A-01), emit OrderConfirmationSent; no second notification for the same order and type
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:189-192, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:61-65, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:88-90, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:102-110
       test data: data.sql C-05, data.sql C-06
       tests: NotificationsConsumerServiceTest
