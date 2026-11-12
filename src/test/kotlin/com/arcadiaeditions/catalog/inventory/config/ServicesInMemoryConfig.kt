@@ -17,7 +17,7 @@ open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
 
     val clock: java.time.Clock = com.arcadiaeditions.config.TestClock.FIXED
     private val eventPublisher = InMemoryEventPublisher()
-    protected val inventoryService = InventoryServiceImpl(stockReservationRepository(), eventPublisher, clock)
+    protected val inventoryService = InventoryServiceImpl(stockReservationRepository(), inventoryPositionRepository(), eventPublisher, clock)
     protected val inventoryBackofficeService =
         InventoryBackofficeServiceImpl(inventoryPositionRepository(), eventPublisher)
 

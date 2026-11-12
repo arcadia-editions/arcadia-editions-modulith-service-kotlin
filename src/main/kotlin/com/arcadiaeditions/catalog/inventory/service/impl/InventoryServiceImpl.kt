@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional
 @org.jmolecules.architecture.layered.ApplicationLayer
 open class InventoryServiceImpl(
     private val stockReservationRepository: StockReservationRepository,
+    private val inventoryPositionRepository: InventoryPositionRepository,
     private val eventPublisher: EventPublisher,
     private val clock: java.time.Clock,
 ) : InventoryService {
@@ -35,9 +36,56 @@ open class InventoryServiceImpl(
 
         log.debug("Request reserveStock: {}", input)
 
-        val stockReservation = inventoryServiceMapper.update(StockReservation(), input)
-        // TODO: implement this method
-        return inventoryServiceMapper.asReserveStockResult(stockReservation)
+        // all-or-nothing: check every line first (lines of the same sku add up)
+        val requested = input.items.groupBy { it.sku!! }.mapValues { (_, lines) -> lines.sumOf { it.quantity!!.toInt() } }
+        val positions = requested.keys.associateWith { inventoryPositionRepository.findBySku(it) }
+        val short =
+            input.items.filter { line ->
+                val available = positions[line.sku!!]?.availableQuantity?.toInt() ?: 0
+                requested.getValue(line.sku!!) > available
+            }
+        if (short.isNotEmpty()) {
+            val unavailable = StockUnavailableResult(orderId = input.orderId)
+            short.distinctBy { it.sku }.forEach { line ->
+                unavailable.addUnavailableItems(
+                    StockUnavailableLine(
+                        sku = line.sku,
+                        requestedQuantity = requested.getValue(line.sku!!) as Integer,
+                        availableQuantity = (positions[line.sku!!]?.availableQuantity?.toInt() ?: 0) as Integer,
+                    )
+                )
+            }
+            return ReserveStockResult(ReserveStockOutcome.UNAVAILABLE, null, unavailable)
+        }
+
+        val now = clock.instant()
+        val expiresAt = now.plus(Duration.ofMinutes(10))
+        input.items.forEach { line ->
+            val position = positions.getValue(line.sku!!)!!
+            val quantity = line.quantity!!.toInt()
+            position.availableQuantity = (position.availableQuantity!!.toInt() - quantity) as Integer
+            position.reservedQuantity = (position.reservedQuantity!!.toInt() + quantity) as Integer
+        }
+        inventoryPositionRepository.saveAll(positions.values.filterNotNull())
+        val reservations =
+            stockReservationRepository.saveAll(
+                input.items.map { line ->
+                    StockReservation(
+                        reservationId = "RES-" + java.util.UUID.randomUUID(),
+                        orderId = input.orderId,
+                        sku = line.sku,
+                        quantity = line.quantity,
+                        status = ReservationStatus.RESERVED,
+                        reservedAt = now,
+                        expiresAt = expiresAt,
+                    )
+                }
+            )
+        val reserved = StockReservedResult(orderId = input.orderId, expiresAt = expiresAt)
+        reservations.forEach {
+            reserved.addReservations(StockReservedLine(it.reservationId, it.sku, it.quantity, it.reservedAt))
+        }
+        return ReserveStockResult(ReserveStockOutcome.RESERVED, reserved, null)
     }
 
     override fun releaseStock(input: ReleaseStockInput): List<StockReservation> {
