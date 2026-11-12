@@ -1,0 +1,26 @@
+package com.arcadiaeditions.orders.checkout.core.domain.events
+
+import com.arcadiaeditions.orders.checkout.core.domain.*
+import jakarta.validation.constraints.*
+import java.io.Serializable
+import java.math.*
+import java.time.*
+import java.util.*
+
+/**  */
+@org.springframework.modulith.NamedInterface("events.OrderCreated")
+@org.jmolecules.event.annotation.DomainEvent
+data class OrderCreated(
+    var orderId: String? = null,
+    var version: Integer? = null,
+    var customerId: String? = null,
+    var customerEmail: String? = null,
+    var paymentMethodId: String? = null,
+    var amount: BigDecimal? = null,
+    var currency: String? = null,
+) : Serializable {
+
+    companion object {
+        private const val serialVersionUID: Long = 1L
+    }
+}

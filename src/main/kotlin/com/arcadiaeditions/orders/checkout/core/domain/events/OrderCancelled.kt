@@ -1,0 +1,25 @@
+package com.arcadiaeditions.orders.checkout.core.domain.events
+
+import com.arcadiaeditions.orders.checkout.core.domain.*
+import jakarta.validation.constraints.*
+import java.io.Serializable
+import java.math.*
+import java.time.*
+import java.util.*
+
+/**  */
+@org.springframework.modulith.NamedInterface("events.OrderCancelled")
+@org.jmolecules.event.annotation.DomainEvent
+data class OrderCancelled(
+    var orderId: String? = null,
+    var version: Integer? = null,
+    var customerId: String? = null,
+    var customerEmail: String? = null,
+    var reason: String? = null,
+    var cancelledAt: Instant? = null,
+) : Serializable {
+
+    companion object {
+        private const val serialVersionUID: Long = 1L
+    }
+}

@@ -1,0 +1,11 @@
+package com.arcadiaeditions.orders.checkout.core.inbound.dtos
+
+import com.arcadiaeditions.orders.checkout.core.domain.*
+import jakarta.validation.constraints.*
+import java.io.Serializable
+import java.math.*
+import java.time.*
+
+/** CancelOrderInput. */
+@org.jmolecules.ddd.annotation.ValueObject
+data class CancelOrderInput(@NotNull val orderId: String, @NotNull val reason: String) : Serializable {}

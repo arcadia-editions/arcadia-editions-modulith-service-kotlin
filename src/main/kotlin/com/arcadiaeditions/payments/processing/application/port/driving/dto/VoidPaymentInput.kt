@@ -1,0 +1,11 @@
+package com.arcadiaeditions.payments.processing.application.port.driving.dto
+
+import com.arcadiaeditions.payments.processing.domain.*
+import jakarta.validation.constraints.*
+import java.io.Serializable
+import java.math.*
+import java.time.*
+
+/** VoidPaymentInput. */
+@org.jmolecules.ddd.annotation.ValueObject
+data class VoidPaymentInput(@NotNull val orderId: String, @NotNull val reason: String) : Serializable {}
