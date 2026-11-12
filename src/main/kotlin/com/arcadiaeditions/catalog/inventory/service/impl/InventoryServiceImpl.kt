@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional
 open class InventoryServiceImpl(
     private val stockReservationRepository: StockReservationRepository,
     private val eventPublisher: EventPublisher,
+    private val clock: java.time.Clock,
 ) : InventoryService {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass)

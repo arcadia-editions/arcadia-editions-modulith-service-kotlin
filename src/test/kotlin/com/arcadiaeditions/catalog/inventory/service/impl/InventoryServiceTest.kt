@@ -30,6 +30,14 @@ class InventoryServiceTest {
     }
 
     @Test
+    fun servicesUseTheFixedClockTest() {
+        org.junit.jupiter.api.Assertions.assertEquals(
+            com.arcadiaeditions.config.TestClock.NOW,
+            context.clock.instant(),
+        )
+    }
+
+    @Test
     fun reserveStockTest() { // TODO: implement this test
     }
 
