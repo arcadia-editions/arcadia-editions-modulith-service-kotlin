@@ -88,12 +88,13 @@ review: [ ]
       tests: PaymentsProcessingServiceTest
       blocked by: T-07
       done: claude-opus opus
-- [/] T-12 bounded AFK sendOrderConfirmation on PaymentCaptured: create the Notification ORDER_CONFIRMATION by EMAIL to customerEmail through an EmailSender port (fake), SENT (sentAt) (A-01), emit OrderConfirmationSent; no second notification for the same order and type
+- [x] T-12 bounded AFK sendOrderConfirmation on PaymentCaptured: create the Notification ORDER_CONFIRMATION by EMAIL to customerEmail through an EmailSender port (fake), SENT (sentAt) (A-01), emit OrderConfirmationSent; no second notification for the same order and type
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:189-192, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:61-65, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:88-90, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:102-110
       test data: data.sql C-05, data.sql C-06
       tests: NotificationsConsumerServiceTest
       blocked by: T-01
       fixes: .zenwave/handoff/place-order-flow/reports/review-S0.md (SHOULD FIX T-01: inject the Clock into NotificationsConsumerServiceImpl)
+      done: claude-sonnet sonnet
 - [ ] T-13 advanced AFK Flow test completed: from startOrderCheckout to OrderConfirmationSent across the five modules (Spring Modulith Scenario, Testcontainers); add a fixed/mutable test Clock @Bean, Spring contexts get Clock.systemUTC() (review-S0 NOTE; T-32 reuses it)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:73-192, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-06, data/jpa/InventoryPosition/1.json
