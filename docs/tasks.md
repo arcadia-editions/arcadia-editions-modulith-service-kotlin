@@ -27,11 +27,12 @@ path: StartOrderCheckout > startOrderCheckout > reserveStock[StockReservedResult
       > capturePayment[PaymentCaptured] > sendOrderConfirmation > end completed
 review: [ ]
 
-- [/] T-04 bounded AFK reserveStock: all lines available -> one StockReservation per line RESERVED (expiresAt = now + 10m), available -> reserved, outcome RESERVED with the reserved lines; any line short -> outcome UNAVAILABLE with the short lines, nothing reserved
+- [x] T-04 bounded AFK reserveStock: all lines available -> one StockReservation per line RESERVED (expiresAt = now + 10m), available -> reserved, outcome RESERVED with the reserved lines; any line short -> outcome UNAVAILABLE with the short lines, nothing reserved
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:95-99, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:52-59, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:74-105, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:111
       test data: data.sql C-02, data/jpa/InventoryPosition/1.json, data/jpa/InventoryPosition/3.json
       tests: InventoryServiceTest
       blocked by: T-01
+      done: claude-sonnet sonnet
 - [ ] T-05 bounded AFK startOrderCheckout: call reserveStock in-process; on RESERVED create the Order CREATED (orderId, totalAmount = sum of quantity x unitPrice) and emit OrderCreated (amount = totalAmount)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:73-89, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:61-80, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:95-98, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:114-123
       test data: data/jpa/InventoryPosition/1.json
