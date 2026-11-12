@@ -7,4 +7,7 @@ import java.time.*
 import java.util.*
 
 class StockReservationRepositoryInMemory :
-    InMemoryJpaRepository<StockReservation, Long>(), StockReservationRepository {}
+    InMemoryJpaRepository<StockReservation, Long>(), StockReservationRepository {
+
+    override fun findByOrderId(orderId: String): List<StockReservation> = findAll().filter { it.orderId == orderId }
+}

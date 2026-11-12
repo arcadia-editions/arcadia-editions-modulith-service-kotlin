@@ -112,19 +112,31 @@ open class InventoryServiceImpl(
 
         log.debug("Request confirmStockReservation: {}", input)
 
-        // TODO CUSTOM_REQUIRED: load the StockReservation(s) this transition applies to, e.g. by a correlation key in
-        // the input
-        var stockReservations: List<StockReservation> = emptyList()
-        stockReservations.forEach { existingStockReservation ->
-            StockReservationTransitions.ensureCanConfirmStockReservation(existingStockReservation)
-            inventoryServiceMapper.update(existingStockReservation, input)
-            existingStockReservation.status = ReservationStatus.CONFIRMED
+        val all = stockReservationRepository.findByOrderId(input.orderId!!)
+        // redelivery: only RESERVED reservations transition, CONFIRMED ones are left alone
+        val toConfirm = all.filter { it.status == ReservationStatus.RESERVED }
+        if (toConfirm.isEmpty()) {
+            return all
         }
-        stockReservations = stockReservationRepository.saveAll(stockReservations)
-        // emit events
-        stockReservations.forEach { eventSource ->
-            eventPublisher.onStockReservationConfirmed(eventsMapper.asStockReservationConfirmed(eventSource))
+        val now = clock.instant()
+        toConfirm.forEach { reservation ->
+            StockReservationTransitions.ensureCanConfirmStockReservation(reservation)
+            reservation.status = ReservationStatus.CONFIRMED
+            reservation.confirmedAt = now
+            // reserved -> sold
+            val position = inventoryPositionRepository.findBySku(reservation.sku!!)!!
+            val quantity = reservation.quantity!!.toInt()
+            position.reservedQuantity = (position.reservedQuantity!!.toInt() - quantity) as Integer
+            position.soldQuantity = (position.soldQuantity!!.toInt() + quantity) as Integer
+            inventoryPositionRepository.save(position)
         }
-        return stockReservations
+        val confirmed = stockReservationRepository.saveAll(toConfirm)
+        // one event for the order, with every confirmed line
+        val event = StockReservationConfirmed(orderId = input.orderId, confirmedAt = now)
+        confirmed.forEach {
+            event.addItems(StockReservationConfirmedItem(it.reservationId, it.sku, it.quantity))
+        }
+        eventPublisher.onStockReservationConfirmed(event)
+        return all
     }
 }

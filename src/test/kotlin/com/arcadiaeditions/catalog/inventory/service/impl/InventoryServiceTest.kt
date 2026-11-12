@@ -115,7 +115,62 @@ class InventoryServiceTest {
     fun releaseStockTest() { // TODO: implement this test
     }
 
+    private fun confirmedEvents() =
+        context.eventPublisher().getEvents().filterIsInstance<com.arcadiaeditions.catalog.inventory.domain.events.StockReservationConfirmed>()
+
     @Test
-    fun confirmStockReservationTest() { // TODO: implement this test
+    fun confirmStockReservationTest() {
+        // C-02: ORD-002 has two RESERVED reservations (SKU-001 x2, SKU-002 x1)
+        val result = inventoryService.confirmStockReservation(ConfirmStockReservationInput(orderId = "ORD-002"))
+
+        org.junit.jupiter.api.Assertions.assertEquals(2, result.size)
+        val saved = stockReservationRepository.findAll().filter { it.orderId == "ORD-002" }
+        org.junit.jupiter.api.Assertions.assertEquals(2, saved.size)
+        saved.forEach {
+            org.junit.jupiter.api.Assertions.assertEquals(ReservationStatus.CONFIRMED, it.status)
+            org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, it.confirmedAt)
+        }
+        // reserved -> sold
+        val sku1 = position("SKU-001")
+        org.junit.jupiter.api.Assertions.assertEquals(4, sku1.reservedQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(7, sku1.soldQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(89, sku1.availableQuantity!!.toInt())
+        val sku2 = position("SKU-002")
+        org.junit.jupiter.api.Assertions.assertEquals(1, sku2.reservedQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(3, sku2.soldQuantity!!.toInt())
+        // exactly one event with the items
+        val events = confirmedEvents()
+        org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
+        val event = events[0]
+        org.junit.jupiter.api.Assertions.assertEquals("ORD-002", event.orderId)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, event.confirmedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(
+            setOf("RES-002:SKU-001:2", "RES-003:SKU-002:1"),
+            event.items!!.map { "${it.reservationId}:${it.sku}:${it.quantity}" }.toSet(),
+        )
+        org.junit.jupiter.api.Assertions.assertEquals(2, event.items!!.size)
+    }
+
+    @Test
+    fun confirmStockReservationRedeliveryTest() {
+        // C-03: ORD-003 already CONFIRMED -> nothing changes, no event
+        val before = stockReservationRepository.findAll().single { it.orderId == "ORD-003" }.copy()
+        val result = inventoryService.confirmStockReservation(ConfirmStockReservationInput(orderId = "ORD-003"))
+
+        org.junit.jupiter.api.Assertions.assertEquals(0, confirmedEvents().size)
+        org.junit.jupiter.api.Assertions.assertTrue(result.none { it.status != ReservationStatus.CONFIRMED })
+        val after = stockReservationRepository.findAll().single { it.orderId == "ORD-003" }
+        org.junit.jupiter.api.Assertions.assertEquals(before.confirmedAt, after.confirmedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(5, position("SKU-001").soldQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(6, position("SKU-001").reservedQuantity!!.toInt())
+    }
+
+    @Test
+    fun confirmStockReservationTwiceTest() {
+        inventoryService.confirmStockReservation(ConfirmStockReservationInput(orderId = "ORD-002"))
+        inventoryService.confirmStockReservation(ConfirmStockReservationInput(orderId = "ORD-002"))
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, confirmedEvents().size)
+        org.junit.jupiter.api.Assertions.assertEquals(7, position("SKU-001").soldQuantity!!.toInt())
     }
 }
