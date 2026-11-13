@@ -287,10 +287,36 @@ class InventoryServiceTest {
         org.junit.jupiter.api.Assertions.assertEquals(7, position("SKU-001").soldQuantity!!.toInt())
     }
 
+    @Test
+    fun releaseStockExpiryOverConfirmedOrderDoesNothingTest() {
+        // C-03: ORD-003 CONFIRMED (expiresAt 11:40 <= now): expiry never releases CONFIRMED lines, no event
+        val before = stockReservationRepository.findAll().single { it.orderId == "ORD-003" }.copy()
+        inventoryService.releaseStock(ReleaseStockInput(orderId = "ORD-003", reason = StockReleaseReason.RESERVATION_EXPIRED))
+
+        val after = stockReservationRepository.findAll().single { it.orderId == "ORD-003" }
+        org.junit.jupiter.api.Assertions.assertEquals(ReservationStatus.CONFIRMED, after.status)
+        org.junit.jupiter.api.Assertions.assertNull(after.releasedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(before.confirmedAt, after.confirmedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(0, releasedEvents().size)
+        org.junit.jupiter.api.Assertions.assertEquals(5, position("SKU-001").soldQuantity!!.toInt())
+    }
+
+    @Test
+    fun releaseStockExpiryBeforeDeadlineDoesNothingTest() {
+        // C-01: ORD-001 RESERVED, expiresAt 12:08 > now 12:00 -> nothing, no event
+        inventoryService.releaseStock(ReleaseStockInput(orderId = "ORD-001", reason = StockReleaseReason.RESERVATION_EXPIRED))
+
+        val after = stockReservationRepository.findAll().single { it.orderId == "ORD-001" }
+        org.junit.jupiter.api.Assertions.assertEquals(ReservationStatus.RESERVED, after.status)
+        org.junit.jupiter.api.Assertions.assertNull(after.releasedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(0, releasedEvents().size)
+    }
+
     private fun reservationExpiredJob(clock: Clock = context.clock) =
         com.arcadiaeditions.catalog.inventory.events.scheduler.ReservationExpiredJob(
             stockReservationRepository,
-            inventoryService,
+            // the service re-checks the deadline with its own clock: same clock as the job
+            InventoryServiceImpl(stockReservationRepository, context.inventoryPositionRepository(), context.eventPublisher(), clock),
             clock,
         )
 
