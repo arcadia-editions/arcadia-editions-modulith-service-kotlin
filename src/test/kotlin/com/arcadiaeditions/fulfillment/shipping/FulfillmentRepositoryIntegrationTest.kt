@@ -77,7 +77,12 @@ class FulfillmentRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         fulfillment.failedAt = now
         fulfillment.failureReason = ""
 
-        val updated = fulfillmentRepository.save(fulfillment)
+        fulfillmentRepository.save(fulfillment)
+
+        // read back from the database, not the managed instance
+        entityManager.flush()
+        entityManager.clear()
+        val updated = fulfillmentRepository.findByIdOrNull(id) ?: throw NoSuchElementException(" not found with id: $id")
         Assertions.assertEquals("", updated.fulfillmentId)
         Assertions.assertEquals("", updated.orderId)
         Assertions.assertEquals("", updated.customerId)

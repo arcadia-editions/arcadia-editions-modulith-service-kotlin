@@ -58,7 +58,12 @@ class InventoryPositionRepositoryIntegrationTest : BaseRepositoryIntegrationTest
         inventoryPosition.reservedQuantity = 0 as Integer
         inventoryPosition.soldQuantity = 0 as Integer
 
-        val updated = inventoryPositionRepository.save(inventoryPosition)
+        inventoryPositionRepository.save(inventoryPosition)
+
+        // read back from the database, not the managed instance
+        entityManager.flush()
+        entityManager.clear()
+        val updated = inventoryPositionRepository.findByIdOrNull(id) ?: throw NoSuchElementException(" not found with id: $id")
         Assertions.assertEquals("", updated.sku)
         Assertions.assertEquals(0 as Integer, updated.availableQuantity)
         Assertions.assertEquals(0 as Integer, updated.reservedQuantity)

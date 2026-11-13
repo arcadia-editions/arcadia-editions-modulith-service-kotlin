@@ -82,12 +82,17 @@ class PaymentRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         payment.voidedAt = now
         payment.failureReason = ""
 
-        val updated = paymentRepository.save(payment)
+        paymentRepository.save(payment)
+
+        // read back from the database, not the managed instance
+        entityManager.flush()
+        entityManager.clear()
+        val updated = paymentRepository.findByIdOrNull(id) ?: throw NoSuchElementException(" not found with id: $id")
         Assertions.assertEquals("", updated.orderId)
         Assertions.assertEquals("", updated.customerId)
         Assertions.assertEquals("", updated.paymentMethodId)
         Assertions.assertEquals("", updated.customerEmail)
-        Assertions.assertEquals(BigDecimal.valueOf(0), updated.amount)
+        Assertions.assertEquals(0, BigDecimal.valueOf(0).compareTo(updated.amount))
         Assertions.assertEquals("", updated.currency)
         Assertions.assertEquals(PaymentStatus.values()[0], updated.status)
         Assertions.assertEquals("", updated.providerReference)

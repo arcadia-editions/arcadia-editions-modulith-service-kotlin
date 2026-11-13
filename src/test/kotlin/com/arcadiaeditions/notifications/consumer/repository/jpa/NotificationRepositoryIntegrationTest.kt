@@ -81,7 +81,12 @@ class NotificationRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         notification.failedAt = now
         notification.failureReason = ""
 
-        val updated = notificationRepository.save(notification)
+        notificationRepository.save(notification)
+
+        // read back from the database, not the managed instance
+        entityManager.flush()
+        entityManager.clear()
+        val updated = notificationRepository.findByIdOrNull(id) ?: throw NoSuchElementException(" not found with id: $id")
         Assertions.assertEquals("", updated.notificationId)
         Assertions.assertEquals("", updated.customerId)
         Assertions.assertEquals("", updated.orderId)
