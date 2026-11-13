@@ -3,6 +3,7 @@ package com.arcadiaeditions.orders.checkout.adapters.web
 import com.arcadiaeditions.orders.checkout.adapters.web.*
 import com.arcadiaeditions.orders.checkout.adapters.web.dtos.*
 import com.arcadiaeditions.orders.checkout.config.ServicesInMemoryConfig
+import com.arcadiaeditions.orders.checkout.core.inbound.StockUnavailableException
 
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -45,6 +46,26 @@ class OrdersCheckoutApiControllerTest {
         Assertions.assertNotNull(body.orderId)
         Assertions.assertEquals("CREATED", body.status.toString())
         Assertions.assertEquals(49.99, body.totalAmount!!.toDouble(), 0.001)
+    }
+
+    // C-07: SKU-003 has no stock; P-03 A: 409 with StockUnavailable body, no Order
+    @Test
+    fun startOrderCheckoutStockUnavailableTest() {
+        val reqBody = StartOrderCheckoutInputDTO(
+            customerId = "CUST-007", customerEmail = "customer07@example.com", paymentMethodId = "pm_card_visa",
+            currency = "EUR",
+            items = mutableListOf(OrderItemInputDTO(sku = "SKU-003", quantity = 1, unitPrice = 75.00)),
+            shippingAddress = ShippingAddressInputDTO(name = "Alex Example", line1 = "Calle Ficticia 1", city = "Madrid", postalCode = "28001", country = "ES"),
+        )
+        val ex = Assertions.assertThrows(StockUnavailableException::class.java) { controller.startOrderCheckout(reqBody) }
+        val response = OrdersCheckoutApiExceptionHandler().handleStockUnavailable(ex)
+        Assertions.assertEquals(409, response.statusCode.value())
+        val body = response.body!!
+        Assertions.assertTrue(body.orderId!!.startsWith("ORD-"))
+        Assertions.assertEquals(1, body.unavailableItems!!.size)
+        Assertions.assertEquals("SKU-003", body.unavailableItems!![0].sku)
+        Assertions.assertEquals(1, body.unavailableItems!![0].requestedQuantity)
+        Assertions.assertEquals(0, body.unavailableItems!![0].availableQuantity)
     }
 
     @Test
