@@ -222,7 +222,7 @@ review: [/] (code review running)
 ## S5 orderCancelled (retries exhausted)
 path: OrderCreated > authorizePayment[failed] > PaymentFailed > retryPayment[retry-exhausted] > PaymentRetryExhausted
       > releaseStock > StockReleased > cancelOrder > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
-review: [/] (code review running)
+review: [/] (code PASS: reports/review-S5.md; flow IT pending T-43)
 
 - [x] T-25 bounded AFK Flow test retries exhausted: every attempt fails (pm_card_processorError), after 3 attempts the order is cancelled with PAYMENT_RETRY_EXHAUSTED
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:124-130, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:223-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
@@ -234,7 +234,7 @@ review: [/] (code review running)
 ## S6 orderCancelled (fulfillment failed)
 path: OrderConfirmed > scheduleFulfillment[FulfillmentFailed] > voidPayment > PaymentVoided > releaseStock > StockReleased
       > cancelOrder > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
-review: [ ]
+review: [/] (code review running)
 
 - [x] T-26 bounded AFK scheduleFulfillment FAILED branch: the Warehouse port refuses (fake, set by the test) -> Fulfillment FAILED (failedAt, failureReason), emit FulfillmentFailed only
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:160-170, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:84, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:99-106
