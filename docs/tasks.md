@@ -22,10 +22,11 @@ review: [ ] (round 1 FIX: reports/review-S0.md)
 - [x] T-03 mechanical AFK Generated repository updateTest: compare Instants at database precision (micros), not Instant.now() identity
       tests: mvn -q verify -Dit.test='*RepositoryIntegrationTest' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false
       done: claude-sonnet sonnet (green verified by orchestrator: worker's run hit a port conflict)
-- [/] T-34 bounded AFK ArchitectureTest tolerance: accept only the 4 known module cycles (catalog>payments>fulfillment>orders>catalog, catalog>payments>orders>catalog, fulfillment>orders>payments>fulfillment, orders>payments>orders) and only the enumerated jMolecules layered Infrastructure->Domain messages of catalog.inventory and notifications.consumer; any other Modulith message fails; drop allowEmptyShould(true) where the package exists; correct the comments (cause, count, "code layout, not models")
+- [x] T-34 bounded AFK ArchitectureTest tolerance: accept only the 4 known module cycles (catalog>payments>fulfillment>orders>catalog, catalog>payments>orders>catalog, fulfillment>orders>payments>fulfillment, orders>payments>orders) and only the enumerated jMolecules layered Infrastructure->Domain messages of catalog.inventory and notifications.consumer; any other Modulith message fails; drop allowEmptyShould(true) where the package exists; correct the comments (cause, count, "code layout, not models")
       tests: ArchitectureTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S0.md (FIX FIRST T-02, SHOULD FIX comment, NOTE allowEmptyShould)
       adr: docs/proposals/P-04.md (decision A)
+      done: claude-sonnet sonnet + claude-opus opus (round 2 handoff, quota)
 - [/] T-35 mechanical AFK Repository updateTest: flush, clear and reload by id before asserting, so Instants are compared as read back from the database
       tests: mvn -q verify -Dit.test='*RepositoryIntegrationTest' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false
       fixes: .zenwave/handoff/place-order-flow/reports/review-S0.md (SHOULD FIX T-03)
@@ -52,11 +53,12 @@ review: [ ]
       tests: OrdersCheckoutServiceTest
       blocked by: T-04
       done: claude-sonnet sonnet
-- [/] T-06 mechanical AFK Web: POST /orders/start-checkout answers 201 with the Order, GET /orders/{id} 200 or 404
+- [x] T-06 mechanical AFK Web: POST /orders/start-checkout answers 201 with the Order, GET /orders/{id} 200 or 404
       model: ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:92-111, ../arcadia-editions-modulith-api/orders-checkout-openapi.yml:32-70
       test data: data.sql C-01, data/jpa/Order/1.json
       tests: OrdersCheckoutApiControllerTest, OrdersCheckoutApiIntegrationTest
       blocked by: T-05
+      done: claude-sonnet sonnet (ITs verified by orchestrator)
 - [x] T-07 advanced AFK authorizePayment on OrderCreated: create the Payment AUTHORIZATION_REQUESTED (attemptCount 1), ask a PaymentProcessor port (fake: pm_card_visa authorizes, pm_card_chargeDeclined declines, pm_card_processorError fails), set AUTHORIZED + providerReference / DECLINED / FAILED (A-01) and emit only that outcome's event; an OrderCreated for an orderId that already has a Payment does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:108-117, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:56-63, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:84-87, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:104-131
       test data: data.sql C-01
@@ -134,11 +136,12 @@ path: OrderCreated > authorizePayment[declined] > PaymentDeclined > releaseStock
       > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
 review: [ ]
 
-- [/] T-18 bounded AFK releaseStock on PaymentDeclined / PaymentRetryExhausted / PaymentVoided: every RESERVED or CONFIRMED reservation of the orderId -> RELEASED (releasedAt, releaseReason from the event: PAYMENT_DECLINED, PAYMENT_RETRY_EXHAUSTED, PAYMENT_VOIDED), quantities back to available (A-02), emit StockReleased; already RELEASED does nothing
+- [x] T-18 bounded AFK releaseStock on PaymentDeclined / PaymentRetryExhausted / PaymentVoided: every RESERVED or CONFIRMED reservation of the orderId -> RELEASED (releasedAt, releaseReason from the event: PAYMENT_DECLINED, PAYMENT_RETRY_EXHAUSTED, PAYMENT_VOIDED), quantities back to available (A-02), emit StockReleased; already RELEASED does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:223-228, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:66-70, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:113-118, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:126-136
       test data: data.sql C-15, data.sql C-18, data.sql C-08
       tests: InventoryServiceTest
       blocked by: T-08
+      done: claude-opus opus
 - [ ] T-19 bounded AFK cancelOrder on StockReleased: Order CREATED or CONFIRMED -> CANCELLED (cancelledAt, cancellationReason = reason, A-07), emit OrderCancelled; already CANCELLED does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:246-250, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:86-90, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:105-107, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:159-167
       test data: data.sql C-19, data.sql C-20, data.sql C-08
@@ -160,11 +163,12 @@ path: OrderCreated > authorizePayment[failed] > PaymentFailed > retryPayment[ret
       > authorizePayment[authorized] > PaymentAuthorized > confirmOrder > ... > end completed
 review: [ ]
 
-- [/] T-22 bounded AFK retryPayment on PaymentFailed: load the Payment by orderId, guard FAILED; attemptCount below 3 (A-03) -> attemptCount + 1, stays FAILED, emit PaymentRetried; at 3 -> RETRY_EXHAUSTED, emit PaymentRetryExhausted
+- [x] T-22 bounded AFK retryPayment on PaymentFailed: load the Payment by orderId, guard FAILED; attemptCount below 3 (A-03) -> attemptCount + 1, stays FAILED, emit PaymentRetried; at 3 -> RETRY_EXHAUSTED, emit PaymentRetryExhausted
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:124-130, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:65-69, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:89-91, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:133-148
       test data: data.sql C-12, data.sql C-13
       tests: PaymentsProcessingServiceTest
       blocked by: T-07
+      done: claude-opus opus
 - [ ] T-23 bounded AFK authorizePayment on PaymentRetried (P-01 accepted D): load the existing FAILED Payment by orderId, take amount, currency, customerEmail and paymentMethodId from it, authorize it again through the PaymentProcessor port; with no Payment create it as on OrderCreated; any other state does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:132-140, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:56-63, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:85-87, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:133-139
       test data: data.sql C-12
