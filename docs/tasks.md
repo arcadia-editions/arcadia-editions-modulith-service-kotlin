@@ -27,9 +27,10 @@ review: [ ] (round 1 FIX: reports/review-S0.md)
       fixes: .zenwave/handoff/place-order-flow/reports/review-S0.md (FIX FIRST T-02, SHOULD FIX comment, NOTE allowEmptyShould)
       adr: docs/proposals/P-04.md (decision A)
       done: claude-sonnet sonnet + claude-opus opus (round 2 handoff, quota)
-- [/] T-35 mechanical AFK Repository updateTest: flush, clear and reload by id before asserting, so Instants are compared as read back from the database
+- [x] T-35 mechanical AFK Repository updateTest: flush, clear and reload by id before asserting, so Instants are compared as read back from the database
       tests: mvn -q verify -Dit.test='*RepositoryIntegrationTest' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false
       fixes: .zenwave/handoff/place-order-flow/reports/review-S0.md (SHOULD FIX T-03)
+      done: claude-sonnet sonnet (redo; ITs 35/35 run by orchestrator)
 - [/] T-36 bounded AFK Modulith modules (P-04 A): @NamedInterface on common.mappers (BaseMapper); declare catalog.inventory, catalog.products, notifications.consumer as application modules; fix the root ModuleMetadata ("Payments Processing" on the root package); remove the BaseMapper and one-module tolerances from ArchitectureTest; keep only the known event cycles; any new violation found is fixed in code or listed in the report
       tests: ArchitectureTest, JMoleculesArchitectureTest
       adr: docs/proposals/P-04.md (decision A)
