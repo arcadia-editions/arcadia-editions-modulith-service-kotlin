@@ -116,10 +116,11 @@ review: [ ] (round 1 FIX at 2c897e8, suite not run: reports/review-S1.md)
       tests: PaymentsProcessingServiceTest, FulfillmentShippingServiceTest, NotificationsConsumerServiceTest, ArchitectureTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (SHOULD FIX fakes)
       blocked by: T-38
-- [/] T-42 bounded AFK NotificationDeliveryFailed: when the EmailSender refuses, the three send* commands set the Notification FAILED (failedAt, failureReason) and emit NotificationDeliveryFailed instead of throwing
+- [x] T-42 bounded AFK NotificationDeliveryFailed: when the EmailSender refuses, the three send* commands set the Notification FAILED (failedAt, failureReason) and emit NotificationDeliveryFailed instead of throwing
       model: ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:88-98
       tests: NotificationsConsumerServiceTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (NOTE T-12)
+      done: claude-sonnet sonnet
 ## S2 stockGone
 path: StartOrderCheckout > startOrderCheckout > reserveStock[StockUnavailableResult] > StockUnavailable
       > sendStockUnavailableNotification > end stockGone
