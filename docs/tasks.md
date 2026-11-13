@@ -144,7 +144,7 @@ review: [ ]
       tests: InventoryServiceTest
       blocked by: T-08
       done: claude-opus opus
-- [ ] T-19 bounded AFK cancelOrder on StockReleased: Order CREATED or CONFIRMED -> CANCELLED (cancelledAt, cancellationReason = reason, A-07), emit OrderCancelled; already CANCELLED does nothing
+- [/] T-19 bounded AFK cancelOrder on StockReleased: Order CREATED or CONFIRMED -> CANCELLED (cancelledAt, cancellationReason = reason, A-07), emit OrderCancelled; already CANCELLED does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:246-250, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:86-90, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:105-107, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:159-167
       test data: data.sql C-19, data.sql C-20, data.sql C-08
       tests: OrdersCheckoutServiceTest

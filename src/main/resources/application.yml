@@ -27,6 +27,7 @@ spring:
       password: password
       roles: USER
   modulith:
+    detection-strategy: explicitly-annotated
     events:
       externalization:
         enabled: true
