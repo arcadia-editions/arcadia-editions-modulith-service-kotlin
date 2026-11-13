@@ -268,7 +268,7 @@ review: [ ] (round 1 FIX: reports/review-S6.md; flow IT pending T-43)
 ## S7 orderCancelled (capture failed)
 path: FulfillmentScheduled > capturePayment[PaymentCaptureFailed] > voidPayment > PaymentVoided > releaseStock
       > StockReleased > cancelOrder > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
-review: [ ]
+review: [/] (code review running)
 
 - [x] T-29 bounded AFK capturePayment failure branch: the PaymentProcessor port refuses the capture (fake, set by the test) -> CAPTURE_FAILED (failedAt, failureReason), emit PaymentCaptureFailed only
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:172-182, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:95, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:161-167
