@@ -243,11 +243,12 @@ path: ReservationExpired (10 minutes after OrderCreated) > releaseStock > StockR
       > sendOrderCancelledNotification > end orderCancelled
 review: [ ]
 
-- [/] T-31 advanced AFK ReservationExpired timer: a scheduled job (Clock-driven) finds RESERVED reservations with expiresAt at or before now and calls releaseStock(orderId, RESERVATION_EXPIRED) once per order; reservations before their deadline are untouched
+- [x] T-31 advanced AFK ReservationExpired timer: a scheduled job (Clock-driven) finds RESERVED reservations with expiresAt at or before now and calls releaseStock(orderId, RESERVATION_EXPIRED) once per order; reservations before their deadline are untouched
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:230-240, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:66-70, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:116-118
       test data: data.sql C-14, data.sql C-01, data.sql C-11
       tests: InventoryServiceTest
       blocked by: T-18
+      done: claude-opus opus
 - [ ] T-32 bounded AFK Flow test reservation expired: an order whose payment never resolves is cancelled with RESERVATION_EXPIRED after the Clock passes 10 minutes
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:230-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-11, data.sql C-14
