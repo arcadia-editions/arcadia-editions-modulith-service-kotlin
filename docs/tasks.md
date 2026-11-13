@@ -52,7 +52,7 @@ review: [x] (round 1 FIX: reports/review-S0.md; round 2 PASS at 4b804fe: reports
 path: StartOrderCheckout > startOrderCheckout > reserveStock[StockReservedResult] > OrderCreated > authorizePayment[authorized]
       > PaymentAuthorized > confirmOrder > confirmStockReservation > OrderConfirmed > scheduleFulfillment[FulfillmentScheduled]
       > capturePayment[PaymentCaptured] > sendOrderConfirmation > end completed
-review: [ ] (round 1 FIX at 2c897e8, suite not run: reports/review-S1.md)
+review: [x] (round 1 FIX at 2c897e8: reports/review-S1.md; round 2 PASS at 5dc4a45: reports/review-S1-r2.md)
 
 - [x] T-04 bounded AFK reserveStock: all lines available -> one StockReservation per line RESERVED (expiresAt = now + 10m), available -> reserved, outcome RESERVED with the reserved lines; any line short -> outcome UNAVAILABLE with the short lines, nothing reserved
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:95-99, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:52-59, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:74-105, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:111
