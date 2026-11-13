@@ -244,11 +244,12 @@ review: [ ]
       tests: PaymentsProcessingServiceTest
       blocked by: T-11
       done: claude-opus opus
-- [/] T-28 bounded AFK Flow test fulfillment failed: ends in OrderCancelledNotificationSent with PAYMENT_VOIDED, payment VOIDED, stock back to available
+- [x] T-28 bounded AFK Flow test fulfillment failed: ends in OrderCancelledNotificationSent with PAYMENT_VOIDED, payment VOIDED, stock back to available
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:160-170, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:204-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-10
       tests: PlaceOrderFlowFulfillmentFailedIntegrationTest
       blocked by: T-21, T-26, T-27
+      done: claude-sonnet sonnet (IT in slice review)
 
 ## S7 orderCancelled (capture failed)
 path: FulfillmentScheduled > capturePayment[PaymentCaptureFailed] > voidPayment > PaymentVoided > releaseStock
