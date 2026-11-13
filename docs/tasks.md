@@ -262,11 +262,12 @@ review: [ ]
       tests: PaymentsProcessingServiceTest
       blocked by: T-11
       done: claude-sonnet sonnet
-- [/] T-30 bounded AFK Flow test capture failed: ends in OrderCancelledNotificationSent with PAYMENT_VOIDED
+- [x] T-30 bounded AFK Flow test capture failed: ends in OrderCancelledNotificationSent with PAYMENT_VOIDED
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:172-182, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:204-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-17
       tests: PlaceOrderFlowCaptureFailedIntegrationTest
       blocked by: T-28, T-29
+      done: claude-sonnet sonnet (IT in slice review)
 
 ## S8 orderCancelled (reservation expired)
 path: ReservationExpired (10 minutes after OrderCreated) > releaseStock > StockReleased > cancelOrder > OrderCancelled
