@@ -238,7 +238,7 @@ review: [/] (code PASS: reports/review-S5.md; flow IT pending T-43)
 ## S6 orderCancelled (fulfillment failed)
 path: OrderConfirmed > scheduleFulfillment[FulfillmentFailed] > voidPayment > PaymentVoided > releaseStock > StockReleased
       > cancelOrder > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
-review: [/] (code review running)
+review: [ ] (round 1 FIX: reports/review-S6.md; flow IT pending T-43)
 
 - [x] T-26 bounded AFK scheduleFulfillment FAILED branch: the Warehouse port refuses (fake, set by the test) -> Fulfillment FAILED (failedAt, failureReason), emit FulfillmentFailed only
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:160-170, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:84, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:99-106
@@ -252,6 +252,12 @@ review: [/] (code review running)
       tests: PaymentsProcessingServiceTest
       blocked by: T-11
       done: claude-opus opus
+- [ ] T-45 bounded AFK voidPayment reason from the event type: FulfillmentFailed -> "fulfillment_failed" (A-06, as data.sql C-10/C-18/C-20) in FulfillmentShippingEventsListenerMapper, not the fulfillment detail; align PlaceOrderFlowFulfillmentFailedIntegrationTest to C-10; fix the "A-01 (P-02): VOIDED" comment and add the A-01 marker on the FAILED branch of scheduleFulfillment
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:204-215, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:76-80
+      test data: data.sql C-10, data.sql C-18, data.sql C-20
+      tests: PaymentsProcessingServiceTest, ArchitectureTest
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S6.md (SHOULD FIX T-27/T-28, NOTEs comments)
+      blocked by: T-43
 - [x] T-28 bounded AFK Flow test fulfillment failed: ends in OrderCancelledNotificationSent with PAYMENT_VOIDED, payment VOIDED, stock back to available
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:160-170, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:204-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-10
