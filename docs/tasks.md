@@ -203,12 +203,12 @@ path: OrderConfirmed > scheduleFulfillment[FulfillmentFailed] > voidPayment > Pa
       > cancelOrder > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
 review: [ ]
 
-- [ ] T-26 bounded AFK scheduleFulfillment FAILED branch: the Warehouse port refuses (fake, set by the test) -> Fulfillment FAILED (failedAt, failureReason), emit FulfillmentFailed only
+- [/] T-26 bounded AFK scheduleFulfillment FAILED branch: the Warehouse port refuses (fake, set by the test) -> Fulfillment FAILED (failedAt, failureReason), emit FulfillmentFailed only
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:160-170, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:84, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:99-106
       test data: data.sql C-03, data.sql C-16
       tests: FulfillmentShippingServiceTest
       blocked by: T-10
-- [ ] T-27 advanced AFK voidPayment on FulfillmentFailed / PaymentCaptureFailed: load the Payment by orderId, guard AUTHORIZED, AUTHORIZATION_REQUESTED, FAILED or CAPTURE_FAILED, void through the PaymentProcessor port (fake), VOIDED (voidedAt, failureReason = reason), emit PaymentVoided; already VOIDED does nothing
+- [/] T-27 advanced AFK voidPayment on FulfillmentFailed / PaymentCaptureFailed: load the Payment by orderId, guard AUTHORIZED, AUTHORIZATION_REQUESTED, FAILED or CAPTURE_FAILED, void through the PaymentProcessor port (fake), VOIDED (voidedAt, failureReason = reason), emit PaymentVoided; already VOIDED does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:204-215, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:76-80, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:97-100, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:169-175
       test data: data.sql C-16, data.sql C-01, data.sql C-12, data.sql C-17, data.sql C-10
       tests: PaymentsProcessingServiceTest
