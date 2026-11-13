@@ -84,7 +84,7 @@ class PlaceOrderFlowStockGoneIntegrationTest {
                 Supplier {
                     try {
                         ordersCheckoutService.startOrderCheckout(startOrderCheckoutInput())
-                        null
+                        throw AssertionError("startOrderCheckout of a sold-out SKU must throw StockUnavailableException")
                     } catch (e: StockUnavailableException) {
                         e
                     }
@@ -93,12 +93,11 @@ class PlaceOrderFlowStockGoneIntegrationTest {
             .andWaitAtMost(timeout)
             .andWaitForEventOfType(StockUnavailableNotificationSent::class.java)
             .toArriveAndVerify(
-                BiConsumer { event: StockUnavailableNotificationSent, thrown: StockUnavailableException? ->
+                BiConsumer { event: StockUnavailableNotificationSent, thrown: StockUnavailableException ->
                     // startOrderCheckout reports the sold-out stock to its caller (A-05)
-                    assertThat(thrown).isNotNull()
-                    val orderId = thrown!!.event.orderId!!
+                    val orderId = thrown.event.orderId!!
                     assertThat(thrown.event.customerId).isEqualTo("CUST-007")
-                    assertThat(thrown.event.unavailableItems.map { it.sku }).containsExactly("SKU-003")
+                    assertThat(thrown.event.unavailableItems!!.map { it.sku }).containsExactly("SKU-003")
 
                     assertThat(event.orderId).isEqualTo(orderId)
                     assertThat(event.customerId).isEqualTo("CUST-007")
