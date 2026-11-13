@@ -34,6 +34,11 @@ open class PaymentsProcessingServiceImpl(
 
     private val eventsMapper: EventsMapper = EventsMapper.INSTANCE
 
+    companion object {
+        /** A-03: payment retry limit; at this attemptCount retryPayment emits PaymentRetryExhausted. */
+        const val MAX_PAYMENT_ATTEMPTS = 3
+    }
+
     override fun authorizePayment(input: AuthorizePaymentInput): Payment {
 
         log.debug("Request authorizePayment: {}", input)
@@ -92,21 +97,25 @@ open class PaymentsProcessingServiceImpl(
 
         log.debug("Request retryPayment: {}", input)
 
-        // TODO CUSTOM_REQUIRED: load the Payment this transition applies to, e.g. by a correlation key in the input
-        val foundPayment: Payment? = emptyList<Payment>().firstOrNull()
-        return foundPayment
-            ?.let { existingPayment ->
-                PaymentTransitions.ensureCanRetryPayment(existingPayment)
-                paymentsProcessingServiceMapper.update(existingPayment, input)
-                // TODO CUSTOM_REQUIRED: set existingPayment.status to one of FAILED, RETRY_EXHAUSTED
-                existingPayment
-            }
-            ?.let { paymentRepository.save(it) }
-            ?.also {
-                // emit events
-                eventPublisher.onPaymentRetried(eventsMapper.asPaymentRetried(it))
-                eventPublisher.onPaymentRetryExhausted(eventsMapper.asPaymentRetryExhausted(it))
-            } ?: throw NoSuchElementException("Payment not found")
+        val payment =
+            paymentRepository.findByOrderId(input.orderId)
+                ?: throw NoSuchElementException("Payment not found for order: ${input.orderId}")
+        PaymentTransitions.ensureCanRetryPayment(payment)
+
+        val now = Instant.now(clock)
+        val attempts = payment.attemptCount?.toInt() ?: 0
+        if (attempts < MAX_PAYMENT_ATTEMPTS) {
+            // retried: stays FAILED, the next attempt is counted here; authorizePayment runs it on PaymentRetried (T-23)
+            payment.attemptCount = (attempts + 1) as Integer
+            val saved = paymentRepository.save(payment)
+            eventPublisher.onPaymentRetried(eventsMapper.asPaymentRetried(saved).copy(retriedAt = now))
+            return saved
+        }
+        // retry-exhausted: A-03 limit reached
+        payment.status = PaymentStatus.RETRY_EXHAUSTED
+        val saved = paymentRepository.save(payment)
+        eventPublisher.onPaymentRetryExhausted(eventsMapper.asPaymentRetryExhausted(saved).copy(exhaustedAt = now))
+        return saved
     }
 
     override fun capturePayment(input: CapturePaymentInput): Payment {

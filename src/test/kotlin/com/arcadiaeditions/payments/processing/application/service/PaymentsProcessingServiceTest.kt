@@ -155,7 +155,64 @@ class PaymentsProcessingServiceTest {
     }
 
     @Test
-    fun retryPaymentTest() { // TODO: implement this test
+    fun retryPaymentTest() {
+        // C-12: ORD-012 Payment FAILED (attempt 1 of 3), PaymentFailed emitted
+        val before = paymentRepository.findAll().size
+
+        val payment = paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-012"))
+
+        org.junit.jupiter.api.Assertions.assertEquals(before, paymentRepository.findAll().size)
+        val saved = savedPayment("ORD-012")
+        org.junit.jupiter.api.Assertions.assertEquals(saved.id, payment.id)
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.FAILED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(2, saved.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(Instant.parse("2026-10-01T11:59:30Z"), saved.failedAt)
+        org.junit.jupiter.api.Assertions.assertEquals("processor_timeout", saved.failureReason)
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
+        val event = events[0] as PaymentRetried
+        org.junit.jupiter.api.Assertions.assertEquals("ORD-012", event.orderId)
+        org.junit.jupiter.api.Assertions.assertEquals("CUST-012", event.customerId)
+        org.junit.jupiter.api.Assertions.assertEquals(2, event.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, event.retriedAt)
+    }
+
+    @Test
+    fun retryPaymentExhaustedTest() {
+        // C-13: ORD-013 Payment FAILED at the retry limit (attempt 3, A-03)
+        val payment = paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-013"))
+
+        val saved = savedPayment("ORD-013")
+        org.junit.jupiter.api.Assertions.assertEquals(saved.id, payment.id)
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.RETRY_EXHAUSTED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(3, saved.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals("processor_timeout", saved.failureReason)
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
+        val event = events[0] as PaymentRetryExhausted
+        org.junit.jupiter.api.Assertions.assertEquals("ORD-013", event.orderId)
+        org.junit.jupiter.api.Assertions.assertEquals("CUST-013", event.customerId)
+        org.junit.jupiter.api.Assertions.assertEquals(3, event.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals("processor_timeout", event.reason)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, event.exhaustedAt)
+    }
+
+    @Test
+    fun retryPaymentInvalidTransitionTest() {
+        // C-04: ORD-004 Payment AUTHORIZED
+        org.junit.jupiter.api.Assertions.assertThrows(PaymentTransitions.InvalidStateTransitionException::class.java) {
+            paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-004"))
+        }
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.AUTHORIZED, savedPayment("ORD-004").status)
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+    }
+
+    @Test
+    fun retryPaymentNotFoundTest() {
+        org.junit.jupiter.api.Assertions.assertThrows(NoSuchElementException::class.java) {
+            paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-MISSING"))
+        }
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
     }
 
     @Test
