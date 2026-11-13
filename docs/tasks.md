@@ -287,7 +287,7 @@ review: [/] (code review running)
 ## S8 orderCancelled (reservation expired)
 path: ReservationExpired (10 minutes after OrderCreated) > releaseStock > StockReleased > cancelOrder > OrderCancelled
       > sendOrderCancelledNotification > end orderCancelled
-review: [ ]
+review: [/] (code review running)
 
 - [x] T-31 advanced AFK ReservationExpired timer: a scheduled job (Clock-driven) finds RESERVED reservations with expiresAt at or before now and calls releaseStock(orderId, RESERVATION_EXPIRED) once per order; reservations before their deadline are untouched
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:230-240, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:66-70, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:116-118
