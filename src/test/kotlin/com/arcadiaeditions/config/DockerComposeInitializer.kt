@@ -29,7 +29,10 @@ class DockerComposeInitializer : ApplicationContextInitializer<ConfigurableAppli
     private data class Service(val name: String, val port: Int, val envVar: String, val envValueTemplate: String?)
 
     companion object {
-        private const val DOCKER_COMPOSE_FILE = "./docker-compose.yml"
+        /** Test-only compose: own project name and host ports (15432, 29092, 22181, 18081), not docker-compose.yml. */
+        private const val DOCKER_COMPOSE_FILE = "./docker-compose-test.yml"
+        private const val DOCKER_COMPOSE_PROJECT = "arcadia-editions-modulith-it"
+        private const val POSTGRES_HOST_PORT = 15432
         private val SERVICES =
             listOf(
                 Service("postgresql", 5432, "DATASOURCE_URL", "jdbc:postgresql://%s:%s/app"),
@@ -85,18 +88,27 @@ class DockerComposeInitializer : ApplicationContextInitializer<ConfigurableAppli
         }
     }
 
+    /**
+     * True only when the test compose was started by hand (`docker compose -f docker-compose-test.yml up`): services of
+     * its own project, listening on its own host port. A running dev docker-compose.yml (other project, port 5432) is
+     * not it.
+     */
     private fun isDockerComposeRunningAllServices(services: List<Service>): Boolean {
         val serviceNames = services.map { it.name }
-        return Stream.of("docker-compose", "docker-compose.exe").anyMatch { cmd ->
-            try {
-                getDockerComposeRunningServices(cmd, "-f", DOCKER_COMPOSE_FILE, "ps", "--services")
-                    .containsAll(serviceNames)
-            } catch (e: IOException) {
-                false
-            } catch (e: InterruptedException) {
-                false
+        val composeArgs =
+            arrayOf("-p", DOCKER_COMPOSE_PROJECT, "-f", DOCKER_COMPOSE_FILE, "ps", "--status", "running", "--services")
+        val running =
+            Stream.of(arrayOf("docker", "compose"), arrayOf("docker-compose"), arrayOf("docker-compose.exe")).anyMatch {
+                cmd ->
+                try {
+                    getDockerComposeRunningServices(*cmd, *composeArgs).containsAll(serviceNames)
+                } catch (e: IOException) {
+                    false
+                } catch (e: InterruptedException) {
+                    false
+                }
             }
-        }
+        return running && isPortOpen("localhost", POSTGRES_HOST_PORT)
     }
 
     @Throws(IOException::class, InterruptedException::class)

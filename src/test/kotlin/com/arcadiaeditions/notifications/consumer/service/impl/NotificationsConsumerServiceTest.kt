@@ -8,6 +8,7 @@ import com.arcadiaeditions.notifications.consumer.service.*
 import com.arcadiaeditions.notifications.consumer.service.dtos.*
 import com.arcadiaeditions.notifications.consumer.service.impl.mappers.*
 import com.arcadiaeditions.config.TestClock
+import com.arcadiaeditions.notifications.consumer.domain.events.NotificationDeliveryFailed
 import com.arcadiaeditions.notifications.consumer.domain.events.OrderCancelledNotificationSent
 import com.arcadiaeditions.notifications.consumer.domain.events.OrderConfirmationSent
 import com.arcadiaeditions.notifications.consumer.domain.events.StockUnavailableNotificationSent
@@ -186,6 +187,58 @@ class NotificationsConsumerServiceTest {
         assertEquals("NTF-008", n.notificationId)
         assertEquals(before, notificationRepository.findAll().size)
         assertTrue(events.isEmpty())
+        assertTrue(context.emailSender().sent.isEmpty())
+    }
+
+    private fun assertFailed(n: Notification, type: NotificationType, orderId: String) {
+        assertEquals(NotificationStatus.FAILED, n.status)
+        assertEquals(TestClock.NOW, n.failedAt)
+        assertEquals("mailbox_full", n.failureReason)
+        assertNull(n.sentAt)
+        assertTrue(notificationRepository.findAll().any { it.orderId == orderId && it.type == type })
+        val failed = events.single() as NotificationDeliveryFailed
+        assertEquals(n.notificationId, failed.notificationId)
+        assertEquals(orderId, failed.orderId)
+        assertEquals(type, failed.type)
+        assertEquals("mailbox_full", failed.reason)
+        assertEquals(TestClock.NOW, failed.failedAt)
+        assertTrue(context.emailSender().sent.isEmpty())
+    }
+
+    @Test
+    fun sendOrderConfirmationDeliveryFailedTest() {
+        context.emailSender().refusalReason = "mailbox_full"
+        val n = notificationsConsumerService.sendOrderConfirmation(confirmationInput("ORD-005", "CUST-005", "customer05@example.com"))
+        assertFailed(n, NotificationType.ORDER_CONFIRMATION, "ORD-005")
+    }
+
+    @Test
+    fun sendStockUnavailableNotificationDeliveryFailedTest() {
+        context.emailSender().refusalReason = "mailbox_full"
+        val n = notificationsConsumerService.sendStockUnavailableNotification(stockInput("ORD-107", "CUST-107", "customer107@example.com"))
+        assertFailed(n, NotificationType.STOCK_UNAVAILABLE, "ORD-107")
+    }
+
+    @Test
+    fun sendOrderCancelledNotificationDeliveryFailedTest() {
+        context.emailSender().refusalReason = "mailbox_full"
+        val n = notificationsConsumerService.sendOrderCancelledNotification(cancelledInput("ORD-021", "CUST-021", "customer21@example.com"))
+        assertFailed(n, NotificationType.ORDER_CANCELLED, "ORD-021")
+    }
+
+    @Test
+    fun redeliveryAfterFailedDoesNothingTest() {
+        context.emailSender().refusalReason = "mailbox_full"
+        val first = notificationsConsumerService.sendOrderConfirmation(confirmationInput("ORD-005", "CUST-005", "customer05@example.com"))
+        val count = notificationRepository.findAll().size
+        context.emailSender().refusalReason = null
+
+        val again = notificationsConsumerService.sendOrderConfirmation(confirmationInput("ORD-005", "CUST-005", "customer05@example.com"))
+
+        assertEquals(first.notificationId, again.notificationId)
+        assertEquals(NotificationStatus.FAILED, again.status)
+        assertEquals(count, notificationRepository.findAll().size)
+        assertEquals(1, events.size)
         assertTrue(context.emailSender().sent.isEmpty())
     }
 }
