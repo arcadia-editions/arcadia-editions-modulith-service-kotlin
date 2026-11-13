@@ -8,6 +8,7 @@ import com.arcadiaeditions.catalog.inventory.service.dtos.ReleaseStockInput
 import java.time.Clock
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 
@@ -17,6 +18,11 @@ import org.springframework.stereotype.Component
  * whose deadline has passed. Once payment resolves, the reservations are no longer RESERVED and the timer stops.
  */
 @Component
+@ConditionalOnProperty(
+    name = ["catalog-inventory.reservation-expired-job.enabled"],
+    havingValue = "true",
+    matchIfMissing = true,
+)
 @org.jmolecules.architecture.layered.InterfaceLayer
 class ReservationExpiredJob(
     private val stockReservationRepository: StockReservationRepository,
