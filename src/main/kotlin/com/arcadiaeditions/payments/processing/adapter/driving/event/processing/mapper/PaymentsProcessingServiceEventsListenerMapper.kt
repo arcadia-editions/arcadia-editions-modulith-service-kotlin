@@ -31,7 +31,7 @@ interface PaymentsProcessingServiceEventsListenerMapper {
         event: PaymentFailed
     ): com.arcadiaeditions.payments.processing.application.port.driving.dto.RetryPaymentInput
 
-    /** Add `@Mapping` here when MapStruct cannot infer the conversion. */
+    /** On purpose, PaymentCaptureFailed.reason (e.g. capture_window_closed) passes through to the void, as data.sql C-17. */
     fun asVoidPaymentInput(
         event: PaymentCaptureFailed
     ): com.arcadiaeditions.payments.processing.application.port.driving.dto.VoidPaymentInput
