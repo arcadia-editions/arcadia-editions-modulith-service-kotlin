@@ -307,11 +307,12 @@ review: [ ] (round 1 FIX: reports/review-S8.md)
       tests: InventoryServiceTest
       blocked by: T-18
       done: claude-opus opus
-- [/] T-48 bounded AFK releaseStock with reason RESERVATION_EXPIRED releases only the order's reservations still RESERVED with expiresAt <= now, checked inside its transaction; CONFIRMED lines are never released by expiry; nothing due -> no event
+- [x] T-48 bounded AFK releaseStock with reason RESERVATION_EXPIRED releases only the order's reservations still RESERVED with expiresAt <= now, checked inside its transaction; CONFIRMED lines are never released by expiry; nothing due -> no event
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:230-240, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:113-118
       test data: data.sql C-14, data.sql C-03
       tests: InventoryServiceTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S8.md (FIX FIRST T-31)
+      done: claude-sonnet sonnet
 - [x] T-32 bounded AFK Flow test reservation expired: an order whose payment never resolves is cancelled with RESERVATION_EXPIRED after the Clock passes 10 minutes
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:230-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-11, data.sql C-14
