@@ -47,9 +47,10 @@ review: [x] (round 1 FIX: reports/review-S0.md; round 2 PASS at 4b804fe: reports
       tests: ArchitectureTest
       fixes: .zenwave/handoff/place-order-flow/reports/T-43.md (candidate product finding)
       done: claude-sonnet sonnet (app.events.resubmit-incomplete-publications-older-than, default PT5M)
-- [/] T-49 mechanical AFK Cleanup from the round-2 reviews (no behavior change): PaymentsProcessingServiceImpl "A-01 (P-02): CAPTURED" comment as the VOIDED one; PlaceOrderFlowCaptureFailedIntegrationTest:96 "C-17 input" -> C-10, re-wrap :52; rename capturePaymentRefusedFromCaptureFailedTest to a redelivery name and add a VOIDED redelivery test on C-10; InventoryServiceImpl:96 comment per branch; PlaceOrderFlowReservationExpiredIntegrationTest KDoc lists every fixture the timer releases; ExternalizationConfiguration unused log removed and app.events.resubmit-incomplete-publications-older-than set in application.yml
+- [x] T-49 mechanical AFK Cleanup from the round-2 reviews (no behavior change): PaymentsProcessingServiceImpl "A-01 (P-02): CAPTURED" comment as the VOIDED one; PlaceOrderFlowCaptureFailedIntegrationTest:96 "C-17 input" -> C-10, re-wrap :52; rename capturePaymentRefusedFromCaptureFailedTest to a redelivery name and add a VOIDED redelivery test on C-10; InventoryServiceImpl:96 comment per branch; PlaceOrderFlowReservationExpiredIntegrationTest KDoc lists every fixture the timer releases; ExternalizationConfiguration unused log removed and app.events.resubmit-incomplete-publications-older-than set in application.yml
       tests: PaymentsProcessingServiceTest, InventoryServiceTest, ArchitectureTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S7-r2.md, .zenwave/handoff/place-order-flow/reports/review-S8-r2.md (NOTEs)
+      done: claude-sonnet sonnet
 
 ## S1 completed (tracer bullet)
 path: StartOrderCheckout > startOrderCheckout > reserveStock[StockReservedResult] > OrderCreated > authorizePayment[authorized]
