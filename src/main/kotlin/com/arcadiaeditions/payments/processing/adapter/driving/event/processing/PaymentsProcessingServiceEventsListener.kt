@@ -18,9 +18,16 @@ class PaymentsProcessingServiceEventsListener(private val paymentsProcessingServ
     private val mapper: PaymentsProcessingServiceEventsListenerMapper =
         PaymentsProcessingServiceEventsListenerMapper.INSTANCE
 
+    private val log = org.slf4j.LoggerFactory.getLogger(javaClass)
+
     @ApplicationModuleListener
     fun authorizePayment(event: PaymentRetried) {
-        paymentsProcessingService.authorizePayment(mapper.asAuthorizePaymentInput(event))
+        try {
+            paymentsProcessingService.authorizePayment(mapper.asAuthorizePaymentInput(event))
+        } catch (e: IllegalArgumentException) {
+            // no Payment to retry (P-01 D): rejected for good, do not leave the publication incomplete to be resubmitted
+            log.warn("PaymentRetried for order {} dropped: {}", event.orderId, e.message)
+        }
     }
 
     @ApplicationModuleListener
