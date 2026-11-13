@@ -8,6 +8,7 @@ import com.arcadiaeditions.notifications.consumer.service.*
 import com.arcadiaeditions.notifications.consumer.service.dtos.*
 import com.arcadiaeditions.notifications.consumer.service.impl.mappers.*
 import com.arcadiaeditions.config.TestClock
+import com.arcadiaeditions.notifications.consumer.domain.events.OrderCancelledNotificationSent
 import com.arcadiaeditions.notifications.consumer.domain.events.OrderConfirmationSent
 import com.arcadiaeditions.notifications.consumer.domain.events.StockUnavailableNotificationSent
 import java.time.*
@@ -136,7 +137,55 @@ class NotificationsConsumerServiceTest {
         assertTrue(context.emailSender().sent.isEmpty())
     }
 
+    private fun cancelledInput(orderId: String, customerId: String, email: String) =
+        SendOrderCancelledNotificationInput(
+            orderId = orderId,
+            customerId = customerId,
+            reason = "PAYMENT_DECLINED",
+            customerEmail = email,
+        )
+
+    // C-21: OrderCancelled, no notification yet
     @Test
-    fun sendOrderCancelledNotificationTest() { // TODO: implement this test
+    fun sendOrderCancelledNotificationTest() {
+        val before = notificationRepository.findAll().size
+
+        val n =
+            notificationsConsumerService.sendOrderCancelledNotification(
+                cancelledInput("ORD-021", "CUST-021", "customer21@example.com")
+            )
+
+        assertEquals(NotificationType.ORDER_CANCELLED, n.type)
+        assertEquals(NotificationChannel.EMAIL, n.channel)
+        assertEquals(NotificationStatus.SENT, n.status)
+        assertEquals("customer21@example.com", n.recipient)
+        assertEquals("ORD-021", n.orderId)
+        assertTrue(n.body!!.contains("PAYMENT_DECLINED"))
+        assertEquals(TestClock.NOW, n.sentAt)
+        assertEquals(TestClock.NOW, n.createdAt)
+        assertNotNull(n.notificationId)
+        assertEquals(before + 1, notificationRepository.findAll().size)
+        val sent = events.single() as OrderCancelledNotificationSent
+        assertEquals("ORD-021", sent.orderId)
+        assertEquals("PAYMENT_DECLINED", sent.reason)
+        assertEquals(n.notificationId, sent.notificationId)
+        assertEquals(TestClock.NOW, sent.sentAt)
+        assertEquals("customer21@example.com", context.emailSender().sent.single().to)
+    }
+
+    // C-08: redelivery, already SENT
+    @Test
+    fun sendOrderCancelledNotificationRedeliveryTest() {
+        val before = notificationRepository.findAll().size
+
+        val n =
+            notificationsConsumerService.sendOrderCancelledNotification(
+                cancelledInput("ORD-008", "CUST-008", "customer08@example.com")
+            )
+
+        assertEquals("NTF-008", n.notificationId)
+        assertEquals(before, notificationRepository.findAll().size)
+        assertTrue(events.isEmpty())
+        assertTrue(context.emailSender().sent.isEmpty())
     }
 }
