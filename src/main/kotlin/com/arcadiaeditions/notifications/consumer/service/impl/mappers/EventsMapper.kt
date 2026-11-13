@@ -25,7 +25,10 @@ interface EventsMapper {
         notification: Notification
     ): com.arcadiaeditions.notifications.consumer.domain.events.OrderConfirmationSent
 
+    // the reason is not stored on Notification: it comes from the command input
+    @org.mapstruct.Mapping(target = "reason", source = "reason")
     fun asOrderCancelledNotificationSent(
-        notification: Notification
+        notification: Notification,
+        reason: String?,
     ): com.arcadiaeditions.notifications.consumer.domain.events.OrderCancelledNotificationSent
 }
