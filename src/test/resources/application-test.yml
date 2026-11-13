@@ -9,3 +9,6 @@ DATASOURCE_URL: jdbc:postgresql://localhost:15432/app
 DATASOURCE_USERNAME: postgres
 DATASOURCE_PASSWORD: admin123
 KAFKA_BOOTSTRAP_SERVERS: localhost:29092
+
+# T-31 job off in test contexts; tests call releaseExpiredReservations() after moving the MutableClock
+catalog-inventory.reservation-expired-job.enabled: false

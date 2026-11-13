@@ -37,6 +37,20 @@ class InventoryServiceTest {
         )
     }
 
+    @Test
+    fun reservationExpiredJobIsGatedByPropertyTest() {
+        val gate =
+            com.arcadiaeditions.catalog.inventory.events.scheduler.ReservationExpiredJob::class.java.getAnnotation(
+                org.springframework.boot.autoconfigure.condition.ConditionalOnProperty::class.java
+            )
+        org.junit.jupiter.api.Assertions.assertNotNull(gate)
+        org.junit.jupiter.api.Assertions.assertEquals(
+            "catalog-inventory.reservation-expired-job.enabled",
+            gate.name.single(),
+        )
+        org.junit.jupiter.api.Assertions.assertTrue(gate.matchIfMissing)
+    }
+
     private fun position(sku: String) = context.inventoryPositionRepository().findAll().single { it.sku == sku }
 
     private fun item(sku: String, quantity: Int) = ReserveStockItemInput(sku = sku, quantity = quantity as Integer)
