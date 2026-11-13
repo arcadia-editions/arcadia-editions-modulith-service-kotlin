@@ -272,4 +272,77 @@ class InventoryServiceTest {
         org.junit.jupiter.api.Assertions.assertEquals(1, confirmedEvents().size)
         org.junit.jupiter.api.Assertions.assertEquals(7, position("SKU-001").soldQuantity!!.toInt())
     }
+
+    private fun reservationExpiredJob(clock: Clock = context.clock) =
+        com.arcadiaeditions.catalog.inventory.events.scheduler.ReservationExpiredJob(
+            stockReservationRepository,
+            inventoryService,
+            clock,
+        )
+
+    @Test
+    fun reservationExpiredJobTest() {
+        // C-14: ORD-014 RESERVED x1 (SKU-001 x1), expiresAt 11:55 <= now 12:00 -> ReservationExpired due
+        // C-01: ORD-001 RESERVED, expiresAt 12:08 -> before its deadline, untouched
+        // C-11: ORD-011 already RELEASED (RESERVATION_EXPIRED) -> untouched
+        val c01 = stockReservationRepository.findAll().single { it.orderId == "ORD-001" }.copy()
+        val c11 = stockReservationRepository.findAll().single { it.orderId == "ORD-011" }.copy()
+
+        reservationExpiredJob().releaseExpiredReservations()
+
+        val c14 = stockReservationRepository.findAll().single { it.orderId == "ORD-014" }
+        org.junit.jupiter.api.Assertions.assertEquals(ReservationStatus.RELEASED, c14.status)
+        org.junit.jupiter.api.Assertions.assertEquals(StockReleaseReason.RESERVATION_EXPIRED, c14.releaseReason)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, c14.releasedAt)
+        // reserved -> available
+        val sku1 = position("SKU-001")
+        org.junit.jupiter.api.Assertions.assertEquals(90, sku1.availableQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(5, sku1.reservedQuantity!!.toInt())
+        // exactly one event, for ORD-014
+        val events = releasedEvents()
+        org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
+        org.junit.jupiter.api.Assertions.assertEquals("ORD-014", events[0].orderId)
+        org.junit.jupiter.api.Assertions.assertEquals(StockReleaseReason.RESERVATION_EXPIRED, events[0].reason)
+        org.junit.jupiter.api.Assertions.assertEquals("RES-014", events[0].items!!.single().reservationId)
+        // before the deadline: untouched
+        val c01After = stockReservationRepository.findAll().single { it.orderId == "ORD-001" }
+        org.junit.jupiter.api.Assertions.assertEquals(ReservationStatus.RESERVED, c01After.status)
+        org.junit.jupiter.api.Assertions.assertNull(c01After.releasedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(c01.expiresAt, c01After.expiresAt)
+        // already released: untouched
+        val c11After = stockReservationRepository.findAll().single { it.orderId == "ORD-011" }
+        org.junit.jupiter.api.Assertions.assertEquals(c11.releasedAt, c11After.releasedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(c11.releaseReason, c11After.releaseReason)
+    }
+
+    @Test
+    fun reservationExpiredJobTwiceTest() {
+        reservationExpiredJob().releaseExpiredReservations()
+        reservationExpiredJob().releaseExpiredReservations()
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, releasedEvents().size)
+        org.junit.jupiter.api.Assertions.assertEquals(90, position("SKU-001").availableQuantity!!.toInt())
+    }
+
+    @Test
+    fun reservationExpiredJobOncePerOrderTest() {
+        // at 12:07 the deadlines of ORD-014 (11:55), ORD-013 (12:06) and ORD-002 (12:07, two lines) are due
+        val at = Clock.fixed(Instant.parse("2026-10-01T12:07:00Z"), ZoneOffset.UTC)
+        reservationExpiredJob(at).releaseExpiredReservations()
+
+        val events = releasedEvents()
+        org.junit.jupiter.api.Assertions.assertEquals(listOf("ORD-002", "ORD-013", "ORD-014"), events.map { it.orderId!! }.sorted())
+        org.junit.jupiter.api.Assertions.assertTrue(events.all { it.reason == StockReleaseReason.RESERVATION_EXPIRED })
+        org.junit.jupiter.api.Assertions.assertEquals(
+            setOf("RES-002", "RES-003"),
+            events.single { it.orderId == "ORD-002" }.items!!.map { it.reservationId }.toSet(),
+        )
+        // ORD-001 (12:08), ORD-012 (12:09), ORD-015 (12:08) still before their deadline
+        listOf("ORD-001", "ORD-012", "ORD-015").forEach { orderId ->
+            org.junit.jupiter.api.Assertions.assertEquals(
+                ReservationStatus.RESERVED,
+                stockReservationRepository.findAll().single { it.orderId == orderId }.status,
+            )
+        }
+    }
 }

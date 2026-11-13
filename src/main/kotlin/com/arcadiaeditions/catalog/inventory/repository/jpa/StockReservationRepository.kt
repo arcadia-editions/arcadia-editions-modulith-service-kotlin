@@ -15,4 +15,6 @@ import org.springframework.stereotype.Repository
 interface StockReservationRepository : JpaRepository<StockReservation, Long> {
 
     fun findByOrderId(orderId: String): List<StockReservation>
+
+    fun findByStatusAndExpiresAtLessThanEqual(status: ReservationStatus, expiresAt: Instant): List<StockReservation>
 }
