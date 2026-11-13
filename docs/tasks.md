@@ -11,7 +11,7 @@ branch: afk/place-order-flow
      adapters driven by the fixtures' test ids (pm_card_visa, pm_card_chargeDeclined, ...); T-33 picks the real ones. -->
 
 ## S0 Baseline
-review: [/] (round 1 FIX: reports/review-S0.md; round 2 running at 4b804fe)
+review: [x] (round 1 FIX: reports/review-S0.md; round 2 PASS at 4b804fe: reports/review-S0-r2.md)
 
 - [x] T-01 mechanical AFK Inject a java.time.Clock bean (system clock; tests fix it at 2026-10-01T12:00:00Z) and use it for every Instant the services set
       tests: OrdersCheckoutServiceTest, InventoryServiceTest, PaymentsProcessingServiceTest
