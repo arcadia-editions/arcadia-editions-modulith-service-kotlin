@@ -94,11 +94,20 @@ open class InventoryServiceImpl(
 
         val all = stockReservationRepository.findByOrderId(input.orderId)
         // redelivery: only RESERVED / CONFIRMED reservations transition, RELEASED ones are left alone
-        val toRelease = all.filter { it.status == ReservationStatus.RESERVED || it.status == ReservationStatus.CONFIRMED }
+        val now = clock.instant()
+        // expiry only releases lines still RESERVED and past their deadline, checked inside this transaction
+        val expiry = input.reason == StockReleaseReason.RESERVATION_EXPIRED
+        val toRelease =
+            all.filter {
+                if (expiry) {
+                    it.status == ReservationStatus.RESERVED && it.expiresAt != null && !it.expiresAt!!.isAfter(now)
+                } else {
+                    it.status == ReservationStatus.RESERVED || it.status == ReservationStatus.CONFIRMED
+                }
+            }
         if (toRelease.isEmpty()) {
             return all
         }
-        val now = clock.instant()
         toRelease.forEach { reservation ->
             StockReservationTransitions.ensureCanReleaseStock(reservation)
             // A-02: reserved (or sold, when CONFIRMED) -> available
