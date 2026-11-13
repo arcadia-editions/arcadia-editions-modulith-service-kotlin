@@ -155,6 +155,54 @@ class PaymentsProcessingServiceTest {
     }
 
     @Test
+    fun authorizePaymentOnPaymentRetriedTest() {
+        // C-12: ORD-012 Payment FAILED; PaymentRetried carries only orderId and customerId (P-01 D),
+        // the other fields come from the Payment, not from the input
+        val before = paymentRepository.findAll().size
+
+        val payment =
+            paymentsProcessingService.authorizePayment(
+                AuthorizePaymentInput(
+                    orderId = "ORD-012",
+                    customerId = "CUST-012",
+                    customerEmail = "",
+                    amount = java.math.BigDecimal.ZERO,
+                    currency = "",
+                    paymentMethodId = "",
+                )
+            )
+
+        org.junit.jupiter.api.Assertions.assertEquals(before, paymentRepository.findAll().size)
+        val saved = savedPayment("ORD-012")
+        org.junit.jupiter.api.Assertions.assertEquals(saved.id, payment.id)
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.AUTHORIZED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals("pm_card_visa", saved.paymentMethodId)
+        org.junit.jupiter.api.Assertions.assertEquals("customer12@example.com", saved.customerEmail)
+        org.junit.jupiter.api.Assertions.assertEquals(0, java.math.BigDecimal("49.99").compareTo(saved.amount))
+        org.junit.jupiter.api.Assertions.assertEquals("EUR", saved.currency)
+        org.junit.jupiter.api.Assertions.assertEquals(1, saved.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertNotNull(saved.providerReference)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, saved.authorizedAt)
+        org.junit.jupiter.api.Assertions.assertNull(saved.failedAt)
+        org.junit.jupiter.api.Assertions.assertNull(saved.failureReason)
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
+        val event = events[0] as PaymentAuthorized
+        org.junit.jupiter.api.Assertions.assertEquals("ORD-012", event.orderId)
+    }
+
+    @Test
+    fun authorizePaymentOnPaymentRetriedOtherStateTest() {
+        // ORD-004 Payment is not FAILED: nothing happens
+        val before = savedPayment("ORD-004")
+
+        paymentsProcessingService.authorizePayment(authorizeInput("ORD-004", "pm_card_visa"))
+
+        org.junit.jupiter.api.Assertions.assertEquals(before.status, savedPayment("ORD-004").status)
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+    }
+
+    @Test
     fun retryPaymentTest() {
         // C-12: ORD-012 Payment FAILED (attempt 1 of 3), PaymentFailed emitted
         val before = paymentRepository.findAll().size
