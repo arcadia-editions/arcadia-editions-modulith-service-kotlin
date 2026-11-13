@@ -192,6 +192,28 @@ class PaymentsProcessingServiceTest {
     }
 
     @Test
+    fun authorizePaymentOnPaymentRetriedWithoutPaymentTest() {
+        // P-01 D: no Payment for the order and the placeholder fields of PaymentRetried: reject, create nothing
+        val before = paymentRepository.findAll().size
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException::class.java) {
+            paymentsProcessingService.authorizePayment(
+                AuthorizePaymentInput(
+                    orderId = "ORD-NO-PAYMENT",
+                    customerId = "CUST-X",
+                    customerEmail = "",
+                    amount = java.math.BigDecimal.ZERO,
+                    currency = "",
+                    paymentMethodId = "",
+                )
+            )
+        }
+
+        org.junit.jupiter.api.Assertions.assertEquals(before, paymentRepository.findAll().size)
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+    }
+
+    @Test
     fun authorizePaymentOnPaymentRetriedOtherStateTest() {
         // ORD-004 Payment is not FAILED: nothing happens
         val before = savedPayment("ORD-004")

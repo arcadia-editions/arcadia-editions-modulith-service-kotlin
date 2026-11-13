@@ -54,8 +54,7 @@ open class NotificationsConsumerServiceImpl(
         notification.createdAt = now
 
         val result = emailSender.send(EmailMessage(input.customerEmail, notification.subject!!, notification.body!!))
-        // the NotificationDeliveryFailed branch (FAILED) is a later task
-        if (!result.sent) throw UnsupportedOperationException("e-mail delivery refused: not implemented")
+        if (!result.sent) return deliveryFailed(notification, now, result.reason)
         // A-01 (P-02): SENT is set here, as the outcome of OrderConfirmationSent
         notification.status = NotificationStatus.SENT
         notification.sentAt = now
@@ -86,8 +85,7 @@ open class NotificationsConsumerServiceImpl(
         notification.createdAt = now
 
         val result = emailSender.send(EmailMessage(input.customerEmail, notification.subject!!, notification.body!!))
-        // the NotificationDeliveryFailed branch (FAILED) is a later task
-        if (!result.sent) throw UnsupportedOperationException("e-mail delivery refused: not implemented")
+        if (!result.sent) return deliveryFailed(notification, now, result.reason)
         notification.status = NotificationStatus.SENT
         notification.sentAt = now
         val saved = notificationRepository.save(notification)
@@ -116,8 +114,7 @@ open class NotificationsConsumerServiceImpl(
         notification.createdAt = now
 
         val result = emailSender.send(EmailMessage(input.customerEmail, notification.subject!!, notification.body!!))
-        // the NotificationDeliveryFailed branch (FAILED) is a later task
-        if (!result.sent) throw UnsupportedOperationException("e-mail delivery refused: not implemented")
+        if (!result.sent) return deliveryFailed(notification, now, result.reason)
         notification.status = NotificationStatus.SENT
         notification.sentAt = now
         val saved = notificationRepository.save(notification)
@@ -125,6 +122,16 @@ open class NotificationsConsumerServiceImpl(
         eventPublisher.onOrderCancelledNotificationSent(
             eventsMapper.asOrderCancelledNotificationSent(saved, input.reason)
         )
+        return saved
+    }
+
+    /** The provider refused: Notification FAILED, NotificationDeliveryFailed only. */
+    private fun deliveryFailed(notification: Notification, now: Instant, reason: String?): Notification {
+        notification.status = NotificationStatus.FAILED
+        notification.failedAt = now
+        notification.failureReason = reason
+        val saved = notificationRepository.save(notification)
+        eventPublisher.onNotificationDeliveryFailed(eventsMapper.asNotificationDeliveryFailed(saved))
         return saved
     }
 }

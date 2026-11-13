@@ -5,7 +5,7 @@ spring.jpa.hibernate.ddl-auto: create
 spring.jpa.defer-datasource-initialization: true
 spring.sql.init.mode: always
 
-DATASOURCE_URL: jdbc:postgresql://localhost:5432/app
+DATASOURCE_URL: jdbc:postgresql://localhost:15432/app
 DATASOURCE_USERNAME: postgres
 DATASOURCE_PASSWORD: admin123
-KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+KAFKA_BOOTSTRAP_SERVERS: localhost:29092

@@ -36,12 +36,14 @@ review: [x] (round 1 FIX: reports/review-S0.md; round 2 PASS at 4b804fe: reports
       adr: docs/proposals/P-04.md (decision A)
       blocked by: T-34
       done: claude-sonnet sonnet
+- [x] T-37 bounded AFK Test infrastructure: integration tests start their own compose file with ports that clash with nothing (postgres 15432, kafka 29092 advertised as ${HOST}:29092, zookeeper 22181, schema-registry 18081); docker-compose.yml (local dev) unchanged
+      tests: mvn -q verify -Dit.test='*RepositoryIntegrationTest' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false
 
 ## S1 completed (tracer bullet)
 path: StartOrderCheckout > startOrderCheckout > reserveStock[StockReservedResult] > OrderCreated > authorizePayment[authorized]
       > PaymentAuthorized > confirmOrder > confirmStockReservation > OrderConfirmed > scheduleFulfillment[FulfillmentScheduled]
       > capturePayment[PaymentCaptured] > sendOrderConfirmation > end completed
-review: [ ]
+review: [ ] (round 1 FIX at 2c897e8, suite not run: reports/review-S1.md)
 
 - [x] T-04 bounded AFK reserveStock: all lines available -> one StockReservation per line RESERVED (expiresAt = now + 10m), available -> reserved, outcome RESERVED with the reserved lines; any line short -> outcome UNAVAILABLE with the short lines, nothing reserved
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:95-99, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:52-59, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:74-105, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:111
@@ -106,6 +108,19 @@ review: [ ]
       blocked by: T-06, T-09, T-10, T-11, T-12
       done: claude-opus opus
 
+- [ ] T-38 bounded AFK ReservationExpiredJob off in test contexts: @ConditionalOnProperty catalog-inventory.reservation-expired-job.enabled (true by default), false in application-test.yml; tests that need it call the job method after moving the MutableClock
+      tests: InventoryServiceTest, PlaceOrderFlowCompletedIntegrationTest
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (FIX FIRST T-13/T-31)
+      blocked by: T-37
+- [ ] T-39 bounded AFK Fake adapters (FakePaymentProcessor, FakeWarehouse, FakeEmailSender) only when arcadia.fake-adapters.enabled=true (application-test.yml and the local profile), so a deployment without real adapters fails fast; FakeEmailSender.sent bounded or test-only
+      tests: PaymentsProcessingServiceTest, FulfillmentShippingServiceTest, NotificationsConsumerServiceTest, ArchitectureTest
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (SHOULD FIX fakes)
+      blocked by: T-38
+- [x] T-42 bounded AFK NotificationDeliveryFailed: when the EmailSender refuses, the three send* commands set the Notification FAILED (failedAt, failureReason) and emit NotificationDeliveryFailed instead of throwing
+      model: ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:88-98
+      tests: NotificationsConsumerServiceTest
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (NOTE T-12)
+      done: claude-sonnet sonnet
 ## S2 stockGone
 path: StartOrderCheckout > startOrderCheckout > reserveStock[StockUnavailableResult] > StockUnavailable
       > sendStockUnavailableNotification > end stockGone
@@ -129,7 +144,7 @@ review: [ ]
       tests: NotificationsConsumerServiceTest
       blocked by: T-12
       done: claude-sonnet sonnet
-- [ ] T-17 bounded AFK Flow test stockGone: startOrderCheckout for SKU-003 ends in StockUnavailableNotificationSent, no order, reservation or payment
+- [/] T-17 bounded AFK Flow test stockGone: startOrderCheckout for SKU-003 ends in StockUnavailableNotificationSent, no order, reservation or payment
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:82-99, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:199-202, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-07
       tests: PlaceOrderFlowStockGoneIntegrationTest
@@ -158,7 +173,7 @@ review: [ ]
       tests: NotificationsConsumerServiceTest
       blocked by: T-12
       done: claude-sonnet sonnet
-- [ ] T-21 bounded AFK Flow test declined: checkout with pm_card_chargeDeclined ends in OrderCancelledNotificationSent, stock back to available
+- [/] T-21 bounded AFK Flow test declined: checkout with pm_card_chargeDeclined ends in OrderCancelledNotificationSent, stock back to available
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:108-117, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:223-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-08
       tests: PlaceOrderFlowDeclinedIntegrationTest
@@ -182,7 +197,13 @@ review: [ ]
       adr: docs/proposals/P-01.md (decision D)
       blocked by: T-22
       done: claude-sonnet sonnet
-- [ ] T-24 bounded AFK Flow test retry: a processor error on the first attempt (fake pm_card_processorErrorOnce), authorized on the retry, ends in OrderConfirmationSent
+- [x] T-41 bounded AFK authorizePayment on PaymentRetried with no Payment: do not create one from the placeholder input; validate the required fields after filling them from the Payment (P-01 D) and reject otherwise
+      model: ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:56-63, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:85-87
+      tests: PaymentsProcessingServiceTest
+      adr: docs/proposals/P-01.md (decision D)
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (NOTE T-23)
+      done: claude-sonnet sonnet
+- [/] T-24 bounded AFK Flow test retry: a processor error on the first attempt (fake pm_card_processorErrorOnce), authorized on the retry, ends in OrderConfirmationSent
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:108-140, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-12
       tests: PlaceOrderFlowRetryIntegrationTest
