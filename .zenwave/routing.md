@@ -68,7 +68,7 @@ unattended work:
 - Integration tests run only in slice verification (the person, 2026-11-13). Workers and the orchestrator check each
   task with its unit tests, the compile and ArchitectureTest; flow-test tasks are written and compiled, then run in
   the slice review's full suite (the reviewer reruns a failing flow test once alone before reporting it).
-- One long-running test compose (`docker compose -f docker-compose-test.yml up -d` (project `arcadia-editions-modulith-it``, ports
+- One long-running test compose (`docker compose -f docker-compose-test.yml up -d`, project `arcadia-editions-modulith-it`, ports
   15432/29092/22181/18081, T-37) is reused by every integration run; tests restore their data. Never two integration
   runs at once: always through `.zenwave/handoff/place-order-flow/docker-run-it.sh` (lock). Docker is shared with
   `arcadia-editions-modulith-service-java`; host 5432/9092/2181/8081 may be held by others.

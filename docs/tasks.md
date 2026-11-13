@@ -132,23 +132,25 @@ review: [ ]
       tests: OrdersCheckoutServiceTest
       blocked by: T-05
       done: claude-sonnet sonnet
-- [/] T-15 bounded AFK Web: start-checkout when stock is unavailable answers 409 Conflict with a StockUnavailable body (orderId, unavailableItems), no Order (P-03 A; contract not edited)
+- [x] T-15 bounded AFK Web: start-checkout when stock is unavailable answers 409 Conflict with a StockUnavailable body (orderId, unavailableItems), no Order (P-03 A; contract not edited)
       model: ../arcadia-editions-modulith-api/orders-checkout-openapi.yml:32-52, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:95-98
       test data: data.sql C-07
       tests: OrdersCheckoutApiControllerTest, OrdersCheckoutApiIntegrationTest
       blocked by: T-06, T-14
       adr: docs/proposals/P-03.md (decision A, code only)
+      done: claude-sonnet sonnet (IT in slice review)
 - [x] T-16 bounded AFK sendStockUnavailableNotification on StockUnavailable: Notification STOCK_UNAVAILABLE with the skus, SENT, emit StockUnavailableNotificationSent; no duplicate on redelivery
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:199-202, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:67-76, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:92-94, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:112-121
       test data: data.sql C-07
       tests: NotificationsConsumerServiceTest
       blocked by: T-12
       done: claude-sonnet sonnet
-- [/] T-17 bounded AFK Flow test stockGone: startOrderCheckout for SKU-003 ends in StockUnavailableNotificationSent, no order, reservation or payment
+- [x] T-17 bounded AFK Flow test stockGone: startOrderCheckout for SKU-003 ends in StockUnavailableNotificationSent, no order, reservation or payment
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:82-99, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:199-202, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-07
       tests: PlaceOrderFlowStockGoneIntegrationTest
       blocked by: T-13, T-14, T-16
+      done: claude-sonnet sonnet (IT in slice review)
 
 ## S3 orderCancelled (payment declined)
 path: OrderCreated > authorizePayment[declined] > PaymentDeclined > releaseStock > StockReleased > cancelOrder
@@ -173,11 +175,12 @@ review: [ ]
       tests: NotificationsConsumerServiceTest
       blocked by: T-12
       done: claude-sonnet sonnet
-- [/] T-21 bounded AFK Flow test declined: checkout with pm_card_chargeDeclined ends in OrderCancelledNotificationSent, stock back to available
+- [x] T-21 bounded AFK Flow test declined: checkout with pm_card_chargeDeclined ends in OrderCancelledNotificationSent, stock back to available
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:108-117, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:223-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-08
       tests: PlaceOrderFlowDeclinedIntegrationTest
       blocked by: T-13, T-18, T-19, T-20
+      done: claude-sonnet sonnet (IT in slice review)
 
 ## S4 retry loop
 path: OrderCreated > authorizePayment[failed] > PaymentFailed > retryPayment[retried] > PaymentRetried
@@ -203,11 +206,12 @@ review: [ ]
       adr: docs/proposals/P-01.md (decision D)
       fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (NOTE T-23)
       done: claude-sonnet sonnet
-- [/] T-24 bounded AFK Flow test retry: a processor error on the first attempt (fake pm_card_processorErrorOnce), authorized on the retry, ends in OrderConfirmationSent
+- [x] T-24 bounded AFK Flow test retry: a processor error on the first attempt (fake pm_card_processorErrorOnce), authorized on the retry, ends in OrderConfirmationSent
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:108-140, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-12
       tests: PlaceOrderFlowRetryIntegrationTest
       blocked by: T-13, T-23
+      done: claude-sonnet sonnet (IT in slice review)
 
 ## S5 orderCancelled (retries exhausted)
 path: OrderCreated > authorizePayment[failed] > PaymentFailed > retryPayment[retry-exhausted] > PaymentRetryExhausted
