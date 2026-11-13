@@ -134,7 +134,7 @@ path: OrderCreated > authorizePayment[declined] > PaymentDeclined > releaseStock
       > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
 review: [ ]
 
-- [ ] T-18 bounded AFK releaseStock on PaymentDeclined / PaymentRetryExhausted / PaymentVoided: every RESERVED or CONFIRMED reservation of the orderId -> RELEASED (releasedAt, releaseReason from the event: PAYMENT_DECLINED, PAYMENT_RETRY_EXHAUSTED, PAYMENT_VOIDED), quantities back to available (A-02), emit StockReleased; already RELEASED does nothing
+- [/] T-18 bounded AFK releaseStock on PaymentDeclined / PaymentRetryExhausted / PaymentVoided: every RESERVED or CONFIRMED reservation of the orderId -> RELEASED (releasedAt, releaseReason from the event: PAYMENT_DECLINED, PAYMENT_RETRY_EXHAUSTED, PAYMENT_VOIDED), quantities back to available (A-02), emit StockReleased; already RELEASED does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:223-228, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:66-70, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:113-118, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:126-136
       test data: data.sql C-15, data.sql C-18, data.sql C-08
       tests: InventoryServiceTest
@@ -160,7 +160,7 @@ path: OrderCreated > authorizePayment[failed] > PaymentFailed > retryPayment[ret
       > authorizePayment[authorized] > PaymentAuthorized > confirmOrder > ... > end completed
 review: [ ]
 
-- [ ] T-22 bounded AFK retryPayment on PaymentFailed: load the Payment by orderId, guard FAILED; attemptCount below 3 (A-03) -> attemptCount + 1, stays FAILED, emit PaymentRetried; at 3 -> RETRY_EXHAUSTED, emit PaymentRetryExhausted
+- [/] T-22 bounded AFK retryPayment on PaymentFailed: load the Payment by orderId, guard FAILED; attemptCount below 3 (A-03) -> attemptCount + 1, stays FAILED, emit PaymentRetried; at 3 -> RETRY_EXHAUSTED, emit PaymentRetryExhausted
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:124-130, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:65-69, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:89-91, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:133-148
       test data: data.sql C-12, data.sql C-13
       tests: PaymentsProcessingServiceTest
