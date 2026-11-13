@@ -196,11 +196,12 @@ review: [ ]
       adr: docs/proposals/P-01.md (decision D)
       blocked by: T-22
       done: claude-sonnet sonnet
-- [/] T-41 bounded AFK authorizePayment on PaymentRetried with no Payment: do not create one from the placeholder input; validate the required fields after filling them from the Payment (P-01 D) and reject otherwise
+- [x] T-41 bounded AFK authorizePayment on PaymentRetried with no Payment: do not create one from the placeholder input; validate the required fields after filling them from the Payment (P-01 D) and reject otherwise
       model: ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:56-63, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:85-87
       tests: PaymentsProcessingServiceTest
       adr: docs/proposals/P-01.md (decision D)
       fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (NOTE T-23)
+      done: claude-sonnet sonnet
 - [/] T-24 bounded AFK Flow test retry: a processor error on the first attempt (fake pm_card_processorErrorOnce), authorized on the retry, ends in OrderConfirmationSent
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:108-140, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-12
