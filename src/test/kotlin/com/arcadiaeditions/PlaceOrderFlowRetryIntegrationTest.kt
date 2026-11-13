@@ -4,6 +4,7 @@ import com.arcadiaeditions.catalog.inventory.domain.ReservationStatus
 import com.arcadiaeditions.catalog.inventory.repository.jpa.InventoryPositionRepository
 import com.arcadiaeditions.catalog.inventory.repository.jpa.StockReservationRepository
 import com.arcadiaeditions.config.DockerComposeInitializer
+import com.arcadiaeditions.config.ExternalizationConfiguration
 import com.arcadiaeditions.config.MutableClock
 import com.arcadiaeditions.config.TestClock
 import com.arcadiaeditions.config.TestClockConfiguration
@@ -37,7 +38,9 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
 import org.springframework.modulith.test.EnableScenarios
 import org.springframework.modulith.test.Scenario
+import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 
 /**
  * place-order-flow, path `retry` (place-order-flow.zfl:108-140, end 262-266): the first authorization fails
@@ -48,11 +51,21 @@ import org.springframework.test.context.ActiveProfiles
  * C-06 with payment attemptCount 2 (fulfillment SCHEDULED: READY_TO_SHIP comes later, outside the flow). Not @Transactional: the module listeners
  * run after commit.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.MOCK,
+    // T-43: no replay, at startup, of incomplete publications another context or run left in event_publication
+    properties = ["spring.modulith.events.republish-outstanding-events-on-restart=false"],
+)
 @ActiveProfiles("test")
 @DockerComposeInitializer.EnableDockerCompose
 @EnableScenarios
 @Import(TestClockConfiguration::class)
+// T-43: a fresh context per flow class (schema + data.sql reloaded, new async threads). Scenario captures events through
+// an InheritableThreadLocal, which async listener threads already created in a reused context never see.
+@DirtiesContext
+// T-43: no resubmitIncompletePublications tick: its first run, right after startup, resubmits this test's in-flight
+// publications and the listener runs twice (seen: two STOCK_UNAVAILABLE notifications for one order)
+@MockitoBean(types = [ExternalizationConfiguration::class])
 class PlaceOrderFlowRetryIntegrationTest {
 
     @Autowired lateinit var ordersCheckoutService: OrdersCheckoutService
@@ -86,10 +99,11 @@ class PlaceOrderFlowRetryIntegrationTest {
 
     @Test
     fun processorErrorOnceIsRetriedAndEndsInOrderConfirmationSent(scenario: Scenario) {
-        // data/jpa/InventoryPosition/1.json: SKU-001 available 89, reserved 6, sold 5
+        // data/jpa/InventoryPosition/1.json: SKU-001 available 89, reserved 6, sold 5 in a fresh context; read, not
+        // asserted: counters are checked relative to these (T-43)
         val before = inventoryPositionRepository.findBySku("SKU-001")!!
-        assertThat(listOf(before.availableQuantity, before.reservedQuantity, before.soldQuantity).map { it?.toInt() })
-            .containsExactly(89, 6, 5)
+        val (available, reserved, sold) =
+            listOf(before.availableQuantity, before.reservedQuantity, before.soldQuantity).map { it!!.toInt() }
 
         scenario
             .stimulate(Supplier { ordersCheckoutService.startOrderCheckout(startOrderCheckoutInput()) })
@@ -102,12 +116,12 @@ class PlaceOrderFlowRetryIntegrationTest {
                     assertThat(event.channel).isEqualTo(NotificationChannel.EMAIL)
                     assertThat(event.recipient).isEqualTo("customer06@example.com")
                     assertThat(event.sentAt).isEqualTo(TestClock.NOW)
-                    assertEndState(order.orderId!!)
+                    assertEndState(order.orderId!!, available, reserved, sold)
                 }
             )
     }
 
-    private fun assertEndState(orderId: String) {
+    private fun assertEndState(orderId: String, available: Int, reserved: Int, sold: Int) {
         val now = TestClock.NOW
         // the event is published inside the sendOrderConfirmation transaction: wait for its commit
         await().atMost(timeout).untilAsserted {
@@ -138,7 +152,7 @@ class PlaceOrderFlowRetryIntegrationTest {
         assertThat(reservation.releasedAt).isNull()
         val position = inventoryPositionRepository.findBySku("SKU-001")!!
         assertThat(listOf(position.availableQuantity, position.reservedQuantity, position.soldQuantity).map { it?.toInt() })
-            .containsExactly(88, 6, 6)
+            .containsExactly(available - 1, reserved, sold + 1)
 
         // payments.processing: authorizePayment fails (attempt 1), retryPayment, authorizePayment -> AUTHORIZED (attempt 2), capturePayment -> CAPTURED (A-01)
         val payment = paymentRepository.findByOrderId(orderId)!!

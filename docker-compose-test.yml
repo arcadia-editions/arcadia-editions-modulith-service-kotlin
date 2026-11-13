@@ -1,7 +1,7 @@
 # Integration tests only (DockerComposeInitializer). Same services as docker-compose.yml, on host ports that clash
 # with nothing else on the same Docker (local dev compose, sibling projects): postgres 15432, zookeeper 22181,
 # kafka 29092, schema-registry 18081. Its own project name, so a running dev compose is never taken for it.
-name: arcadia-editions-modulith-it
+name: arcadia-kotlin-it
 services:
   postgresql:
     image: postgres:16.3

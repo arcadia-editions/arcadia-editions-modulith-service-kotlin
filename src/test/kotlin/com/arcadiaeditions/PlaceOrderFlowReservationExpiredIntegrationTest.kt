@@ -6,6 +6,7 @@ import com.arcadiaeditions.catalog.inventory.repository.jpa.InventoryPositionRep
 import com.arcadiaeditions.catalog.inventory.repository.jpa.StockReservationRepository
 import com.arcadiaeditions.catalog.inventory.service.InventoryService
 import com.arcadiaeditions.config.DockerComposeInitializer
+import com.arcadiaeditions.config.ExternalizationConfiguration
 import com.arcadiaeditions.config.MutableClock
 import com.arcadiaeditions.config.TestClock
 import com.arcadiaeditions.config.TestClockConfiguration
@@ -37,9 +38,13 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.modulith.test.EnableScenarios
 import org.springframework.modulith.test.Scenario
+import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.springframework.transaction.support.TransactionTemplate
 
 /**
  * place-order-flow, path `orderCancelled` by reservation expired (place-order-flow.zfl:230-260, end 262-266):
@@ -53,11 +58,21 @@ import org.springframework.test.context.ActiveProfiles
  * never resolves, so the P-06 race (PaymentAuthorized after the release) cannot happen here. Not @Transactional: the
  * module listeners run after commit.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.MOCK,
+    // T-43: no replay, at startup, of incomplete publications another context or run left in event_publication
+    properties = ["spring.modulith.events.republish-outstanding-events-on-restart=false"],
+)
 @ActiveProfiles("test")
 @DockerComposeInitializer.EnableDockerCompose
 @EnableScenarios
 @Import(TestClockConfiguration::class)
+// T-43: a fresh context per flow class (schema + data.sql reloaded, new async threads). Scenario captures events through
+// an InheritableThreadLocal, which async listener threads already created in a reused context never see.
+@DirtiesContext
+// T-43: no resubmitIncompletePublications tick: its first run, right after startup, resubmits this test's in-flight
+// publications and the listener runs twice (seen: two STOCK_UNAVAILABLE notifications for one order)
+@MockitoBean(types = [ExternalizationConfiguration::class])
 class PlaceOrderFlowReservationExpiredIntegrationTest {
 
     @Autowired lateinit var ordersCheckoutService: OrdersCheckoutService
@@ -71,6 +86,8 @@ class PlaceOrderFlowReservationExpiredIntegrationTest {
     @Autowired lateinit var emailSender: FakeEmailSender
     @Autowired lateinit var paymentProcessor: FakePaymentProcessor
     @Autowired lateinit var clock: MutableClock
+    @Autowired lateinit var jdbcTemplate: JdbcTemplate
+    @Autowired lateinit var transactionTemplate: TransactionTemplate
 
     private val timeout: Duration = Duration.ofSeconds(30)
 
@@ -86,6 +103,16 @@ class PlaceOrderFlowReservationExpiredIntegrationTest {
     fun releaseStalledAuthorizations() {
         // the stalled authorization throws and rolls back: payment still never resolves
         paymentProcessor.releaseStalledAuthorizations()
+        // T-43: wait until the stalled call has left the processor, so it ends in this class's context, never the next
+        await().atMost(timeout).until { paymentProcessor.stalledOrderIds.isEmpty() }
+        // T-43: its OrderCreated publication to payments stays incomplete for good (the listener threw); drop it, and any
+        // left by earlier runs on the shared test database, so no later context resubmits it and stalls again
+        transactionTemplate.executeWithoutResult {
+            jdbcTemplate.update(
+                "DELETE FROM event_publication WHERE completion_date IS NULL AND serialized_event LIKE ?",
+                "%\"${FakePaymentProcessor.NO_ANSWER_PAYMENT_METHOD}\"%",
+            )
+        }
         clock.reset()
     }
 
