@@ -94,6 +94,39 @@ open class OrdersCheckoutApiIntegrationTest : BaseWebTestClientTest() {
         }
 
         /**
+        * Test: startOrderCheckout for stock unavailable (C-07, SKU-003) answers 409 with StockUnavailable body (P-03 A).
+        */
+        @Test
+        fun testStartOrderCheckout_409() {
+        val requestBody = """
+            {
+              "customerId" : "CUST-007",
+              "customerEmail" : "customer07@example.com",
+              "paymentMethodId" : "pm_card_visa",
+              "currency" : "EUR",
+              "items" : [ { "sku" : "SKU-003", "quantity" : 1, "unitPrice" : 75.00 } ],
+              "shippingAddress" : {
+                "name" : "Alex Example", "line1" : "Calle Ficticia 1", "city" : "Madrid",
+                "postalCode" : "28001", "country" : "ES"
+              }
+            }
+        """
+
+        webTestClient.method(POST).uri("/api/orders/start-checkout")
+        .accept(MediaType.APPLICATION_JSON)
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(requestBody)
+        .exchange()
+        .expectStatus().isEqualTo(409)
+            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+            .expectBody()
+            .jsonPath("$.orderId").isNotEmpty()
+            .jsonPath("$.unavailableItems[0].sku").isEqualTo("SKU-003")
+            .jsonPath("$.unavailableItems[0].requestedQuantity").isEqualTo(1)
+            .jsonPath("$.unavailableItems[0].availableQuantity").isEqualTo(0)
+        }
+
+        /**
         * Test: getOrder for OK.
         */
         @Test
