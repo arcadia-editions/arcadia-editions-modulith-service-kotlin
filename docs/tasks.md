@@ -41,7 +41,7 @@ review: [x] (round 1 FIX: reports/review-S0.md; round 2 PASS at 4b804fe: reports
 path: StartOrderCheckout > startOrderCheckout > reserveStock[StockReservedResult] > OrderCreated > authorizePayment[authorized]
       > PaymentAuthorized > confirmOrder > confirmStockReservation > OrderConfirmed > scheduleFulfillment[FulfillmentScheduled]
       > capturePayment[PaymentCaptured] > sendOrderConfirmation > end completed
-review: [ ]
+review: [/] (running at 2c897e8)
 
 - [x] T-04 bounded AFK reserveStock: all lines available -> one StockReservation per line RESERVED (expiresAt = now + 10m), available -> reserved, outcome RESERVED with the reserved lines; any line short -> outcome UNAVAILABLE with the short lines, nothing reserved
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:95-99, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:52-59, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:74-105, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:111
@@ -129,7 +129,7 @@ review: [ ]
       tests: NotificationsConsumerServiceTest
       blocked by: T-12
       done: claude-sonnet sonnet
-- [ ] T-17 bounded AFK Flow test stockGone: startOrderCheckout for SKU-003 ends in StockUnavailableNotificationSent, no order, reservation or payment
+- [/] T-17 bounded AFK Flow test stockGone: startOrderCheckout for SKU-003 ends in StockUnavailableNotificationSent, no order, reservation or payment
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:82-99, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:199-202, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-07
       tests: PlaceOrderFlowStockGoneIntegrationTest
@@ -158,7 +158,7 @@ review: [ ]
       tests: NotificationsConsumerServiceTest
       blocked by: T-12
       done: claude-sonnet sonnet
-- [ ] T-21 bounded AFK Flow test declined: checkout with pm_card_chargeDeclined ends in OrderCancelledNotificationSent, stock back to available
+- [/] T-21 bounded AFK Flow test declined: checkout with pm_card_chargeDeclined ends in OrderCancelledNotificationSent, stock back to available
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:108-117, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:223-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-08
       tests: PlaceOrderFlowDeclinedIntegrationTest
@@ -182,7 +182,7 @@ review: [ ]
       adr: docs/proposals/P-01.md (decision D)
       blocked by: T-22
       done: claude-sonnet sonnet
-- [ ] T-24 bounded AFK Flow test retry: a processor error on the first attempt (fake pm_card_processorErrorOnce), authorized on the retry, ends in OrderConfirmationSent
+- [/] T-24 bounded AFK Flow test retry: a processor error on the first attempt (fake pm_card_processorErrorOnce), authorized on the retry, ends in OrderConfirmationSent
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:108-140, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-12
       tests: PlaceOrderFlowRetryIntegrationTest
