@@ -4,6 +4,7 @@ import com.arcadiaeditions.catalog.inventory.domain.ReservationStatus
 import com.arcadiaeditions.catalog.inventory.repository.jpa.InventoryPositionRepository
 import com.arcadiaeditions.catalog.inventory.repository.jpa.StockReservationRepository
 import com.arcadiaeditions.config.DockerComposeInitializer
+import com.arcadiaeditions.config.ExternalizationConfiguration
 import com.arcadiaeditions.config.MutableClock
 import com.arcadiaeditions.config.TestClock
 import com.arcadiaeditions.config.TestClockConfiguration
@@ -37,18 +38,30 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
 import org.springframework.modulith.test.EnableScenarios
 import org.springframework.modulith.test.Scenario
+import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 
 /**
  * place-order-flow, path `orderCancelled` by retries exhausted (place-order-flow.zfl:124-130, 223-260, end 262-266):
  * StartOrderCheckout with pm_card_processorError (every attempt fails, 3 attempts, A-03) ends in OrderCancelledNotificationSent, stock back to available.
- * End state is the shape of C-09 (CUST-009, SKU-001 x1). Not @Transactional: the module listeners run after commit.
+ * End state is the shape of C-09 (CUST-009); the input line SKU-001 x1 49.99 is the one of C-13 (C-09 holds SKU-002). Not @Transactional: the module listeners run after commit.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.MOCK,
+    // T-43: no replay, at startup, of incomplete publications another context or run left in event_publication
+    properties = ["spring.modulith.events.republish-outstanding-events-on-restart=false"],
+)
 @ActiveProfiles("test")
 @DockerComposeInitializer.EnableDockerCompose
 @EnableScenarios
 @Import(TestClockConfiguration::class)
+// T-43: a fresh context per flow class (schema + data.sql reloaded, new async threads). Scenario captures events through
+// an InheritableThreadLocal, which async listener threads already created in a reused context never see.
+@DirtiesContext
+// T-43: no resubmitIncompletePublications tick: its first run, right after startup, resubmits this test's in-flight
+// publications and the listener runs twice (seen: two STOCK_UNAVAILABLE notifications for one order)
+@MockitoBean(types = [ExternalizationConfiguration::class])
 class PlaceOrderFlowRetryExhaustedIntegrationTest {
 
     @Autowired lateinit var ordersCheckoutService: OrdersCheckoutService
