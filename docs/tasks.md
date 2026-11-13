@@ -114,7 +114,7 @@ review: [ ] (round 1 FIX at 2c897e8, suite not run: reports/review-S1.md)
       fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (FIX FIRST T-13/T-31)
       blocked by: T-37
       done: claude-sonnet sonnet
-- [ ] T-39 bounded AFK Fake adapters (FakePaymentProcessor, FakeWarehouse, FakeEmailSender) only when arcadia.fake-adapters.enabled=true (application-test.yml and the local profile), so a deployment without real adapters fails fast; FakeEmailSender.sent bounded or test-only
+- [/] T-39 bounded AFK Fake adapters (FakePaymentProcessor, FakeWarehouse, FakeEmailSender) only when arcadia.fake-adapters.enabled=true (application-test.yml and the local profile), so a deployment without real adapters fails fast; FakeEmailSender.sent bounded or test-only
       tests: PaymentsProcessingServiceTest, FulfillmentShippingServiceTest, NotificationsConsumerServiceTest, ArchitectureTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (SHOULD FIX fakes)
       blocked by: T-38
@@ -262,7 +262,7 @@ review: [ ]
       tests: PaymentsProcessingServiceTest
       blocked by: T-11
       done: claude-sonnet sonnet
-- [ ] T-30 bounded AFK Flow test capture failed: ends in OrderCancelledNotificationSent with PAYMENT_VOIDED
+- [/] T-30 bounded AFK Flow test capture failed: ends in OrderCancelledNotificationSent with PAYMENT_VOIDED
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:172-182, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:204-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-17
       tests: PlaceOrderFlowCaptureFailedIntegrationTest
@@ -279,7 +279,7 @@ review: [ ]
       tests: InventoryServiceTest
       blocked by: T-18
       done: claude-opus opus
-- [ ] T-32 bounded AFK Flow test reservation expired: an order whose payment never resolves is cancelled with RESERVATION_EXPIRED after the Clock passes 10 minutes
+- [/] T-32 bounded AFK Flow test reservation expired: an order whose payment never resolves is cancelled with RESERVATION_EXPIRED after the Clock passes 10 minutes
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:230-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-11, data.sql C-14
       tests: PlaceOrderFlowReservationExpiredIntegrationTest
