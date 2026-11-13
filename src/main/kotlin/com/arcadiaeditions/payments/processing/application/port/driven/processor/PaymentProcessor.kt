@@ -23,6 +23,8 @@ data class AuthorizationRequest(
     val paymentMethodId: String,
     val amount: BigDecimal,
     val currency: String,
+    /** Attempt being made (1 on the first authorization, more on PaymentRetried). */
+    val attemptCount: Int = 1,
 )
 
 data class CaptureRequest(

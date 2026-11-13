@@ -43,28 +43,40 @@ open class PaymentsProcessingServiceImpl(
 
         log.debug("Request authorizePayment: {}", input)
 
-        // redelivery: the orderId already has a Payment (reuse of a FAILED one on PaymentRetried is T-23, P-01 D)
-        paymentRepository.findByOrderId(input.orderId)?.let {
-            return it
+        // P-01 D: PaymentRetried reuses the FAILED Payment of the order (its fields win over the input's);
+        // any other existing state is a redelivery and does nothing
+        val existing = paymentRepository.findByOrderId(input.orderId)
+        if (existing != null && existing.status != PaymentStatus.FAILED) {
+            return existing
         }
-
-        val payment = paymentsProcessingServiceMapper.update(Payment(), input)
-        payment.status = PaymentStatus.AUTHORIZATION_REQUESTED
-        payment.attemptCount = 1 as Integer
-        val requested = paymentRepository.save(payment)
+        val requested =
+            if (existing != null) {
+                // attemptCount was already counted by retryPayment
+                existing.status = PaymentStatus.AUTHORIZATION_REQUESTED
+                paymentRepository.save(existing)
+            } else {
+                val payment = paymentsProcessingServiceMapper.update(Payment(), input)
+                payment.status = PaymentStatus.AUTHORIZATION_REQUESTED
+                payment.attemptCount = 1 as Integer
+                paymentRepository.save(payment)
+            }
 
         val result =
             paymentProcessor.authorize(
                 AuthorizationRequest(
-                    orderId = input.orderId,
-                    customerId = input.customerId,
-                    paymentMethodId = input.paymentMethodId,
-                    amount = input.amount,
-                    currency = input.currency,
+                    orderId = requested.orderId!!,
+                    customerId = requested.customerId!!,
+                    paymentMethodId = requested.paymentMethodId!!,
+                    amount = requested.amount!!,
+                    currency = requested.currency!!,
+                    attemptCount = requested.attemptCount?.toInt() ?: 1,
                 )
             )
         // A-01 (P-02): the outcome state is set here, though the ZDL transition only names AUTHORIZATION_REQUESTED
         val now = Instant.now(clock)
+        // a retried authorization starts without the failure of the previous attempt
+        requested.failedAt = null
+        requested.failureReason = null
         when (result.outcome) {
             PaymentProcessorOutcome.APPROVED -> {
                 requested.status = PaymentStatus.AUTHORIZED
