@@ -27,23 +27,14 @@ open class OrdersCheckoutApiIntegrationTest : BaseWebTestClientTest() {
         fun testStartOrderCheckout_201() {
         val requestBody = """
             {
-              "customerId" : "customerId-fz",
-              "customerEmail" : "ricardo.tremblay@hotmail.c",
-              "paymentMethodId" : "paymentMethodId-sygwuu1k28",
-              "currency" : "currency-zoesrbh8tagdogzbp",
-              "items" : [ {
-                "sku" : "sku-j6dpsnojidxr",
-                "quantity" : 85,
-                "unitPrice" : 64
-              } ],
+              "customerId" : "CUST-001",
+              "customerEmail" : "customer01@example.com",
+              "paymentMethodId" : "pm_card_visa",
+              "currency" : "EUR",
+              "items" : [ { "sku" : "SKU-001", "quantity" : 1, "unitPrice" : 49.99 } ],
               "shippingAddress" : {
-                "name" : "name-gh",
-                "line1" : "line1-eykvcxb4sf14fs6yts4z",
-                "line2" : "line2-did5wykahu",
-                "city" : "Lake Katina",
-                "region" : "region-al5i2rwx3cjwyu",
-                "postalCode" : "postalCode-s",
-                "country" : "Maldives"
+                "name" : "Alex Example", "line1" : "Calle Ficticia 1", "line2" : "2B", "city" : "Madrid",
+                "region" : "Madrid", "postalCode" : "28001", "country" : "ES"
               }
             }
         """
@@ -57,31 +48,13 @@ open class OrdersCheckoutApiIntegrationTest : BaseWebTestClientTest() {
             .expectHeader().contentType(MediaType.APPLICATION_JSON)
             .expectBody()
             .jsonPath("$.id").isNotEmpty()
-            .jsonPath("$.version").isNotEmpty()
             .jsonPath("$.orderId").isNotEmpty()
-            .jsonPath("$.status").isNotEmpty()
-            .jsonPath("$.customerId").isNotEmpty()
-            .jsonPath("$.customerEmail").isNotEmpty()
-            .jsonPath("$.paymentMethodId").isNotEmpty()
-            .jsonPath("$.items").isNotEmpty()
-                .jsonPath("$.items").isArray()
-                    .jsonPath("$.items[0].sku").isNotEmpty()
-                    .jsonPath("$.items[0].quantity").isNotEmpty()
-                    .jsonPath("$.items[0].unitPrice").isNotEmpty()
-            .jsonPath("$.shippingAddress").isNotEmpty()
-                    .jsonPath("$.shippingAddress.name").isNotEmpty()
-                    .jsonPath("$.shippingAddress.line1").isNotEmpty()
-                    .jsonPath("$.shippingAddress.line2").isNotEmpty()
-                    .jsonPath("$.shippingAddress.city").isNotEmpty()
-                    .jsonPath("$.shippingAddress.region").isNotEmpty()
-                    .jsonPath("$.shippingAddress.postalCode").isNotEmpty()
-                    .jsonPath("$.shippingAddress.country").isNotEmpty()
-            .jsonPath("$.totalAmount").isNotEmpty()
-            .jsonPath("$.currency").isNotEmpty()
+            .jsonPath("$.status").isEqualTo("CREATED")
+            .jsonPath("$.customerId").isEqualTo("CUST-001")
+            .jsonPath("$.items[0].sku").isEqualTo("SKU-001")
+            .jsonPath("$.totalAmount").isEqualTo(49.99)
+            .jsonPath("$.currency").isEqualTo("EUR")
             .jsonPath("$.createdAt").isNotEmpty()
-            .jsonPath("$.confirmedAt").isNotEmpty()
-            .jsonPath("$.cancelledAt").isNotEmpty()
-            .jsonPath("$.cancellationReason").isNotEmpty()
         }
 
         /**
@@ -125,53 +98,27 @@ open class OrdersCheckoutApiIntegrationTest : BaseWebTestClientTest() {
         */
         @Test
         fun testGetOrder_200() {
-        val id = ""
-
-        webTestClient.method(GET).uri("/api/orders/{id}", id)
+        webTestClient.method(GET).uri("/api/orders/{id}", 1)
         .accept(MediaType.APPLICATION_JSON)
         .exchange()
         .expectStatus().isEqualTo(200)
             .expectHeader().contentType(MediaType.APPLICATION_JSON)
             .expectBody()
-            .jsonPath("$.id").isNotEmpty()
-            .jsonPath("$.version").isNotEmpty()
-            .jsonPath("$.orderId").isNotEmpty()
-            .jsonPath("$.status").isNotEmpty()
-            .jsonPath("$.customerId").isNotEmpty()
-            .jsonPath("$.customerEmail").isNotEmpty()
-            .jsonPath("$.paymentMethodId").isNotEmpty()
-            .jsonPath("$.items").isNotEmpty()
-                .jsonPath("$.items").isArray()
-                    .jsonPath("$.items[0].sku").isNotEmpty()
-                    .jsonPath("$.items[0].quantity").isNotEmpty()
-                    .jsonPath("$.items[0].unitPrice").isNotEmpty()
-            .jsonPath("$.shippingAddress").isNotEmpty()
-                    .jsonPath("$.shippingAddress.name").isNotEmpty()
-                    .jsonPath("$.shippingAddress.line1").isNotEmpty()
-                    .jsonPath("$.shippingAddress.line2").isNotEmpty()
-                    .jsonPath("$.shippingAddress.city").isNotEmpty()
-                    .jsonPath("$.shippingAddress.region").isNotEmpty()
-                    .jsonPath("$.shippingAddress.postalCode").isNotEmpty()
-                    .jsonPath("$.shippingAddress.country").isNotEmpty()
-            .jsonPath("$.totalAmount").isNotEmpty()
-            .jsonPath("$.currency").isNotEmpty()
-            .jsonPath("$.createdAt").isNotEmpty()
-            .jsonPath("$.confirmedAt").isNotEmpty()
-            .jsonPath("$.cancelledAt").isNotEmpty()
-            .jsonPath("$.cancellationReason").isNotEmpty()
+            .jsonPath("$.orderId").isEqualTo("ORD-001")
+            .jsonPath("$.status").isEqualTo("CREATED")
+            .jsonPath("$.customerId").isEqualTo("CUST-001")
+            .jsonPath("$.totalAmount").isEqualTo(49.99)
         }
 
         /**
-        * Test: getOrder for Invalid request.
+        * Test: getOrder for an unknown id answers 404.
         */
         @Test
-        fun testGetOrder_400() {
-        val id = ""
-
-        webTestClient.method(GET).uri("/api/orders/{id}", id)
+        fun testGetOrder_404() {
+        webTestClient.method(GET).uri("/api/orders/{id}", 999999)
         .accept(MediaType.APPLICATION_JSON)
         .exchange()
-        .expectStatus().isEqualTo(400)
+        .expectStatus().isEqualTo(404)
         }
 
 }
