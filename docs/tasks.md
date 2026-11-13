@@ -135,7 +135,7 @@ review: [ ] (round 1 FIX at 2c897e8, suite not run: reports/review-S1.md)
 ## S2 stockGone
 path: StartOrderCheckout > startOrderCheckout > reserveStock[StockUnavailableResult] > StockUnavailable
       > sendStockUnavailableNotification > end stockGone
-review: [/] (code PASS: reports/review-S2.md; flow IT pending T-43)
+review: [x] (code PASS: reports/review-S2.md; flow IT green in suite 5dc4a45)
 
 - [x] T-14 bounded AFK startOrderCheckout UNAVAILABLE: persist no Order (A-05) and emit StockUnavailable with the unavailable items
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:82-89, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:194-202, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:98, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:126-135
@@ -166,7 +166,7 @@ review: [/] (code PASS: reports/review-S2.md; flow IT pending T-43)
 ## S3 orderCancelled (payment declined)
 path: OrderCreated > authorizePayment[declined] > PaymentDeclined > releaseStock > StockReleased > cancelOrder
       > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
-review: [/] (code PASS: reports/review-S3.md; flow IT pending T-43)
+review: [x] (code PASS: reports/review-S3.md; flow IT green in suite 5dc4a45)
 
 - [x] T-18 bounded AFK releaseStock on PaymentDeclined / PaymentRetryExhausted / PaymentVoided: every RESERVED or CONFIRMED reservation of the orderId -> RELEASED (releasedAt, releaseReason from the event: PAYMENT_DECLINED, PAYMENT_RETRY_EXHAUSTED, PAYMENT_VOIDED), quantities back to available (A-02), emit StockReleased; already RELEASED does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:223-228, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:66-70, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:113-118, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:126-136
@@ -232,7 +232,7 @@ review: [ ] (round 1 FIX: reports/review-S4.md; flow IT pending T-43)
 ## S5 orderCancelled (retries exhausted)
 path: OrderCreated > authorizePayment[failed] > PaymentFailed > retryPayment[retry-exhausted] > PaymentRetryExhausted
       > releaseStock > StockReleased > cancelOrder > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
-review: [/] (code PASS: reports/review-S5.md; flow IT pending T-43)
+review: [x] (code PASS: reports/review-S5.md; flow IT green in suite 5dc4a45)
 
 - [x] T-25 bounded AFK Flow test retries exhausted: every attempt fails (pm_card_processorError), after 3 attempts the order is cancelled with PAYMENT_RETRY_EXHAUSTED
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:124-130, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:223-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
