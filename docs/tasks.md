@@ -31,10 +31,11 @@ review: [ ] (round 1 FIX: reports/review-S0.md)
       tests: mvn -q verify -Dit.test='*RepositoryIntegrationTest' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false
       fixes: .zenwave/handoff/place-order-flow/reports/review-S0.md (SHOULD FIX T-03)
       done: claude-sonnet sonnet (redo; ITs 35/35 run by orchestrator)
-- [/] T-36 bounded AFK Modulith modules (P-04 A): @NamedInterface on common.mappers (BaseMapper); declare catalog.inventory, catalog.products, notifications.consumer as application modules; fix the root ModuleMetadata ("Payments Processing" on the root package); remove the BaseMapper and one-module tolerances from ArchitectureTest; keep only the known event cycles; any new violation found is fixed in code or listed in the report
+- [x] T-36 bounded AFK Modulith modules (P-04 A): @NamedInterface on common.mappers (BaseMapper); declare catalog.inventory, catalog.products, notifications.consumer as application modules; fix the root ModuleMetadata ("Payments Processing" on the root package); remove the BaseMapper and one-module tolerances from ArchitectureTest; keep only the known event cycles; any new violation found is fixed in code or listed in the report
       tests: ArchitectureTest, JMoleculesArchitectureTest
       adr: docs/proposals/P-04.md (decision A)
       blocked by: T-34
+      done: claude-sonnet sonnet
 
 ## S1 completed (tracer bullet)
 path: StartOrderCheckout > startOrderCheckout > reserveStock[StockReservedResult] > OrderCreated > authorizePayment[authorized]
@@ -144,11 +145,12 @@ review: [ ]
       tests: InventoryServiceTest
       blocked by: T-08
       done: claude-opus opus
-- [/] T-19 bounded AFK cancelOrder on StockReleased: Order CREATED or CONFIRMED -> CANCELLED (cancelledAt, cancellationReason = reason, A-07), emit OrderCancelled; already CANCELLED does nothing
+- [x] T-19 bounded AFK cancelOrder on StockReleased: Order CREATED or CONFIRMED -> CANCELLED (cancelledAt, cancellationReason = reason, A-07), emit OrderCancelled; already CANCELLED does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:246-250, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:86-90, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:105-107, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:159-167
       test data: data.sql C-19, data.sql C-20, data.sql C-08
       tests: OrdersCheckoutServiceTest
       blocked by: T-09
+      done: claude-sonnet sonnet
 - [ ] T-20 bounded AFK sendOrderCancelledNotification on OrderCancelled: Notification ORDER_CANCELLED with the reason, SENT, emit OrderCancelledNotificationSent; no duplicate on redelivery
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:257-260, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:78-83, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:96-98, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:123-132
       test data: data.sql C-21, data.sql C-08
