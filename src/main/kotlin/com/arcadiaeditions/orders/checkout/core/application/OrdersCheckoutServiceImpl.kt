@@ -103,20 +103,18 @@ open class OrdersCheckoutServiceImpl(
 
         log.debug("Request cancelOrder: {}", input)
 
-        // TODO CUSTOM_REQUIRED: load the Order this transition applies to, e.g. by a correlation key in the input
-        val foundOrder: Order? = emptyList<Order>().firstOrNull()
-        return foundOrder
-            ?.let { existingOrder ->
-                OrderTransitions.ensureCanCancelOrder(existingOrder)
-                ordersCheckoutServiceMapper.update(existingOrder, input)
-                existingOrder.status = OrderStatus.CANCELLED
-                existingOrder
-            }
-            ?.let { orderRepository.save(it) }
-            ?.also {
-                // emit events
-                eventPublisher.onOrderCancelled(eventsMapper.asOrderCancelled(it))
-            } ?: throw NoSuchElementException("Order not found")
+        val order = orderRepository.findByOrderId(input.orderId) ?: throw NoSuchElementException("Order not found")
+        // redelivery: an already CANCELLED order does nothing
+        if (order.status == OrderStatus.CANCELLED) {
+            return order
+        }
+        OrderTransitions.ensureCanCancelOrder(order)
+        order.status = OrderStatus.CANCELLED
+        order.cancelledAt = Instant.now(clock)
+        order.cancellationReason = input.reason // A-07: StockReleased.reason
+        val saved = orderRepository.save(order)
+        eventPublisher.onOrderCancelled(eventsMapper.asOrderCancelled(saved))
+        return saved
     }
 
     @Transactional(readOnly = true)

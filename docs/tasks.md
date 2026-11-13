@@ -11,7 +11,7 @@ branch: afk/place-order-flow
      adapters driven by the fixtures' test ids (pm_card_visa, pm_card_chargeDeclined, ...); T-33 picks the real ones. -->
 
 ## S0 Baseline
-review: [ ] (round 1 FIX: reports/review-S0.md)
+review: [x] (round 1 FIX: reports/review-S0.md; round 2 PASS at 4b804fe: reports/review-S0-r2.md)
 
 - [x] T-01 mechanical AFK Inject a java.time.Clock bean (system clock; tests fix it at 2026-10-01T12:00:00Z) and use it for every Instant the services set
       tests: OrdersCheckoutServiceTest, InventoryServiceTest, PaymentsProcessingServiceTest
@@ -31,10 +31,11 @@ review: [ ] (round 1 FIX: reports/review-S0.md)
       tests: mvn -q verify -Dit.test='*RepositoryIntegrationTest' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false
       fixes: .zenwave/handoff/place-order-flow/reports/review-S0.md (SHOULD FIX T-03)
       done: claude-sonnet sonnet (redo; ITs 35/35 run by orchestrator)
-- [/] T-36 bounded AFK Modulith modules (P-04 A): @NamedInterface on common.mappers (BaseMapper); declare catalog.inventory, catalog.products, notifications.consumer as application modules; fix the root ModuleMetadata ("Payments Processing" on the root package); remove the BaseMapper and one-module tolerances from ArchitectureTest; keep only the known event cycles; any new violation found is fixed in code or listed in the report
+- [x] T-36 bounded AFK Modulith modules (P-04 A): @NamedInterface on common.mappers (BaseMapper); declare catalog.inventory, catalog.products, notifications.consumer as application modules; fix the root ModuleMetadata ("Payments Processing" on the root package); remove the BaseMapper and one-module tolerances from ArchitectureTest; keep only the known event cycles; any new violation found is fixed in code or listed in the report
       tests: ArchitectureTest, JMoleculesArchitectureTest
       adr: docs/proposals/P-04.md (decision A)
       blocked by: T-34
+      done: claude-sonnet sonnet
 
 ## S1 completed (tracer bullet)
 path: StartOrderCheckout > startOrderCheckout > reserveStock[StockReservedResult] > OrderCreated > authorizePayment[authorized]
@@ -144,16 +145,18 @@ review: [ ]
       tests: InventoryServiceTest
       blocked by: T-08
       done: claude-opus opus
-- [ ] T-19 bounded AFK cancelOrder on StockReleased: Order CREATED or CONFIRMED -> CANCELLED (cancelledAt, cancellationReason = reason, A-07), emit OrderCancelled; already CANCELLED does nothing
+- [x] T-19 bounded AFK cancelOrder on StockReleased: Order CREATED or CONFIRMED -> CANCELLED (cancelledAt, cancellationReason = reason, A-07), emit OrderCancelled; already CANCELLED does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:246-250, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:86-90, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:105-107, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:159-167
       test data: data.sql C-19, data.sql C-20, data.sql C-08
       tests: OrdersCheckoutServiceTest
       blocked by: T-09
-- [ ] T-20 bounded AFK sendOrderCancelledNotification on OrderCancelled: Notification ORDER_CANCELLED with the reason, SENT, emit OrderCancelledNotificationSent; no duplicate on redelivery
+      done: claude-sonnet sonnet
+- [x] T-20 bounded AFK sendOrderCancelledNotification on OrderCancelled: Notification ORDER_CANCELLED with the reason, SENT, emit OrderCancelledNotificationSent; no duplicate on redelivery
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:257-260, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:78-83, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:96-98, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:123-132
       test data: data.sql C-21, data.sql C-08
       tests: NotificationsConsumerServiceTest
       blocked by: T-12
+      done: claude-sonnet sonnet
 - [ ] T-21 bounded AFK Flow test declined: checkout with pm_card_chargeDeclined ends in OrderCancelledNotificationSent, stock back to available
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:108-117, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:223-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-08
@@ -171,12 +174,13 @@ review: [ ]
       tests: PaymentsProcessingServiceTest
       blocked by: T-07
       done: claude-opus opus
-- [ ] T-23 bounded AFK authorizePayment on PaymentRetried (P-01 accepted D): load the existing FAILED Payment by orderId, take amount, currency, customerEmail and paymentMethodId from it, authorize it again through the PaymentProcessor port; with no Payment create it as on OrderCreated; any other state does nothing
+- [x] T-23 bounded AFK authorizePayment on PaymentRetried (P-01 accepted D): load the existing FAILED Payment by orderId, take amount, currency, customerEmail and paymentMethodId from it, authorize it again through the PaymentProcessor port; with no Payment create it as on OrderCreated; any other state does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:132-140, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:56-63, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:85-87, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:133-139
       test data: data.sql C-12
       tests: PaymentsProcessingServiceTest
       adr: docs/proposals/P-01.md (decision D)
       blocked by: T-22
+      done: claude-sonnet sonnet
 - [ ] T-24 bounded AFK Flow test retry: a processor error on the first attempt (fake pm_card_processorErrorOnce), authorized on the retry, ends in OrderConfirmationSent
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:108-140, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-12
@@ -199,16 +203,18 @@ path: OrderConfirmed > scheduleFulfillment[FulfillmentFailed] > voidPayment > Pa
       > cancelOrder > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
 review: [ ]
 
-- [ ] T-26 bounded AFK scheduleFulfillment FAILED branch: the Warehouse port refuses (fake, set by the test) -> Fulfillment FAILED (failedAt, failureReason), emit FulfillmentFailed only
+- [x] T-26 bounded AFK scheduleFulfillment FAILED branch: the Warehouse port refuses (fake, set by the test) -> Fulfillment FAILED (failedAt, failureReason), emit FulfillmentFailed only
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:160-170, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:84, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:99-106
       test data: data.sql C-03, data.sql C-16
       tests: FulfillmentShippingServiceTest
       blocked by: T-10
-- [ ] T-27 advanced AFK voidPayment on FulfillmentFailed / PaymentCaptureFailed: load the Payment by orderId, guard AUTHORIZED, AUTHORIZATION_REQUESTED, FAILED or CAPTURE_FAILED, void through the PaymentProcessor port (fake), VOIDED (voidedAt, failureReason = reason), emit PaymentVoided; already VOIDED does nothing
+      done: claude-sonnet sonnet
+- [x] T-27 advanced AFK voidPayment on FulfillmentFailed / PaymentCaptureFailed: load the Payment by orderId, guard AUTHORIZED, AUTHORIZATION_REQUESTED, FAILED or CAPTURE_FAILED, void through the PaymentProcessor port (fake), VOIDED (voidedAt, failureReason = reason), emit PaymentVoided; already VOIDED does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:204-215, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:76-80, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:97-100, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:169-175
       test data: data.sql C-16, data.sql C-01, data.sql C-12, data.sql C-17, data.sql C-10
       tests: PaymentsProcessingServiceTest
       blocked by: T-11
+      done: claude-opus opus
 - [ ] T-28 bounded AFK Flow test fulfillment failed: ends in OrderCancelledNotificationSent with PAYMENT_VOIDED, payment VOIDED, stock back to available
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:160-170, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:204-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-10
@@ -220,11 +226,12 @@ path: FulfillmentScheduled > capturePayment[PaymentCaptureFailed] > voidPayment 
       > StockReleased > cancelOrder > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
 review: [ ]
 
-- [ ] T-29 bounded AFK capturePayment failure branch: the PaymentProcessor port refuses the capture (fake, set by the test) -> CAPTURE_FAILED (failedAt, failureReason), emit PaymentCaptureFailed only
+- [x] T-29 bounded AFK capturePayment failure branch: the PaymentProcessor port refuses the capture (fake, set by the test) -> CAPTURE_FAILED (failedAt, failureReason), emit PaymentCaptureFailed only
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:172-182, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:95, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:161-167
       test data: data.sql C-04, data.sql C-17
       tests: PaymentsProcessingServiceTest
       blocked by: T-11
+      done: claude-sonnet sonnet
 - [ ] T-30 bounded AFK Flow test capture failed: ends in OrderCancelledNotificationSent with PAYMENT_VOIDED
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:172-182, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:204-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-17
@@ -236,11 +243,12 @@ path: ReservationExpired (10 minutes after OrderCreated) > releaseStock > StockR
       > sendOrderCancelledNotification > end orderCancelled
 review: [ ]
 
-- [ ] T-31 advanced AFK ReservationExpired timer: a scheduled job (Clock-driven) finds RESERVED reservations with expiresAt at or before now and calls releaseStock(orderId, RESERVATION_EXPIRED) once per order; reservations before their deadline are untouched
+- [x] T-31 advanced AFK ReservationExpired timer: a scheduled job (Clock-driven) finds RESERVED reservations with expiresAt at or before now and calls releaseStock(orderId, RESERVATION_EXPIRED) once per order; reservations before their deadline are untouched
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:230-240, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:66-70, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:116-118
       test data: data.sql C-14, data.sql C-01, data.sql C-11
       tests: InventoryServiceTest
       blocked by: T-18
+      done: claude-opus opus
 - [ ] T-32 bounded AFK Flow test reservation expired: an order whose payment never resolves is cancelled with RESERVATION_EXPIRED after the Clock passes 10 minutes
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:230-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-11, data.sql C-14

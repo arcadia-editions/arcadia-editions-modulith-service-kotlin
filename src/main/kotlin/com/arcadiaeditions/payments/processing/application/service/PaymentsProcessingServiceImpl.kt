@@ -43,28 +43,40 @@ open class PaymentsProcessingServiceImpl(
 
         log.debug("Request authorizePayment: {}", input)
 
-        // redelivery: the orderId already has a Payment (reuse of a FAILED one on PaymentRetried is T-23, P-01 D)
-        paymentRepository.findByOrderId(input.orderId)?.let {
-            return it
+        // P-01 D: PaymentRetried reuses the FAILED Payment of the order (its fields win over the input's);
+        // any other existing state is a redelivery and does nothing
+        val existing = paymentRepository.findByOrderId(input.orderId)
+        if (existing != null && existing.status != PaymentStatus.FAILED) {
+            return existing
         }
-
-        val payment = paymentsProcessingServiceMapper.update(Payment(), input)
-        payment.status = PaymentStatus.AUTHORIZATION_REQUESTED
-        payment.attemptCount = 1 as Integer
-        val requested = paymentRepository.save(payment)
+        val requested =
+            if (existing != null) {
+                // attemptCount was already counted by retryPayment
+                existing.status = PaymentStatus.AUTHORIZATION_REQUESTED
+                paymentRepository.save(existing)
+            } else {
+                val payment = paymentsProcessingServiceMapper.update(Payment(), input)
+                payment.status = PaymentStatus.AUTHORIZATION_REQUESTED
+                payment.attemptCount = 1 as Integer
+                paymentRepository.save(payment)
+            }
 
         val result =
             paymentProcessor.authorize(
                 AuthorizationRequest(
-                    orderId = input.orderId,
-                    customerId = input.customerId,
-                    paymentMethodId = input.paymentMethodId,
-                    amount = input.amount,
-                    currency = input.currency,
+                    orderId = requested.orderId!!,
+                    customerId = requested.customerId!!,
+                    paymentMethodId = requested.paymentMethodId!!,
+                    amount = requested.amount!!,
+                    currency = requested.currency!!,
+                    attemptCount = requested.attemptCount?.toInt() ?: 1,
                 )
             )
         // A-01 (P-02): the outcome state is set here, though the ZDL transition only names AUTHORIZATION_REQUESTED
         val now = Instant.now(clock)
+        // a retried authorization starts without the failure of the previous attempt
+        requested.failedAt = null
+        requested.failureReason = null
         when (result.outcome) {
             PaymentProcessorOutcome.APPROVED -> {
                 requested.status = PaymentStatus.AUTHORIZED
@@ -147,10 +159,16 @@ open class PaymentsProcessingServiceImpl(
                 eventPublisher.onPaymentCaptured(eventsMapper.asPaymentCaptured(saved))
                 return saved
             }
-            // the PaymentCaptureFailed branch (CAPTURE_FAILED) is T-29
+            // the processor refused the capture: CAPTURE_FAILED, only PaymentCaptureFailed (the voidPayment listener follows)
             PaymentProcessorOutcome.DECLINED,
-            PaymentProcessorOutcome.FAILED ->
-                throw UnsupportedOperationException("capturePayment refused by the processor: not implemented (T-29)")
+            PaymentProcessorOutcome.FAILED -> {
+                payment.status = PaymentStatus.CAPTURE_FAILED
+                payment.failedAt = Instant.now(clock)
+                payment.failureReason = result.reason
+                val saved = paymentRepository.save(payment)
+                eventPublisher.onPaymentCaptureFailed(eventsMapper.asPaymentCaptureFailed(saved))
+                return saved
+            }
         }
     }
 
@@ -158,19 +176,27 @@ open class PaymentsProcessingServiceImpl(
 
         log.debug("Request voidPayment: {}", input)
 
-        // TODO CUSTOM_REQUIRED: load the Payment this transition applies to, e.g. by a correlation key in the input
-        val foundPayment: Payment? = emptyList<Payment>().firstOrNull()
-        return foundPayment
-            ?.let { existingPayment ->
-                PaymentTransitions.ensureCanVoidPayment(existingPayment)
-                paymentsProcessingServiceMapper.update(existingPayment, input)
-                existingPayment.status = PaymentStatus.VOIDED
-                existingPayment
-            }
-            ?.let { paymentRepository.save(it) }
-            ?.also {
-                // emit events
-                eventPublisher.onPaymentVoided(eventsMapper.asPaymentVoided(it))
-            } ?: throw NoSuchElementException("Payment not found")
+        val payment =
+            paymentRepository.findByOrderId(input.orderId)
+                ?: throw NoSuchElementException("Payment not found for order: ${input.orderId}")
+        // redelivery of FulfillmentFailed / PaymentCaptureFailed: already voided, nothing to do
+        if (payment.status == PaymentStatus.VOIDED) return payment
+        PaymentTransitions.ensureCanVoidPayment(payment)
+
+        val result =
+            paymentProcessor.void(
+                VoidRequest(orderId = payment.orderId!!, providerReference = payment.providerReference, reason = input.reason)
+            )
+        if (result.outcome != PaymentProcessorOutcome.APPROVED) {
+            // the models have no void-refused outcome: fail so the event publication stays incomplete and is retried
+            throw IllegalStateException("voidPayment refused by the processor for order ${input.orderId}: ${result.reason}")
+        }
+        // A-01 (P-02): VOIDED is set here, as the outcome of PaymentVoided
+        payment.status = PaymentStatus.VOIDED
+        payment.voidedAt = Instant.now(clock)
+        payment.failureReason = input.reason
+        val saved = paymentRepository.save(payment)
+        eventPublisher.onPaymentVoided(eventsMapper.asPaymentVoided(saved))
+        return saved
     }
 }

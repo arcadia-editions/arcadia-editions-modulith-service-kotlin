@@ -8,6 +8,7 @@ import com.arcadiaeditions.orders.checkout.core.inbound.dtos.*
 import com.arcadiaeditions.orders.checkout.core.outbound.jpa.*
 import com.arcadiaeditions.orders.checkout.infrastructure.jpa.inmemory.*
 import com.arcadiaeditions.config.TestClock
+import com.arcadiaeditions.orders.checkout.core.domain.events.OrderCancelled
 import com.arcadiaeditions.orders.checkout.core.domain.events.OrderConfirmed
 import com.arcadiaeditions.orders.checkout.core.domain.events.OrderCreated
 import com.arcadiaeditions.orders.checkout.core.domain.events.StockUnavailable
@@ -190,7 +191,54 @@ class OrdersCheckoutServiceTest {
     }
 
     @Test
-    fun cancelOrderTest() { // TODO: implement this test
+    fun cancelOrderFromCreatedTest() {
+        // C-19: Order CREATED
+        val order = ordersCheckoutService.cancelOrder(CancelOrderInput("ORD-019", "PAYMENT_DECLINED"))
+
+        assertEquals(OrderStatus.CANCELLED, order.status)
+        assertEquals(TestClock.NOW, order.cancelledAt)
+        assertEquals("PAYMENT_DECLINED", order.cancellationReason)
+        assertEquals(OrderStatus.CANCELLED, orderRepository.findAll().first { it.orderId == "ORD-019" }.status)
+        val events = (context.eventPublisher() as InMemoryEventPublisher).getEvents()
+        assertEquals(1, events.size)
+        val cancelled = events[0] as OrderCancelled
+        assertEquals("ORD-019", cancelled.orderId)
+        assertEquals("CUST-019", cancelled.customerId)
+        assertEquals("customer19@example.com", cancelled.customerEmail)
+        assertEquals("PAYMENT_DECLINED", cancelled.reason)
+        assertEquals(TestClock.NOW, cancelled.cancelledAt)
+    }
+
+    @Test
+    fun cancelOrderFromConfirmedTest() {
+        // C-20: Order CONFIRMED
+        val order = ordersCheckoutService.cancelOrder(CancelOrderInput("ORD-020", "PAYMENT_VOIDED"))
+
+        assertEquals(OrderStatus.CANCELLED, order.status)
+        assertEquals(TestClock.NOW, order.cancelledAt)
+        assertEquals("PAYMENT_VOIDED", order.cancellationReason)
+        val events = (context.eventPublisher() as InMemoryEventPublisher).getEvents()
+        assertEquals(1, events.size)
+        assertEquals("PAYMENT_VOIDED", (events[0] as OrderCancelled).reason)
+    }
+
+    @Test
+    fun cancelOrderAlreadyCancelledDoesNothingTest() {
+        // C-08: Order CANCELLED (redelivery)
+        val before = orderRepository.findAll().first { it.orderId == "ORD-008" }.cancelledAt
+
+        val order = ordersCheckoutService.cancelOrder(CancelOrderInput("ORD-008", "PAYMENT_DECLINED"))
+
+        assertEquals(OrderStatus.CANCELLED, order.status)
+        assertEquals(before, order.cancelledAt)
+        assertTrue((context.eventPublisher() as InMemoryEventPublisher).getEvents().isEmpty())
+    }
+
+    @Test
+    fun cancelOrderNotFoundTest() {
+        org.junit.jupiter.api.Assertions.assertThrows(NoSuchElementException::class.java) {
+            ordersCheckoutService.cancelOrder(CancelOrderInput("ORD-NOPE", "PAYMENT_DECLINED"))
+        }
     }
 
     @Test
