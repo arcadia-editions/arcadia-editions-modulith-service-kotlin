@@ -114,10 +114,11 @@ review: [ ] (round 1 FIX at 2c897e8, suite not run: reports/review-S1.md)
       fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (FIX FIRST T-13/T-31)
       blocked by: T-37
       done: claude-sonnet sonnet
-- [/] T-39 bounded AFK Fake adapters (FakePaymentProcessor, FakeWarehouse, FakeEmailSender) only when arcadia.fake-adapters.enabled=true (application-test.yml and the local profile), so a deployment without real adapters fails fast; FakeEmailSender.sent bounded or test-only
+- [x] T-39 bounded AFK Fake adapters (FakePaymentProcessor, FakeWarehouse, FakeEmailSender) only when arcadia.fake-adapters.enabled=true (application-test.yml and the local profile), so a deployment without real adapters fails fast; FakeEmailSender.sent bounded or test-only
       tests: PaymentsProcessingServiceTest, FulfillmentShippingServiceTest, NotificationsConsumerServiceTest, ArchitectureTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (SHOULD FIX fakes)
       blocked by: T-38
+      done: claude-sonnet sonnet (fakes on in application-default.yml: question for the person)
 - [x] T-42 bounded AFK NotificationDeliveryFailed: when the EmailSender refuses, the three send* commands set the Notification FAILED (failedAt, failureReason) and emit NotificationDeliveryFailed instead of throwing
       model: ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:88-98
       tests: NotificationsConsumerServiceTest
