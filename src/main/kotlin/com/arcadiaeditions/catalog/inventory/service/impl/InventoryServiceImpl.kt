@@ -92,20 +92,36 @@ open class InventoryServiceImpl(
 
         log.debug("Request releaseStock: {}", input)
 
-        // TODO CUSTOM_REQUIRED: load the StockReservation(s) this transition applies to, e.g. by a correlation key in
-        // the input
-        var stockReservations: List<StockReservation> = emptyList()
-        stockReservations.forEach { existingStockReservation ->
-            StockReservationTransitions.ensureCanReleaseStock(existingStockReservation)
-            inventoryServiceMapper.update(existingStockReservation, input)
-            existingStockReservation.status = ReservationStatus.RELEASED
+        val all = stockReservationRepository.findByOrderId(input.orderId)
+        // redelivery: only RESERVED / CONFIRMED reservations transition, RELEASED ones are left alone
+        val toRelease = all.filter { it.status == ReservationStatus.RESERVED || it.status == ReservationStatus.CONFIRMED }
+        if (toRelease.isEmpty()) {
+            return all
         }
-        stockReservations = stockReservationRepository.saveAll(stockReservations)
-        // emit events
-        stockReservations.forEach { eventSource ->
-            eventPublisher.onStockReleased(eventsMapper.asStockReleased(eventSource))
+        val now = clock.instant()
+        toRelease.forEach { reservation ->
+            StockReservationTransitions.ensureCanReleaseStock(reservation)
+            // A-02: reserved (or sold, when CONFIRMED) -> available
+            val position = inventoryPositionRepository.findBySku(reservation.sku!!)!!
+            val quantity = reservation.quantity!!.toInt()
+            if (reservation.status == ReservationStatus.CONFIRMED) {
+                position.soldQuantity = (position.soldQuantity!!.toInt() - quantity) as Integer
+            } else {
+                position.reservedQuantity = (position.reservedQuantity!!.toInt() - quantity) as Integer
+            }
+            position.availableQuantity = (position.availableQuantity!!.toInt() + quantity) as Integer
+            inventoryPositionRepository.save(position)
+            // A-08: confirmedAt is kept
+            reservation.status = ReservationStatus.RELEASED
+            reservation.releasedAt = now
+            reservation.releaseReason = input.reason
         }
-        return stockReservations
+        val released = stockReservationRepository.saveAll(toRelease)
+        // one event for the order, with every released line
+        val event = StockReleased(orderId = input.orderId, reason = input.reason, releasedAt = now)
+        released.forEach { event.addItems(StockReleasedItem(it.reservationId, it.sku, it.quantity)) }
+        eventPublisher.onStockReleased(event)
+        return all
     }
 
     override fun confirmStockReservation(input: ConfirmStockReservationInput): List<StockReservation> {
