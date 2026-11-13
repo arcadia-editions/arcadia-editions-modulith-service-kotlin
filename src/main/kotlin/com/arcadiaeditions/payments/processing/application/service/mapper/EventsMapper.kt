@@ -30,6 +30,7 @@ interface EventsMapper {
     @Mapping(target = "retriedAt", ignore = true)
     fun asPaymentRetried(payment: Payment): com.arcadiaeditions.payments.processing.domain.event.PaymentRetried
 
+    @Mapping(target = "reason", source = "failureReason")
     fun asPaymentCaptureFailed(
         payment: Payment
     ): com.arcadiaeditions.payments.processing.domain.event.PaymentCaptureFailed
