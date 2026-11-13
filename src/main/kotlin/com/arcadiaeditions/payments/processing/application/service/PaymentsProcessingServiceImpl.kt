@@ -55,15 +55,12 @@ open class PaymentsProcessingServiceImpl(
                 existing.status = PaymentStatus.AUTHORIZATION_REQUESTED
                 paymentRepository.save(existing)
             } else {
-                // no Payment: the input must be complete (PaymentRetried maps placeholders), never create from them
-                require(
-                    input.customerEmail.isNotBlank() &&
-                        input.currency.isNotBlank() &&
-                        input.paymentMethodId.isNotBlank() &&
-                        input.amount.signum() > 0
-                ) {
-                    "authorizePayment for order ${input.orderId}: no Payment exists and the input lacks " +
-                        "customerEmail, amount, currency or paymentMethodId"
+                // no Payment: PaymentRetried maps placeholders, never create from them; a logged no-op, not an
+                // exception (it would mark the listener's REQUIRES_NEW transaction rollback-only and the publication
+                // would be resubmitted forever)
+                if (input.customerEmail.isBlank() || input.currency.isBlank() || input.paymentMethodId.isBlank()) {
+                    log.warn("authorizePayment for order {}: no Payment exists and the input is incomplete, ignored", input.orderId)
+                    return Payment()
                 }
                 val payment = paymentsProcessingServiceMapper.update(Payment(), input)
                 payment.status = PaymentStatus.AUTHORIZATION_REQUESTED

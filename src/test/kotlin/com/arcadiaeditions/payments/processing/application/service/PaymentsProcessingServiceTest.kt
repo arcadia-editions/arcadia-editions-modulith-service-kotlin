@@ -193,10 +193,11 @@ class PaymentsProcessingServiceTest {
 
     @Test
     fun authorizePaymentOnPaymentRetriedWithoutPaymentTest() {
-        // P-01 D: no Payment for the order and the placeholder fields of PaymentRetried: reject, create nothing
+        // P-01 D: no Payment for the order and the placeholder fields of PaymentRetried: logged no-op, no exception
+        // (an exception would mark the listener's transaction rollback-only), nothing saved, no event
         val before = paymentRepository.findAll().size
 
-        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException::class.java) {
+        val result =
             paymentsProcessingService.authorizePayment(
                 AuthorizePaymentInput(
                     orderId = "ORD-NO-PAYMENT",
@@ -207,8 +208,8 @@ class PaymentsProcessingServiceTest {
                     paymentMethodId = "",
                 )
             )
-        }
 
+        org.junit.jupiter.api.Assertions.assertNull(result.id)
         org.junit.jupiter.api.Assertions.assertEquals(before, paymentRepository.findAll().size)
         org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
     }
