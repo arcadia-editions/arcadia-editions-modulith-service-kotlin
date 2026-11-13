@@ -43,9 +43,10 @@ review: [x] (round 1 FIX: reports/review-S0.md; round 2 PASS at 4b804fe: reports
       tests: bash .zenwave/handoff/place-order-flow/docker-run-it.sh mvn -q verify -Dit.test='PlaceOrderFlow*IntegrationTest' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false
       fixes: .zenwave/handoff/place-order-flow/logs/suite-1f8c0ff.log
       done: claude-opus opus (8/8 flow ITs green together, run by worker via lock)
-- [/] T-47 bounded AFK Event publication resubmit only for stale publications: ExternalizationConfiguration resubmits every incomplete publication every 30 s, in-flight ones included, so a tick during processing runs a listener twice (seen: two STOCK_UNAVAILABLE notifications for one order); resubmit only those older than a configurable age (e.g. resubmitIncompletePublicationsOlderThan, default PT5M)
+- [x] T-47 bounded AFK Event publication resubmit only for stale publications: ExternalizationConfiguration resubmits every incomplete publication every 30 s, in-flight ones included, so a tick during processing runs a listener twice (seen: two STOCK_UNAVAILABLE notifications for one order); resubmit only those older than a configurable age (e.g. resubmitIncompletePublicationsOlderThan, default PT5M)
       tests: ArchitectureTest
       fixes: .zenwave/handoff/place-order-flow/reports/T-43.md (candidate product finding)
+      done: claude-sonnet sonnet (app.events.resubmit-incomplete-publications-older-than, default PT5M)
 
 ## S1 completed (tracer bullet)
 path: StartOrderCheckout > startOrderCheckout > reserveStock[StockReservedResult] > OrderCreated > authorizePayment[authorized]
@@ -257,12 +258,13 @@ review: [ ] (round 1 FIX: reports/review-S6.md; flow IT pending T-43)
       tests: PaymentsProcessingServiceTest
       blocked by: T-11
       done: claude-opus opus
-- [/] T-45 bounded AFK voidPayment reason from the event type: FulfillmentFailed -> "fulfillment_failed" (A-06, as data.sql C-10/C-18/C-20) in FulfillmentShippingEventsListenerMapper, not the fulfillment detail; align PlaceOrderFlowFulfillmentFailedIntegrationTest to C-10; fix the "A-01 (P-02): VOIDED" comment, add the A-01 marker on the FAILED branch of scheduleFulfillment and on the CAPTURE_FAILED branch of capturePayment (not on CAPTURED), comment that PaymentCaptureFailed passes its reason through to void on purpose, relabel PlaceOrderFlowCaptureFailedIntegrationTest KDoc (input is C-10 customer, not C-17)
+- [x] T-45 bounded AFK voidPayment reason from the event type: FulfillmentFailed -> "fulfillment_failed" (A-06, as data.sql C-10/C-18/C-20) in FulfillmentShippingEventsListenerMapper, not the fulfillment detail; align PlaceOrderFlowFulfillmentFailedIntegrationTest to C-10; fix the "A-01 (P-02): VOIDED" comment, add the A-01 marker on the FAILED branch of scheduleFulfillment and on the CAPTURE_FAILED branch of capturePayment (not on CAPTURED), comment that PaymentCaptureFailed passes its reason through to void on purpose, relabel PlaceOrderFlowCaptureFailedIntegrationTest KDoc (input is C-10 customer, not C-17)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:204-215, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:76-80
       test data: data.sql C-10, data.sql C-18, data.sql C-20
       tests: PaymentsProcessingServiceTest, ArchitectureTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S6.md (SHOULD FIX T-27/T-28, NOTEs comments), review-S7.md (NOTEs)
       blocked by: T-43
+      done: claude-sonnet sonnet
 - [x] T-28 bounded AFK Flow test fulfillment failed: ends in OrderCancelledNotificationSent with PAYMENT_VOIDED, payment VOIDED, stock back to available
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:160-170, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:204-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-10
@@ -297,7 +299,7 @@ review: [ ] (round 1 FIX: reports/review-S7.md; flow IT pending T-43)
 ## S8 orderCancelled (reservation expired)
 path: ReservationExpired (10 minutes after OrderCreated) > releaseStock > StockReleased > cancelOrder > OrderCancelled
       > sendOrderCancelledNotification > end orderCancelled
-review: [/] (code review running)
+review: [ ] (round 1 FIX: reports/review-S8.md)
 
 - [x] T-31 advanced AFK ReservationExpired timer: a scheduled job (Clock-driven) finds RESERVED reservations with expiresAt at or before now and calls releaseStock(orderId, RESERVATION_EXPIRED) once per order; reservations before their deadline are untouched
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:230-240, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:66-70, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:116-118
@@ -305,6 +307,11 @@ review: [/] (code review running)
       tests: InventoryServiceTest
       blocked by: T-18
       done: claude-opus opus
+- [/] T-48 bounded AFK releaseStock with reason RESERVATION_EXPIRED releases only the order's reservations still RESERVED with expiresAt <= now, checked inside its transaction; CONFIRMED lines are never released by expiry; nothing due -> no event
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:230-240, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:113-118
+      test data: data.sql C-14, data.sql C-03
+      tests: InventoryServiceTest
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S8.md (FIX FIRST T-31)
 - [x] T-32 bounded AFK Flow test reservation expired: an order whose payment never resolves is cancelled with RESERVATION_EXPIRED after the Clock passes 10 minutes
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:230-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-11, data.sql C-14

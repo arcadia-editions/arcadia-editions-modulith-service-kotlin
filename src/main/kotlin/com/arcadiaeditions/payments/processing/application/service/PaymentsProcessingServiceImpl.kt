@@ -175,6 +175,7 @@ open class PaymentsProcessingServiceImpl(
             // the processor refused the capture: CAPTURE_FAILED, only PaymentCaptureFailed (the voidPayment listener follows)
             PaymentProcessorOutcome.DECLINED,
             PaymentProcessorOutcome.FAILED -> {
+                // A-01 (P-02): CAPTURE_FAILED is set here, as the outcome of PaymentCaptureFailed
                 payment.status = PaymentStatus.CAPTURE_FAILED
                 payment.failedAt = Instant.now(clock)
                 payment.failureReason = result.reason
@@ -204,7 +205,7 @@ open class PaymentsProcessingServiceImpl(
             // the models have no void-refused outcome: fail so the event publication stays incomplete and is retried
             throw IllegalStateException("voidPayment refused by the processor for order ${input.orderId}: ${result.reason}")
         }
-        // A-01 (P-02): VOIDED is set here, as the outcome of PaymentVoided
+        // VOIDED is the target declared in the ZDL (voidPayment transition), as PaymentVoided is the outcome
         payment.status = PaymentStatus.VOIDED
         payment.voidedAt = Instant.now(clock)
         payment.failureReason = input.reason
