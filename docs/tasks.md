@@ -244,7 +244,7 @@ review: [x] (code PASS: reports/review-S5.md; flow IT green in suite 5dc4a45)
 ## S6 orderCancelled (fulfillment failed)
 path: OrderConfirmed > scheduleFulfillment[FulfillmentFailed] > voidPayment > PaymentVoided > releaseStock > StockReleased
       > cancelOrder > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
-review: [ ] (round 1 FIX: reports/review-S6.md; flow IT pending T-43)
+review: [x] (round 1 FIX: reports/review-S6.md; round 2 PASS at 5dc4a45: reports/review-S6-r2.md)
 
 - [x] T-26 bounded AFK scheduleFulfillment FAILED branch: the Warehouse port refuses (fake, set by the test) -> Fulfillment FAILED (failedAt, failureReason), emit FulfillmentFailed only
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:160-170, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:84, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:99-106
