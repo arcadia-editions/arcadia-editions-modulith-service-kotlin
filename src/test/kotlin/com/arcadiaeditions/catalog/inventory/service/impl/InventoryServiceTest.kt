@@ -111,8 +111,107 @@ class InventoryServiceTest {
         org.junit.jupiter.api.Assertions.assertEquals(6, position("SKU-001").reservedQuantity!!.toInt())
     }
 
+    private fun releasedEvents() =
+        context.eventPublisher().getEvents().filterIsInstance<com.arcadiaeditions.catalog.inventory.domain.events.StockReleased>()
+
     @Test
-    fun releaseStockTest() { // TODO: implement this test
+    fun releaseStockTest() {
+        // C-15: ORD-015 RESERVED x1 (SKU-002 x1), PaymentDeclined
+        val result =
+            inventoryService.releaseStock(ReleaseStockInput(orderId = "ORD-015", reason = StockReleaseReason.PAYMENT_DECLINED))
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, result.size)
+        val saved = stockReservationRepository.findAll().single { it.orderId == "ORD-015" }
+        org.junit.jupiter.api.Assertions.assertEquals(ReservationStatus.RELEASED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, saved.releasedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(StockReleaseReason.PAYMENT_DECLINED, saved.releaseReason)
+        org.junit.jupiter.api.Assertions.assertNull(saved.confirmedAt)
+        // reserved -> available
+        val sku2 = position("SKU-002")
+        org.junit.jupiter.api.Assertions.assertEquals(47, sku2.availableQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(1, sku2.reservedQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(2, sku2.soldQuantity!!.toInt())
+        // exactly one event with the items
+        val events = releasedEvents()
+        org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
+        val event = events[0]
+        org.junit.jupiter.api.Assertions.assertEquals("ORD-015", event.orderId)
+        org.junit.jupiter.api.Assertions.assertEquals(StockReleaseReason.PAYMENT_DECLINED, event.reason)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, event.releasedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(
+            listOf("RES-015:SKU-002:1"),
+            event.items!!.map { "${it.reservationId}:${it.sku}:${it.quantity}" },
+        )
+    }
+
+    @Test
+    fun releaseStockFromConfirmedTest() {
+        // C-18: ORD-018 CONFIRMED x1 (SKU-001 x1), PaymentVoided
+        inventoryService.releaseStock(ReleaseStockInput(orderId = "ORD-018", reason = StockReleaseReason.PAYMENT_VOIDED))
+
+        val saved = stockReservationRepository.findAll().single { it.orderId == "ORD-018" }
+        org.junit.jupiter.api.Assertions.assertEquals(ReservationStatus.RELEASED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, saved.releasedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(StockReleaseReason.PAYMENT_VOIDED, saved.releaseReason)
+        // A-08: keeps confirmedAt
+        org.junit.jupiter.api.Assertions.assertEquals(Instant.parse("2026-10-01T10:56:00Z"), saved.confirmedAt)
+        // A-02: sold -> available
+        val sku1 = position("SKU-001")
+        org.junit.jupiter.api.Assertions.assertEquals(90, sku1.availableQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(6, sku1.reservedQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(4, sku1.soldQuantity!!.toInt())
+        val events = releasedEvents()
+        org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
+        org.junit.jupiter.api.Assertions.assertEquals(StockReleaseReason.PAYMENT_VOIDED, events[0].reason)
+        org.junit.jupiter.api.Assertions.assertEquals("RES-018", events[0].items!!.single().reservationId)
+    }
+
+    @Test
+    fun releaseStockRedeliveryTest() {
+        // C-08: ORD-008 already RELEASED -> nothing changes, no event
+        val before = stockReservationRepository.findAll().single { it.orderId == "ORD-008" }.copy()
+        val result =
+            inventoryService.releaseStock(ReleaseStockInput(orderId = "ORD-008", reason = StockReleaseReason.PAYMENT_DECLINED))
+
+        org.junit.jupiter.api.Assertions.assertEquals(0, releasedEvents().size)
+        org.junit.jupiter.api.Assertions.assertTrue(result.all { it.status == ReservationStatus.RELEASED })
+        val after = stockReservationRepository.findAll().single { it.orderId == "ORD-008" }
+        org.junit.jupiter.api.Assertions.assertEquals(before.releasedAt, after.releasedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(before.releaseReason, after.releaseReason)
+        org.junit.jupiter.api.Assertions.assertEquals(89, position("SKU-001").availableQuantity!!.toInt())
+    }
+
+    @Test
+    fun releaseStockTwiceTest() {
+        inventoryService.releaseStock(ReleaseStockInput(orderId = "ORD-015", reason = StockReleaseReason.PAYMENT_DECLINED))
+        inventoryService.releaseStock(ReleaseStockInput(orderId = "ORD-015", reason = StockReleaseReason.PAYMENT_DECLINED))
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, releasedEvents().size)
+        org.junit.jupiter.api.Assertions.assertEquals(47, position("SKU-002").availableQuantity!!.toInt())
+    }
+
+    @Test
+    fun releaseStockReasonFromPaymentEventTest() {
+        val mapper =
+            com.arcadiaeditions.catalog.inventory.events.processing.mappers.PaymentsProcessingEventsListenerMapper.INSTANCE
+        val declined =
+            mapper.asReleaseStockInput(
+                com.arcadiaeditions.payments.processing.domain.event.PaymentDeclined(orderId = "ORD-015", reason = "card_declined")
+            )
+        org.junit.jupiter.api.Assertions.assertEquals(ReleaseStockInput("ORD-015", StockReleaseReason.PAYMENT_DECLINED), declined)
+        val exhausted =
+            mapper.asReleaseStockInput(
+                com.arcadiaeditions.payments.processing.domain.event.PaymentRetryExhausted(orderId = "ORD-016", reason = "processor_timeout")
+            )
+        org.junit.jupiter.api.Assertions.assertEquals(
+            ReleaseStockInput("ORD-016", StockReleaseReason.PAYMENT_RETRY_EXHAUSTED),
+            exhausted,
+        )
+        val voided =
+            mapper.asReleaseStockInput(
+                com.arcadiaeditions.payments.processing.domain.event.PaymentVoided(orderId = "ORD-018", reason = "fulfillment_failed")
+            )
+        org.junit.jupiter.api.Assertions.assertEquals(ReleaseStockInput("ORD-018", StockReleaseReason.PAYMENT_VOIDED), voided)
     }
 
     private fun confirmedEvents() =
