@@ -37,6 +37,7 @@ open class OrdersCheckoutServiceImpl(
 
     private val eventsMapper: EventsMapper = EventsMapper.INSTANCE
 
+    @Transactional(noRollbackFor = [StockUnavailableException::class])
     override fun startOrderCheckout(input: StartOrderCheckoutInput): Order {
         log.debug("Request startOrderCheckout: {}", input)
 
@@ -61,8 +62,22 @@ open class OrdersCheckoutServiceImpl(
                 eventPublisher.onOrderCreated(eventsMapper.asOrderCreated(saved))
                 return saved
             }
-            // UNAVAILABLE is T-14
-            else -> TODO("StockUnavailable branch: T-14")
+            else -> {
+                // A-05: no Order is persisted; the event is emitted and the caller learns through the exception
+                val unavailable = result.unavailable
+                val event =
+                    StockUnavailable(
+                        orderId = orderId,
+                        customerId = input.customerId,
+                        customerEmail = input.customerEmail,
+                        unavailableItems =
+                            unavailable?.unavailableItems
+                                ?.map { StockUnavailableItem(it.sku, it.requestedQuantity, it.availableQuantity) }
+                                ?.toMutableList() ?: mutableListOf(),
+                    )
+                eventPublisher.onStockUnavailable(event)
+                throw StockUnavailableException(event)
+            }
         }
     }
 

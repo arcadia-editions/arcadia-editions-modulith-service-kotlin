@@ -10,6 +10,7 @@ import com.arcadiaeditions.orders.checkout.infrastructure.jpa.inmemory.*
 import com.arcadiaeditions.config.TestClock
 import com.arcadiaeditions.orders.checkout.core.domain.events.OrderConfirmed
 import com.arcadiaeditions.orders.checkout.core.domain.events.OrderCreated
+import com.arcadiaeditions.orders.checkout.core.domain.events.StockUnavailable
 import com.arcadiaeditions.orders.checkout.infrastructure.events.InMemoryEventPublisher
 import java.math.BigDecimal
 import java.time.*
@@ -96,6 +97,51 @@ class OrdersCheckoutServiceTest {
         val position = context.inventoryContext.inventoryPositionRepository().findAll().first { it.sku == "SKU-001" }
         assertEquals(86, position.availableQuantity!!.toInt())
         assertEquals(9, position.reservedQuantity!!.toInt())
+    }
+
+    @Test
+    fun startOrderCheckoutStockUnavailableTest() {
+        // C-07: SKU-003 position, available 0
+        val input =
+            StartOrderCheckoutInput(
+                customerId = "CUST-007",
+                customerEmail = "customer07@example.com",
+                paymentMethodId = "pm_card_visa",
+                currency = "EUR",
+                items = mutableListOf(OrderItemInput("SKU-003", 1 as Integer, BigDecimal("49.99"))),
+                shippingAddress =
+                    ShippingAddressInput(
+                        name = "Alex Example",
+                        line1 = "Calle Ficticia 1",
+                        city = "Madrid",
+                        postalCode = "28001",
+                        country = "ES",
+                        line2 = null,
+                        region = null,
+                    ),
+            )
+        val before = orderRepository.count()
+        val reservationsBefore = context.inventoryContext.stockReservationRepository().count()
+
+        val ex =
+            org.junit.jupiter.api.Assertions.assertThrows(StockUnavailableException::class.java) {
+                ordersCheckoutService.startOrderCheckout(input)
+            }
+
+        assertEquals(before, orderRepository.count())
+        assertEquals(reservationsBefore, context.inventoryContext.stockReservationRepository().count())
+        val events = (context.eventPublisher() as InMemoryEventPublisher).getEvents()
+        assertEquals(1, events.size)
+        val unavailable = events[0] as StockUnavailable
+        assertEquals(unavailable, ex.event)
+        assertTrue(unavailable.orderId!!.isNotBlank())
+        assertEquals("CUST-007", unavailable.customerId)
+        assertEquals("customer07@example.com", unavailable.customerEmail)
+        assertEquals(1, unavailable.unavailableItems!!.size)
+        val item = unavailable.unavailableItems!![0]
+        assertEquals("SKU-003", item.sku)
+        assertEquals(1, item.requestedQuantity!!.toInt())
+        assertEquals(0, item.availableQuantity!!.toInt())
     }
 
     @Test
