@@ -144,8 +144,14 @@ open class PaymentsProcessingServiceImpl(
         val payment =
             paymentRepository.findByOrderId(input.orderId)
                 ?: throw NoSuchElementException("Payment not found for order: ${input.orderId}")
-        // redelivery of FulfillmentScheduled: already captured, nothing to do
-        if (payment.status == PaymentStatus.CAPTURED) return payment
+        // redelivery of FulfillmentScheduled: already captured or capture already failed/voided, nothing to do
+        if (
+            payment.status == PaymentStatus.CAPTURED ||
+                payment.status == PaymentStatus.CAPTURE_FAILED ||
+                payment.status == PaymentStatus.VOIDED
+        ) {
+            return payment
+        }
         PaymentTransitions.ensureCanCapturePayment(payment)
 
         val result =
