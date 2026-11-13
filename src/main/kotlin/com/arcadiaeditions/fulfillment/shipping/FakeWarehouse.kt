@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component
  * simulate a refusal). A real warehouse adapter is a separate task.
  */
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = ["arcadia.fake-adapters.enabled"], havingValue = "true")
 @org.jmolecules.architecture.hexagonal.SecondaryAdapter
 class FakeWarehouse : Warehouse {
 
