@@ -100,6 +100,32 @@ class FulfillmentShippingServiceTest {
         org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
     }
 
+    // C-03 with the warehouse refusing: Fulfillment FAILED, FulfillmentFailed only
+    @Test
+    fun scheduleFulfillmentWarehouseRefusesTest() {
+        context.warehouse.refusalReason = "warehouse_damage"
+        val before = fulfillmentRepository.findAll().size
+
+        val fulfillment = fulfillmentShippingService.scheduleFulfillment(scheduleInput("ORD-003"))
+
+        org.junit.jupiter.api.Assertions.assertEquals(before + 1, fulfillmentRepository.findAll().size)
+        val saved = fulfillmentRepository.findAll().single { it.orderId == "ORD-003" }
+        org.junit.jupiter.api.Assertions.assertEquals(saved.id, fulfillment.id)
+        org.junit.jupiter.api.Assertions.assertEquals("FUL-003", saved.fulfillmentId)
+        org.junit.jupiter.api.Assertions.assertEquals(FulfillmentStatus.FAILED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, saved.failedAt)
+        org.junit.jupiter.api.Assertions.assertEquals("warehouse_damage", saved.failureReason)
+        org.junit.jupiter.api.Assertions.assertNull(saved.scheduledAt)
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
+        val event = events[0] as com.arcadiaeditions.fulfillment.shipping.domain.events.FulfillmentFailed
+        org.junit.jupiter.api.Assertions.assertEquals("FUL-003", event.fulfillmentId)
+        org.junit.jupiter.api.Assertions.assertEquals("ORD-003", event.orderId)
+        org.junit.jupiter.api.Assertions.assertEquals("CUST-003", event.customerId)
+        org.junit.jupiter.api.Assertions.assertEquals("warehouse_damage", event.reason)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, event.failedAt)
+    }
+
     @Test
     fun markReadyToShipTest() { // TODO: implement this test
     }

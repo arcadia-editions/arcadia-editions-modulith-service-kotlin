@@ -44,16 +44,23 @@ open class FulfillmentShippingServiceImpl(
             warehouse.schedule(
                 WarehouseRequest(input.orderId, input.items.map { WarehouseItem(it.sku, it.quantity.toInt()) })
             )
-        // the refusal branch (FulfillmentFailed) is T-26
-        check(result.scheduled) { "Warehouse refused fulfillment of ${input.orderId}: ${result.reason}" }
-
         val toSave = fulfillmentShippingServiceMapper.update(Fulfillment(), input)
         toSave.fulfillmentId = "FUL-" + input.orderId.removePrefix("ORD-")
-        toSave.status = FulfillmentStatus.SCHEDULED
-        toSave.scheduledAt = Instant.now(clock)
+        if (result.scheduled) {
+            toSave.status = FulfillmentStatus.SCHEDULED
+            toSave.scheduledAt = Instant.now(clock)
+        } else {
+            toSave.status = FulfillmentStatus.FAILED
+            toSave.failedAt = Instant.now(clock)
+            toSave.failureReason = result.reason
+        }
         val fulfillment = fulfillmentRepository.save(toSave)
         // emit events
-        eventPublisher.onFulfillmentScheduled(eventsMapper.asFulfillmentScheduled(fulfillment))
+        if (result.scheduled) {
+            eventPublisher.onFulfillmentScheduled(eventsMapper.asFulfillmentScheduled(fulfillment))
+        } else {
+            eventPublisher.onFulfillmentFailed(eventsMapper.asFulfillmentFailed(fulfillment))
+        }
         return fulfillment
     }
 
