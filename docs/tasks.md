@@ -281,11 +281,12 @@ review: [ ] (round 1 FIX: reports/review-S7.md; flow IT pending T-43)
       tests: PaymentsProcessingServiceTest
       blocked by: T-11
       done: claude-sonnet sonnet
-- [/] T-46 bounded AFK capturePayment on a redelivered FulfillmentScheduled when the Payment is CAPTURE_FAILED or VOIDED: return it unchanged, no event, no processor call (as CAPTURED); fix capturePaymentRefusedFromCaptureFailedTest to assert the no-op on C-17
+- [x] T-46 bounded AFK capturePayment on a redelivered FulfillmentScheduled when the Payment is CAPTURE_FAILED or VOIDED: return it unchanged, no event, no processor call (as CAPTURED); fix capturePaymentRefusedFromCaptureFailedTest to assert the no-op on C-17
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:172-182, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:93-95
       test data: data.sql C-17
       tests: PaymentsProcessingServiceTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S7.md (SHOULD FIX T-29)
+      done: claude-sonnet sonnet
 - [x] T-30 bounded AFK Flow test capture failed: ends in OrderCancelledNotificationSent with PAYMENT_VOIDED
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:172-182, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:204-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-17
