@@ -159,10 +159,16 @@ open class PaymentsProcessingServiceImpl(
                 eventPublisher.onPaymentCaptured(eventsMapper.asPaymentCaptured(saved))
                 return saved
             }
-            // the PaymentCaptureFailed branch (CAPTURE_FAILED) is T-29
+            // the processor refused the capture: CAPTURE_FAILED, only PaymentCaptureFailed (the voidPayment listener follows)
             PaymentProcessorOutcome.DECLINED,
-            PaymentProcessorOutcome.FAILED ->
-                throw UnsupportedOperationException("capturePayment refused by the processor: not implemented (T-29)")
+            PaymentProcessorOutcome.FAILED -> {
+                payment.status = PaymentStatus.CAPTURE_FAILED
+                payment.failedAt = Instant.now(clock)
+                payment.failureReason = result.reason
+                val saved = paymentRepository.save(payment)
+                eventPublisher.onPaymentCaptureFailed(eventsMapper.asPaymentCaptureFailed(saved))
+                return saved
+            }
         }
     }
 
