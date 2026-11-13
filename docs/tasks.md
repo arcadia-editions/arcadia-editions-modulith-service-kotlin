@@ -151,7 +151,7 @@ review: [ ]
       tests: OrdersCheckoutServiceTest
       blocked by: T-09
       done: claude-sonnet sonnet
-- [ ] T-20 bounded AFK sendOrderCancelledNotification on OrderCancelled: Notification ORDER_CANCELLED with the reason, SENT, emit OrderCancelledNotificationSent; no duplicate on redelivery
+- [/] T-20 bounded AFK sendOrderCancelledNotification on OrderCancelled: Notification ORDER_CANCELLED with the reason, SENT, emit OrderCancelledNotificationSent; no duplicate on redelivery
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:257-260, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:78-83, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:96-98, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:123-132
       test data: data.sql C-21, data.sql C-08
       tests: NotificationsConsumerServiceTest
@@ -173,7 +173,7 @@ review: [ ]
       tests: PaymentsProcessingServiceTest
       blocked by: T-07
       done: claude-opus opus
-- [ ] T-23 bounded AFK authorizePayment on PaymentRetried (P-01 accepted D): load the existing FAILED Payment by orderId, take amount, currency, customerEmail and paymentMethodId from it, authorize it again through the PaymentProcessor port; with no Payment create it as on OrderCreated; any other state does nothing
+- [/] T-23 bounded AFK authorizePayment on PaymentRetried (P-01 accepted D): load the existing FAILED Payment by orderId, take amount, currency, customerEmail and paymentMethodId from it, authorize it again through the PaymentProcessor port; with no Payment create it as on OrderCreated; any other state does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:132-140, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:56-63, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:85-87, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:133-139
       test data: data.sql C-12
       tests: PaymentsProcessingServiceTest
