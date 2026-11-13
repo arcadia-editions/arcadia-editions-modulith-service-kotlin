@@ -109,10 +109,11 @@ review: [ ] (round 1 FIX at 2c897e8, suite not run: reports/review-S1.md)
       blocked by: T-06, T-09, T-10, T-11, T-12
       done: claude-opus opus
 
-- [/] T-38 bounded AFK ReservationExpiredJob off in test contexts: @ConditionalOnProperty catalog-inventory.reservation-expired-job.enabled (true by default), false in application-test.yml; tests that need it call the job method after moving the MutableClock
+- [x] T-38 bounded AFK ReservationExpiredJob off in test contexts: @ConditionalOnProperty catalog-inventory.reservation-expired-job.enabled (true by default), false in application-test.yml; tests that need it call the job method after moving the MutableClock
       tests: InventoryServiceTest, PlaceOrderFlowCompletedIntegrationTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (FIX FIRST T-13/T-31)
       blocked by: T-37
+      done: claude-sonnet sonnet
 - [ ] T-39 bounded AFK Fake adapters (FakePaymentProcessor, FakeWarehouse, FakeEmailSender) only when arcadia.fake-adapters.enabled=true (application-test.yml and the local profile), so a deployment without real adapters fails fast; FakeEmailSender.sent bounded or test-only
       tests: PaymentsProcessingServiceTest, FulfillmentShippingServiceTest, NotificationsConsumerServiceTest, ArchitectureTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (SHOULD FIX fakes)
