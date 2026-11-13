@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component
  * A real processor adapter is a separate task.
  */
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = ["arcadia.fake-adapters.enabled"], havingValue = "true")
 @org.jmolecules.architecture.hexagonal.SecondaryAdapter
 class FakePaymentProcessor : PaymentProcessor {
 
