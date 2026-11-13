@@ -1,6 +1,7 @@
 package com.arcadiaeditions.common.mappers
 
 import org.mapstruct.Mapper
+import org.springframework.modulith.NamedInterface
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
@@ -8,6 +9,7 @@ import java.time.ZoneOffset
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.core.io.Resource
 
+@NamedInterface("mappers")
 @Mapper
 interface BaseMapper {
 
