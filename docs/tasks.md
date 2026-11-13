@@ -108,11 +108,12 @@ path: StartOrderCheckout > startOrderCheckout > reserveStock[StockUnavailableRes
       > sendStockUnavailableNotification > end stockGone
 review: [ ]
 
-- [/] T-14 bounded AFK startOrderCheckout UNAVAILABLE: persist no Order (A-05) and emit StockUnavailable with the unavailable items
+- [x] T-14 bounded AFK startOrderCheckout UNAVAILABLE: persist no Order (A-05) and emit StockUnavailable with the unavailable items
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:82-89, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:194-202, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:98, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:126-135
       test data: data.sql C-07, data/jpa/InventoryPosition/3.json
       tests: OrdersCheckoutServiceTest
       blocked by: T-05
+      done: claude-sonnet sonnet
 - [ ] T-15 bounded AFK Web: start-checkout when stock is unavailable answers 409 Conflict with a StockUnavailable body (orderId, unavailableItems), no Order (P-03 A; contract not edited)
       model: ../arcadia-editions-modulith-api/orders-checkout-openapi.yml:32-52, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:95-98
       test data: data.sql C-07
