@@ -79,7 +79,12 @@ class OrderRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         order.cancelledAt = now
         order.cancellationReason = ""
 
-        val updated = orderRepository.save(order)
+        orderRepository.save(order)
+
+        // read back from the database, not the managed instance
+        entityManager.flush()
+        entityManager.clear()
+        val updated = orderRepository.findByIdOrNull(id) ?: throw NoSuchElementException(" not found with id: $id")
         Assertions.assertEquals("", updated.orderId)
         Assertions.assertEquals(OrderStatus.values()[0], updated.status)
         Assertions.assertEquals("", updated.customerId)
@@ -87,7 +92,7 @@ class OrderRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         Assertions.assertEquals("", updated.paymentMethodId)
         Assertions.assertEquals(List.of(OrderItem()), updated.items)
         Assertions.assertEquals(ShippingAddress(), updated.shippingAddress)
-        Assertions.assertEquals(BigDecimal.valueOf(0), updated.totalAmount)
+        Assertions.assertEquals(0, BigDecimal.valueOf(0).compareTo(updated.totalAmount))
         Assertions.assertEquals("", updated.currency)
         Assertions.assertEquals(now, updated.createdAt)
         Assertions.assertEquals(now, updated.confirmedAt)

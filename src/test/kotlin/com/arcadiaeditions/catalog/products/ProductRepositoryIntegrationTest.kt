@@ -69,11 +69,16 @@ class ProductRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         product.launchAt = now
         product.status = ProductStatus.values()[0]
 
-        val updated = productRepository.save(product)
+        productRepository.save(product)
+
+        // read back from the database, not the managed instance
+        entityManager.flush()
+        entityManager.clear()
+        val updated = productRepository.findByIdOrNull(id) ?: throw NoSuchElementException(" not found with id: $id")
         Assertions.assertEquals("", updated.sku)
         Assertions.assertEquals("", updated.name)
         Assertions.assertEquals("", updated.description)
-        Assertions.assertEquals(BigDecimal.valueOf(0), updated.price)
+        Assertions.assertEquals(0, BigDecimal.valueOf(0).compareTo(updated.price))
         Assertions.assertEquals("", updated.currency)
         Assertions.assertEquals(0 as Integer, updated.editionSize)
         Assertions.assertEquals(InventoryTrackingMode.values()[0], updated.trackingMode)
