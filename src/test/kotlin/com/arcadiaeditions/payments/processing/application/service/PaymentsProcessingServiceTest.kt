@@ -342,15 +342,18 @@ class PaymentsProcessingServiceTest {
 
     @Test
     fun capturePaymentRefusedFromCaptureFailedTest() {
-        // C-17: ORD-017 Payment already CAPTURE_FAILED: redelivered FulfillmentScheduled captures again and is refused again
-        context.paymentProcessor().captureRefusal =
-            com.arcadiaeditions.payments.processing.application.port.driven.processor.PaymentProcessorResult.declined(
-                "card_declined"
-            )
-        org.junit.jupiter.api.Assertions.assertThrows(PaymentTransitions.InvalidStateTransitionException::class.java) {
-            paymentsProcessingService.capturePayment(CapturePaymentInput(orderId = "ORD-017"))
-        }
-        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.CAPTURE_FAILED, savedPayment("ORD-017").status)
+        // C-17: ORD-017 Payment already CAPTURE_FAILED: redelivered FulfillmentScheduled is a no-op (no processor call, no event)
+        val before = savedPayment("ORD-017")
+        // would approve if the processor were called: the Payment would become CAPTURED
+        val payment = paymentsProcessingService.capturePayment(CapturePaymentInput(orderId = "ORD-017"))
+
+        val saved = savedPayment("ORD-017")
+        org.junit.jupiter.api.Assertions.assertEquals(before.id, payment.id)
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.CAPTURE_FAILED, payment.status)
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.CAPTURE_FAILED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(before.failedAt, saved.failedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(before.failureReason, saved.failureReason)
+        org.junit.jupiter.api.Assertions.assertNull(saved.capturedAt)
         org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
     }
 
