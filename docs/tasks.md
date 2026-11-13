@@ -219,11 +219,12 @@ path: OrderCreated > authorizePayment[failed] > PaymentFailed > retryPayment[ret
       > releaseStock > StockReleased > cancelOrder > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
 review: [ ]
 
-- [/] T-25 bounded AFK Flow test retries exhausted: every attempt fails (pm_card_processorError), after 3 attempts the order is cancelled with PAYMENT_RETRY_EXHAUSTED
+- [x] T-25 bounded AFK Flow test retries exhausted: every attempt fails (pm_card_processorError), after 3 attempts the order is cancelled with PAYMENT_RETRY_EXHAUSTED
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:124-130, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:223-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-09, data.sql C-13
       tests: PlaceOrderFlowRetryExhaustedIntegrationTest
       blocked by: T-21, T-24
+      done: claude-sonnet sonnet (IT in slice review)
 
 ## S6 orderCancelled (fulfillment failed)
 path: OrderConfirmed > scheduleFulfillment[FulfillmentFailed] > voidPayment > PaymentVoided > releaseStock > StockReleased
