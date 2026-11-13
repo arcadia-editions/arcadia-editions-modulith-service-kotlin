@@ -9,6 +9,7 @@ import com.arcadiaeditions.notifications.consumer.service.dtos.*
 import com.arcadiaeditions.notifications.consumer.service.impl.mappers.*
 import com.arcadiaeditions.config.TestClock
 import com.arcadiaeditions.notifications.consumer.domain.events.OrderConfirmationSent
+import com.arcadiaeditions.notifications.consumer.domain.events.StockUnavailableNotificationSent
 import java.time.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -84,8 +85,55 @@ class NotificationsConsumerServiceTest {
         assertTrue(context.emailSender().sent.isEmpty())
     }
 
+    private fun stockInput(orderId: String, customerId: String, email: String) =
+        SendStockUnavailableNotificationInput(
+            orderId = orderId,
+            customerId = customerId,
+            customerEmail = email,
+            unavailableItems = mutableListOf(StockUnavailableItemInput("SKU-003", 1 as Integer, 0 as Integer)),
+        )
+
+    // C-07 input: StockUnavailable for an order with no notification yet
     @Test
-    fun sendStockUnavailableNotificationTest() { // TODO: implement this test
+    fun sendStockUnavailableNotificationTest() {
+        val before = notificationRepository.findAll().size
+
+        val n =
+            notificationsConsumerService.sendStockUnavailableNotification(
+                stockInput("ORD-107", "CUST-107", "customer107@example.com")
+            )
+
+        assertEquals(NotificationType.STOCK_UNAVAILABLE, n.type)
+        assertEquals(NotificationChannel.EMAIL, n.channel)
+        assertEquals(NotificationStatus.SENT, n.status)
+        assertEquals("customer107@example.com", n.recipient)
+        assertEquals("ORD-107", n.orderId)
+        assertEquals(listOf("SKU-003"), n.skus)
+        assertEquals(TestClock.NOW, n.sentAt)
+        assertEquals(TestClock.NOW, n.createdAt)
+        assertNotNull(n.notificationId)
+        assertEquals(before + 1, notificationRepository.findAll().size)
+        val sent = events.single() as StockUnavailableNotificationSent
+        assertEquals("ORD-107", sent.orderId)
+        assertEquals(listOf("SKU-003"), sent.skus)
+        assertEquals(TestClock.NOW, sent.sentAt)
+        assertEquals("customer107@example.com", context.emailSender().sent.single().to)
+    }
+
+    // C-07: redelivery, already SENT
+    @Test
+    fun sendStockUnavailableNotificationRedeliveryTest() {
+        val before = notificationRepository.findAll().size
+
+        val n =
+            notificationsConsumerService.sendStockUnavailableNotification(
+                stockInput("ORD-007", "CUST-007", "customer07@example.com")
+            )
+
+        assertEquals("NTF-007", n.notificationId)
+        assertEquals(before, notificationRepository.findAll().size)
+        assertTrue(events.isEmpty())
+        assertTrue(context.emailSender().sent.isEmpty())
     }
 
     @Test

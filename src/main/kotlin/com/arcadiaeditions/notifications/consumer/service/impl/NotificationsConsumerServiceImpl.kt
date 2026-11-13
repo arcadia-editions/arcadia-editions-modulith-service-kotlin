@@ -69,12 +69,31 @@ open class NotificationsConsumerServiceImpl(
 
         log.debug("Request sendStockUnavailableNotification: {}", input)
 
+        // redelivery of StockUnavailable: one notification per order
+        notificationRepository.findByOrderIdAndType(input.orderId, NotificationType.STOCK_UNAVAILABLE)?.let {
+            return it
+        }
+
+        val now = Instant.now(clock)
         val notification = notificationsConsumerServiceMapper.update(Notification(), input)
-        // TODO: implement this method
-        // emit events
-        eventPublisher.onStockUnavailableNotificationSent(eventsMapper.asStockUnavailableNotificationSent(notification))
-        eventPublisher.onNotificationDeliveryFailed(eventsMapper.asNotificationDeliveryFailed(notification))
-        return notification
+        notification.notificationId = "NTF-" + java.util.UUID.randomUUID()
+        notification.type = NotificationType.STOCK_UNAVAILABLE
+        notification.channel = NotificationChannel.EMAIL
+        notification.recipient = input.customerEmail
+        notification.skus = input.unavailableItems.map { it.sku }.toMutableList()
+        notification.subject = "Sorry, this edition is sold out"
+        notification.body = "Sorry, this edition is sold out: ${input.orderId}"
+        notification.createdAt = now
+
+        val result = emailSender.send(EmailMessage(input.customerEmail, notification.subject!!, notification.body!!))
+        // the NotificationDeliveryFailed branch (FAILED) is a later task
+        if (!result.sent) throw UnsupportedOperationException("e-mail delivery refused: not implemented")
+        notification.status = NotificationStatus.SENT
+        notification.sentAt = now
+        val saved = notificationRepository.save(notification)
+
+        eventPublisher.onStockUnavailableNotificationSent(eventsMapper.asStockUnavailableNotificationSent(saved))
+        return saved
     }
 
     override fun sendOrderCancelledNotification(input: SendOrderCancelledNotificationInput): Notification {
