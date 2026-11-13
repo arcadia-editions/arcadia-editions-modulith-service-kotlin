@@ -2,6 +2,7 @@ logging.level.org.hibernate.SQL: DEBUG
 logging.level.org.springframework.transaction: DEBUG
 
 spring.jpa.hibernate.ddl-auto: create
+arcadia.fake-adapters.enabled: true
 spring.jpa.defer-datasource-initialization: true
 spring.sql.init.mode: always
 
