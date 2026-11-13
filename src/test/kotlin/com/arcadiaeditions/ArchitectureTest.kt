@@ -32,11 +32,14 @@ class ArchitectureTest {
         assertThat(unexpected).describedAs("Spring Modulith violations").isEmpty()
     }
 
-    /** The tolerance is bounded: an unlisted cycle, BaseMapper user or jMolecules message is not known. */
+    /** The tolerance is bounded: an unlisted cycle, a BaseMapper violation or jMolecules message is not known. */
     @Test
     fun toleranceRejectsAnythingNotListed() {
         assertThat(isKnown(cycle("orders", "fulfillment", "orders"))).isFalse()
         assertThat(isKnown(cycle("orders", "payments", "orders"))).isTrue()
+        assertThat(isKnown(cycle("catalog.inventory", "payments", "orders", "catalog.inventory"))).isTrue()
+        assertThat(isKnown(cycle("catalog.products", "payments", "orders", "catalog.products"))).isFalse()
+        assertThat(isKnown("Module 'orders' depends on non-exposed type com.arcadiaeditions.common.mappers.BaseMapper within module 'common'!")).isFalse()
         assertThat(isKnown("Module 'orders' depends on non-exposed type com.arcadiaeditions.common.other.Foo within module 'common'!")).isFalse()
         // repository shape: tolerated only in catalog.inventory / notifications.consumer, same-module domain types only
         assertThat(isKnown(
@@ -74,7 +77,6 @@ class ArchitectureTest {
         "Cycle detected: " + slices.joinToString(" -> \n") { "Slice $it" } + "\n  1. Dependencies of Slice ${slices[0]}"
 
     private fun isKnown(message: String): Boolean {
-        if (KNOWN_MAPPER_VIOLATION.containsMatchIn(message)) return true
         if (message.startsWith("Cycle detected")) {
             val chain = SLICE.findAll(message.substringBefore("1. Dependencies")).map { it.groupValues[1] }.joinToString(">")
             return chain in KNOWN_CYCLES
@@ -96,7 +98,7 @@ class ArchitectureTest {
     }
 
     private companion object {
-        val SLICE = Regex("""Slice (\w+)""")
+        val SLICE = Regex("""Slice ([\w.]+)""")
         val LOCATION = Regex("""\s+in \(\w+\.kt:\d+\)$""")
         const val INV = "com.arcadiaeditions.catalog.inventory"
         const val NOT = "com.arcadiaeditions.notifications.consumer"
@@ -108,23 +110,16 @@ class ArchitectureTest {
          * 1. Module cycles, exactly these 4 (the flow's event choreography through event types).
          */
         val KNOWN_CYCLES = setOf(
-            "catalog>payments>fulfillment>orders>catalog",
-            "catalog>payments>orders>catalog",
+            "catalog.inventory>payments>fulfillment>orders>catalog.inventory",
+            "catalog.inventory>payments>orders>catalog.inventory",
             "fulfillment>orders>payments>fulfillment",
             "orders>payments>orders",
         )
-
         /**
-         * 2. `common.mappers.BaseMapper` is not exposed by `common`; every module's MapStruct mapper extends it.
-         */
-        val KNOWN_MAPPER_VIOLATION =
-            Regex("""Module '\w+' depends on non-exposed type com\.arcadiaeditions\.common\.mappers\.BaseMapper within module 'common'!""")
-
-        /**
-         * 3. jMolecules layered-architecture messages (jmolecules-archunit runs inside Modulith): `@InfrastructureLayer`
+         * 2. jMolecules layered-architecture messages (jmolecules-archunit runs inside Modulith): `@InfrastructureLayer`
          * types depend on `@DomainLayer` types of the same module, in catalog.inventory and notifications.consumer only.
          *
-         * 3a. Repositories, by shape (a new finder must not break the build; T-36 splits the modules, P-04 A):
+         * 2a. Repositories, by shape (a new finder must not break the build):
          * the source is a `<module>.repository.jpa.*Repository` of one of [LAYERED_MODULES], the message is its
          * `JpaRepository<Entity, ..>` supertype or a method parameter/return type, and every `com.arcadiaeditions`
          * type it references is in `<module>.domain`. Today: 3 `JpaRepository` supertypes (InventoryPosition,
@@ -138,7 +133,7 @@ class ArchitectureTest {
                 """(?: with type argument depending on <[\w.$]+>)?""",
         )
 
-        /** 3b. Event publishers take domain events: exactly these 8 (4 inventory + 4 notifications). */
+        /** 2b. Event publishers take domain events: exactly these 8 (4 inventory + 4 notifications). */
         val KNOWN_PUBLISHER_MESSAGES = setOf(
             *listOf("StockAdjusted", "StockReceived", "StockReleased", "StockReservationConfirmed").map {
                 "Method <$INV.events.DefaultEventPublisher.on$it($INV.domain.events.$it)> has parameter of type <$INV.domain.events.$it>"
