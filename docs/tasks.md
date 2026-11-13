@@ -30,7 +30,7 @@ review: [ ] (round 1 FIX: reports/review-S0.md)
 - [/] T-35 mechanical AFK Repository updateTest: flush, clear and reload by id before asserting, so Instants are compared as read back from the database
       tests: mvn -q verify -Dit.test='*RepositoryIntegrationTest' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false
       fixes: .zenwave/handoff/place-order-flow/reports/review-S0.md (SHOULD FIX T-03)
-- [ ] T-36 bounded AFK Modulith modules (P-04 A): @NamedInterface on common.mappers (BaseMapper); declare catalog.inventory, catalog.products, notifications.consumer as application modules; fix the root ModuleMetadata ("Payments Processing" on the root package); remove the BaseMapper and one-module tolerances from ArchitectureTest; keep only the known event cycles; any new violation found is fixed in code or listed in the report
+- [/] T-36 bounded AFK Modulith modules (P-04 A): @NamedInterface on common.mappers (BaseMapper); declare catalog.inventory, catalog.products, notifications.consumer as application modules; fix the root ModuleMetadata ("Payments Processing" on the root package); remove the BaseMapper and one-module tolerances from ArchitectureTest; keep only the known event cycles; any new violation found is fixed in code or listed in the report
       tests: ArchitectureTest, JMoleculesArchitectureTest
       adr: docs/proposals/P-04.md (decision A)
       blocked by: T-34
@@ -108,7 +108,7 @@ path: StartOrderCheckout > startOrderCheckout > reserveStock[StockUnavailableRes
       > sendStockUnavailableNotification > end stockGone
 review: [ ]
 
-- [ ] T-14 bounded AFK startOrderCheckout UNAVAILABLE: persist no Order (A-05) and emit StockUnavailable with the unavailable items
+- [/] T-14 bounded AFK startOrderCheckout UNAVAILABLE: persist no Order (A-05) and emit StockUnavailable with the unavailable items
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:82-89, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:194-202, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:98, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:126-135
       test data: data.sql C-07, data/jpa/InventoryPosition/3.json
       tests: OrdersCheckoutServiceTest
