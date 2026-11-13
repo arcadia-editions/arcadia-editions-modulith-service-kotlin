@@ -65,7 +65,10 @@ src/test/resources/data/*
 The orchestrator and the workers use the ones in `docs/zenwave-sdd-overlay.md`. Only set here what is specific to
 unattended work:
 
-- Docker is shared with the sibling project `arcadia-editions-modulith-service-java` (its own AFK loop), and the
-  compose file binds fixed ports (5432, 9092, 2181, 8081). One Testcontainers job at a time across both projects:
-  workers run only unit tests; the orchestrator runs integration tests and slice reviews when `docker ps` shows no
-  other compose project.
+- Integration tests run only in slice verification (the person, 2026-11-13). Workers and the orchestrator check each
+  task with its unit tests, the compile and ArchitectureTest; flow-test tasks are written and compiled, then run in
+  the slice review's full suite (the reviewer reruns a failing flow test once alone before reporting it).
+- One long-running test compose (`docker compose -f docker-compose-test.yml -p arcadia-kotlin-it up -d`, ports
+  15432/29092/22181/18081, T-37) is reused by every integration run; tests restore their data. Never two integration
+  runs at once: always through `.zenwave/handoff/place-order-flow/docker-run-it.sh` (lock). Docker is shared with
+  `arcadia-editions-modulith-service-java`; host 5432/9092/2181/8081 may be held by others.
