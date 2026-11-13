@@ -253,11 +253,11 @@ review: [ ] (round 1 FIX: reports/review-S6.md; flow IT pending T-43)
       tests: PaymentsProcessingServiceTest
       blocked by: T-11
       done: claude-opus opus
-- [ ] T-45 bounded AFK voidPayment reason from the event type: FulfillmentFailed -> "fulfillment_failed" (A-06, as data.sql C-10/C-18/C-20) in FulfillmentShippingEventsListenerMapper, not the fulfillment detail; align PlaceOrderFlowFulfillmentFailedIntegrationTest to C-10; fix the "A-01 (P-02): VOIDED" comment and add the A-01 marker on the FAILED branch of scheduleFulfillment
+- [ ] T-45 bounded AFK voidPayment reason from the event type: FulfillmentFailed -> "fulfillment_failed" (A-06, as data.sql C-10/C-18/C-20) in FulfillmentShippingEventsListenerMapper, not the fulfillment detail; align PlaceOrderFlowFulfillmentFailedIntegrationTest to C-10; fix the "A-01 (P-02): VOIDED" comment, add the A-01 marker on the FAILED branch of scheduleFulfillment and on the CAPTURE_FAILED branch of capturePayment (not on CAPTURED), comment that PaymentCaptureFailed passes its reason through to void on purpose, relabel PlaceOrderFlowCaptureFailedIntegrationTest KDoc (input is C-10 customer, not C-17)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:204-215, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:76-80
       test data: data.sql C-10, data.sql C-18, data.sql C-20
       tests: PaymentsProcessingServiceTest, ArchitectureTest
-      fixes: .zenwave/handoff/place-order-flow/reports/review-S6.md (SHOULD FIX T-27/T-28, NOTEs comments)
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S6.md (SHOULD FIX T-27/T-28, NOTEs comments), review-S7.md (NOTEs)
       blocked by: T-43
 - [x] T-28 bounded AFK Flow test fulfillment failed: ends in OrderCancelledNotificationSent with PAYMENT_VOIDED, payment VOIDED, stock back to available
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:160-170, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:204-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
@@ -269,7 +269,7 @@ review: [ ] (round 1 FIX: reports/review-S6.md; flow IT pending T-43)
 ## S7 orderCancelled (capture failed)
 path: FulfillmentScheduled > capturePayment[PaymentCaptureFailed] > voidPayment > PaymentVoided > releaseStock
       > StockReleased > cancelOrder > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
-review: [/] (code review running)
+review: [ ] (round 1 FIX: reports/review-S7.md; flow IT pending T-43)
 
 - [x] T-29 bounded AFK capturePayment failure branch: the PaymentProcessor port refuses the capture (fake, set by the test) -> CAPTURE_FAILED (failedAt, failureReason), emit PaymentCaptureFailed only
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:172-182, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:95, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:161-167
@@ -277,6 +277,11 @@ review: [/] (code review running)
       tests: PaymentsProcessingServiceTest
       blocked by: T-11
       done: claude-sonnet sonnet
+- [/] T-46 bounded AFK capturePayment on a redelivered FulfillmentScheduled when the Payment is CAPTURE_FAILED or VOIDED: return it unchanged, no event, no processor call (as CAPTURED); fix capturePaymentRefusedFromCaptureFailedTest to assert the no-op on C-17
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:172-182, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:93-95
+      test data: data.sql C-17
+      tests: PaymentsProcessingServiceTest
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S7.md (SHOULD FIX T-29)
 - [x] T-30 bounded AFK Flow test capture failed: ends in OrderCancelledNotificationSent with PAYMENT_VOIDED
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:172-182, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:204-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-17
