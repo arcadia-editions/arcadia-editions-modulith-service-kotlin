@@ -281,11 +281,12 @@ review: [ ]
       tests: InventoryServiceTest
       blocked by: T-18
       done: claude-opus opus
-- [/] T-32 bounded AFK Flow test reservation expired: an order whose payment never resolves is cancelled with RESERVATION_EXPIRED after the Clock passes 10 minutes
+- [x] T-32 bounded AFK Flow test reservation expired: an order whose payment never resolves is cancelled with RESERVATION_EXPIRED after the Clock passes 10 minutes
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:230-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-11, data.sql C-14
       tests: PlaceOrderFlowReservationExpiredIntegrationTest
       blocked by: T-21, T-31
+      done: claude-opus opus (IT in slice review; payment stalls in fake, no row)
 
 ## S9 Integrations
 review: [ ]
