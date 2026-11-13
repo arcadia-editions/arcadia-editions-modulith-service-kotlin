@@ -43,9 +43,10 @@ review: [x] (round 1 FIX: reports/review-S0.md; round 2 PASS at 4b804fe: reports
       tests: bash .zenwave/handoff/place-order-flow/docker-run-it.sh mvn -q verify -Dit.test='PlaceOrderFlow*IntegrationTest' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false
       fixes: .zenwave/handoff/place-order-flow/logs/suite-1f8c0ff.log
       done: claude-opus opus (8/8 flow ITs green together, run by worker via lock)
-- [/] T-47 bounded AFK Event publication resubmit only for stale publications: ExternalizationConfiguration resubmits every incomplete publication every 30 s, in-flight ones included, so a tick during processing runs a listener twice (seen: two STOCK_UNAVAILABLE notifications for one order); resubmit only those older than a configurable age (e.g. resubmitIncompletePublicationsOlderThan, default PT5M)
+- [x] T-47 bounded AFK Event publication resubmit only for stale publications: ExternalizationConfiguration resubmits every incomplete publication every 30 s, in-flight ones included, so a tick during processing runs a listener twice (seen: two STOCK_UNAVAILABLE notifications for one order); resubmit only those older than a configurable age (e.g. resubmitIncompletePublicationsOlderThan, default PT5M)
       tests: ArchitectureTest
       fixes: .zenwave/handoff/place-order-flow/reports/T-43.md (candidate product finding)
+      done: claude-sonnet sonnet (app.events.resubmit-incomplete-publications-older-than, default PT5M)
 
 ## S1 completed (tracer bullet)
 path: StartOrderCheckout > startOrderCheckout > reserveStock[StockReservedResult] > OrderCreated > authorizePayment[authorized]
