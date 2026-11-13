@@ -39,6 +39,9 @@ review: [x] (round 1 FIX: reports/review-S0.md; round 2 PASS at 4b804fe: reports
 - [x] T-37 bounded AFK Test infrastructure: integration tests start their own compose file with ports that clash with nothing (postgres 15432, kafka 29092 advertised as ${HOST}:29092, zookeeper 22181, schema-registry 18081); docker-compose.yml (local dev) unchanged
       tests: mvn -q verify -Dit.test='*RepositoryIntegrationTest' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false
       done: claude-opus opus
+- [/] T-43 advanced AFK Flow tests pass together in one failsafe JVM: 6 of 8 time out with Scenario seeing no events when the Spring context is reused across classes, PlaceOrderFlowRetry asserts absolute stock counters left by earlier tests; also apply the T-37 addition patch (test properties on every context, TCP detection of the reused compose)
+      tests: bash .zenwave/handoff/place-order-flow/docker-run-it.sh mvn -q verify -Dit.test='PlaceOrderFlow*IntegrationTest' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false
+      fixes: .zenwave/handoff/place-order-flow/logs/suite-1f8c0ff.log
 
 ## S1 completed (tracer bullet)
 path: StartOrderCheckout > startOrderCheckout > reserveStock[StockReservedResult] > OrderCreated > authorizePayment[authorized]
@@ -127,7 +130,7 @@ review: [ ] (round 1 FIX at 2c897e8, suite not run: reports/review-S1.md)
 ## S2 stockGone
 path: StartOrderCheckout > startOrderCheckout > reserveStock[StockUnavailableResult] > StockUnavailable
       > sendStockUnavailableNotification > end stockGone
-review: [ ]
+review: [/] (code PASS: reports/review-S2.md; flow IT pending T-43)
 
 - [x] T-14 bounded AFK startOrderCheckout UNAVAILABLE: persist no Order (A-05) and emit StockUnavailable with the unavailable items
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:82-89, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:194-202, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:98, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:126-135
@@ -158,7 +161,7 @@ review: [ ]
 ## S3 orderCancelled (payment declined)
 path: OrderCreated > authorizePayment[declined] > PaymentDeclined > releaseStock > StockReleased > cancelOrder
       > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
-review: [ ]
+review: [/] (code PASS: reports/review-S3.md; flow IT pending T-43)
 
 - [x] T-18 bounded AFK releaseStock on PaymentDeclined / PaymentRetryExhausted / PaymentVoided: every RESERVED or CONFIRMED reservation of the orderId -> RELEASED (releasedAt, releaseReason from the event: PAYMENT_DECLINED, PAYMENT_RETRY_EXHAUSTED, PAYMENT_VOIDED), quantities back to available (A-02), emit StockReleased; already RELEASED does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:223-228, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:66-70, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:113-118, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:126-136
@@ -188,7 +191,7 @@ review: [ ]
 ## S4 retry loop
 path: OrderCreated > authorizePayment[failed] > PaymentFailed > retryPayment[retried] > PaymentRetried
       > authorizePayment[authorized] > PaymentAuthorized > confirmOrder > ... > end completed
-review: [ ]
+review: [ ] (round 1 FIX: reports/review-S4.md; flow IT pending T-43)
 
 - [x] T-22 bounded AFK retryPayment on PaymentFailed: load the Payment by orderId, guard FAILED; attemptCount below 3 (A-03) -> attemptCount + 1, stays FAILED, emit PaymentRetried; at 3 -> RETRY_EXHAUSTED, emit PaymentRetryExhausted
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:124-130, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:65-69, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:89-91, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:133-148
@@ -209,6 +212,11 @@ review: [ ]
       adr: docs/proposals/P-01.md (decision D)
       fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (NOTE T-23)
       done: claude-sonnet sonnet
+- [x] T-44 bounded AFK authorizePayment on PaymentRetried with no Payment is a logged no-op in the service (no exception, no event, nothing saved), the listener's IllegalArgumentException catch removed; no amount > 0 rule (no model declares it)
+      model: ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:56-63, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:85-87
+      tests: PaymentsProcessingServiceTest
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S4.md (SHOULD FIX T-41 x2)
+      done: claude-sonnet sonnet (returns unsaved empty Payment on no-op)
 - [x] T-24 bounded AFK Flow test retry: a processor error on the first attempt (fake pm_card_processorErrorOnce), authorized on the retry, ends in OrderConfirmationSent
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:108-140, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-12
@@ -219,7 +227,7 @@ review: [ ]
 ## S5 orderCancelled (retries exhausted)
 path: OrderCreated > authorizePayment[failed] > PaymentFailed > retryPayment[retry-exhausted] > PaymentRetryExhausted
       > releaseStock > StockReleased > cancelOrder > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
-review: [ ]
+review: [/] (code PASS: reports/review-S5.md; flow IT pending T-43)
 
 - [x] T-25 bounded AFK Flow test retries exhausted: every attempt fails (pm_card_processorError), after 3 attempts the order is cancelled with PAYMENT_RETRY_EXHAUSTED
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:124-130, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:223-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
@@ -231,7 +239,7 @@ review: [ ]
 ## S6 orderCancelled (fulfillment failed)
 path: OrderConfirmed > scheduleFulfillment[FulfillmentFailed] > voidPayment > PaymentVoided > releaseStock > StockReleased
       > cancelOrder > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
-review: [ ]
+review: [ ] (round 1 FIX: reports/review-S6.md; flow IT pending T-43)
 
 - [x] T-26 bounded AFK scheduleFulfillment FAILED branch: the Warehouse port refuses (fake, set by the test) -> Fulfillment FAILED (failedAt, failureReason), emit FulfillmentFailed only
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:160-170, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:84, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:99-106
@@ -245,6 +253,12 @@ review: [ ]
       tests: PaymentsProcessingServiceTest
       blocked by: T-11
       done: claude-opus opus
+- [ ] T-45 bounded AFK voidPayment reason from the event type: FulfillmentFailed -> "fulfillment_failed" (A-06, as data.sql C-10/C-18/C-20) in FulfillmentShippingEventsListenerMapper, not the fulfillment detail; align PlaceOrderFlowFulfillmentFailedIntegrationTest to C-10; fix the "A-01 (P-02): VOIDED" comment, add the A-01 marker on the FAILED branch of scheduleFulfillment and on the CAPTURE_FAILED branch of capturePayment (not on CAPTURED), comment that PaymentCaptureFailed passes its reason through to void on purpose, relabel PlaceOrderFlowCaptureFailedIntegrationTest KDoc (input is C-10 customer, not C-17)
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:204-215, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:76-80
+      test data: data.sql C-10, data.sql C-18, data.sql C-20
+      tests: PaymentsProcessingServiceTest, ArchitectureTest
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S6.md (SHOULD FIX T-27/T-28, NOTEs comments), review-S7.md (NOTEs)
+      blocked by: T-43
 - [x] T-28 bounded AFK Flow test fulfillment failed: ends in OrderCancelledNotificationSent with PAYMENT_VOIDED, payment VOIDED, stock back to available
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:160-170, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:204-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-10
@@ -255,7 +269,7 @@ review: [ ]
 ## S7 orderCancelled (capture failed)
 path: FulfillmentScheduled > capturePayment[PaymentCaptureFailed] > voidPayment > PaymentVoided > releaseStock
       > StockReleased > cancelOrder > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
-review: [ ]
+review: [ ] (round 1 FIX: reports/review-S7.md; flow IT pending T-43)
 
 - [x] T-29 bounded AFK capturePayment failure branch: the PaymentProcessor port refuses the capture (fake, set by the test) -> CAPTURE_FAILED (failedAt, failureReason), emit PaymentCaptureFailed only
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:172-182, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:95, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:161-167
@@ -263,6 +277,11 @@ review: [ ]
       tests: PaymentsProcessingServiceTest
       blocked by: T-11
       done: claude-sonnet sonnet
+- [/] T-46 bounded AFK capturePayment on a redelivered FulfillmentScheduled when the Payment is CAPTURE_FAILED or VOIDED: return it unchanged, no event, no processor call (as CAPTURED); fix capturePaymentRefusedFromCaptureFailedTest to assert the no-op on C-17
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:172-182, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:93-95
+      test data: data.sql C-17
+      tests: PaymentsProcessingServiceTest
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S7.md (SHOULD FIX T-29)
 - [x] T-30 bounded AFK Flow test capture failed: ends in OrderCancelledNotificationSent with PAYMENT_VOIDED
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:172-182, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:204-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-17
@@ -273,7 +292,7 @@ review: [ ]
 ## S8 orderCancelled (reservation expired)
 path: ReservationExpired (10 minutes after OrderCreated) > releaseStock > StockReleased > cancelOrder > OrderCancelled
       > sendOrderCancelledNotification > end orderCancelled
-review: [ ]
+review: [/] (code review running)
 
 - [x] T-31 advanced AFK ReservationExpired timer: a scheduled job (Clock-driven) finds RESERVED reservations with expiresAt at or before now and calls releaseStock(orderId, RESERVATION_EXPIRED) once per order; reservations before their deadline are untouched
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:230-240, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:66-70, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:116-118
