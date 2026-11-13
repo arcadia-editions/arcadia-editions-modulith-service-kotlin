@@ -341,7 +341,7 @@ class PaymentsProcessingServiceTest {
     }
 
     @Test
-    fun capturePaymentRefusedFromCaptureFailedTest() {
+    fun capturePaymentRedeliveryFromCaptureFailedTest() {
         // C-17: ORD-017 Payment already CAPTURE_FAILED: redelivered FulfillmentScheduled is a no-op (no processor call, no event)
         val before = savedPayment("ORD-017")
         // would approve if the processor were called: the Payment would become CAPTURED
@@ -353,6 +353,21 @@ class PaymentsProcessingServiceTest {
         org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.CAPTURE_FAILED, saved.status)
         org.junit.jupiter.api.Assertions.assertEquals(before.failedAt, saved.failedAt)
         org.junit.jupiter.api.Assertions.assertEquals(before.failureReason, saved.failureReason)
+        org.junit.jupiter.api.Assertions.assertNull(saved.capturedAt)
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+    }
+
+    @Test
+    fun capturePaymentRedeliveryFromVoidedTest() {
+        // C-10: ORD-010 Payment already VOIDED at 10:15: redelivered FulfillmentScheduled is a no-op (no processor call, no event)
+        val before = savedPayment("ORD-010")
+        val payment = paymentsProcessingService.capturePayment(CapturePaymentInput(orderId = "ORD-010"))
+
+        val saved = savedPayment("ORD-010")
+        org.junit.jupiter.api.Assertions.assertEquals(before.id, payment.id)
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.VOIDED, payment.status)
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.VOIDED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(before.voidedAt, saved.voidedAt)
         org.junit.jupiter.api.Assertions.assertNull(saved.capturedAt)
         org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
     }

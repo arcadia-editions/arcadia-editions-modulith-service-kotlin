@@ -52,7 +52,8 @@ import org.springframework.transaction.support.TransactionTemplate
  * Clock passes 10 minutes after OrderCreated (A-04) the ReservationExpired timer releases the stock and the order ends
  * in OrderCancelledNotificationSent with RESERVATION_EXPIRED. End state is the shape of C-11 (CUST-011, SKU-001 x1),
  * except the Payment: the stalled authorization is never committed, so no Payment row is read back. The same timer run
- * also releases C-14 (ORD-014, past its deadline at the test "now").
+ * also releases every other fixture RESERVED and past its deadline at the test "now": C-01, C-02, C-12, C-13, C-14 and
+ * C-15.
  *
  * ReservationExpiredJob is off in test contexts (T-38): the test builds it on the context's beans and runs it. Payment
  * never resolves, so the P-06 race (PaymentAuthorized after the release) cannot happen here. Not @Transactional: the
