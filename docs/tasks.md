@@ -191,7 +191,7 @@ review: [/] (code PASS: reports/review-S3.md; flow IT pending T-43)
 ## S4 retry loop
 path: OrderCreated > authorizePayment[failed] > PaymentFailed > retryPayment[retried] > PaymentRetried
       > authorizePayment[authorized] > PaymentAuthorized > confirmOrder > ... > end completed
-review: [/] (code review running)
+review: [ ] (round 1 FIX: reports/review-S4.md; flow IT pending T-43)
 
 - [x] T-22 bounded AFK retryPayment on PaymentFailed: load the Payment by orderId, guard FAILED; attemptCount below 3 (A-03) -> attemptCount + 1, stays FAILED, emit PaymentRetried; at 3 -> RETRY_EXHAUSTED, emit PaymentRetryExhausted
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:124-130, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:65-69, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:89-91, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:133-148
@@ -212,6 +212,10 @@ review: [/] (code review running)
       adr: docs/proposals/P-01.md (decision D)
       fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (NOTE T-23)
       done: claude-sonnet sonnet
+- [/] T-44 bounded AFK authorizePayment on PaymentRetried with no Payment is a logged no-op in the service (no exception, no event, nothing saved), the listener's IllegalArgumentException catch removed; no amount > 0 rule (no model declares it)
+      model: ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:56-63, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:85-87
+      tests: PaymentsProcessingServiceTest
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S4.md (SHOULD FIX T-41 x2)
 - [x] T-24 bounded AFK Flow test retry: a processor error on the first attempt (fake pm_card_processorErrorOnce), authorized on the retry, ends in OrderConfirmationSent
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:108-140, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-12
