@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component
  * Deterministic stand-in for the payment processor, driven by the processor's test payment method ids:
  * `pm_card_chargeDeclined` declines, `pm_card_processorError` fails, `pm_card_processorErrorOnce` fails on attempt 1 only, any other (e.g. `pm_card_visa`) is approved.
  * Captures always succeed, keeping the authorization reference, unless a test sets [captureRefusal].
+ * Voids always succeed, keeping the authorization reference.
  * A real processor adapter is a separate task.
  */
 @Component
@@ -40,4 +41,9 @@ class FakePaymentProcessor : PaymentProcessor {
             ?: PaymentProcessorResult.approved(
                 request.providerReference ?: ("PSP-AUTH-" + request.orderId.removePrefix("ORD-"))
             )
+
+    override fun void(request: VoidRequest): PaymentProcessorResult =
+        PaymentProcessorResult.approved(
+            request.providerReference ?: ("PSP-VOID-" + request.orderId.removePrefix("ORD-"))
+        )
 }

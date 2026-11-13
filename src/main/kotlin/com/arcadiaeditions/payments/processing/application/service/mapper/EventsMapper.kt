@@ -34,6 +34,7 @@ interface EventsMapper {
         payment: Payment
     ): com.arcadiaeditions.payments.processing.domain.event.PaymentCaptureFailed
 
+    @Mapping(target = "reason", source = "failureReason")
     fun asPaymentVoided(payment: Payment): com.arcadiaeditions.payments.processing.domain.event.PaymentVoided
 
     @Mapping(target = "reason", source = "failureReason")

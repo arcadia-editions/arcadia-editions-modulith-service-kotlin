@@ -170,19 +170,27 @@ open class PaymentsProcessingServiceImpl(
 
         log.debug("Request voidPayment: {}", input)
 
-        // TODO CUSTOM_REQUIRED: load the Payment this transition applies to, e.g. by a correlation key in the input
-        val foundPayment: Payment? = emptyList<Payment>().firstOrNull()
-        return foundPayment
-            ?.let { existingPayment ->
-                PaymentTransitions.ensureCanVoidPayment(existingPayment)
-                paymentsProcessingServiceMapper.update(existingPayment, input)
-                existingPayment.status = PaymentStatus.VOIDED
-                existingPayment
-            }
-            ?.let { paymentRepository.save(it) }
-            ?.also {
-                // emit events
-                eventPublisher.onPaymentVoided(eventsMapper.asPaymentVoided(it))
-            } ?: throw NoSuchElementException("Payment not found")
+        val payment =
+            paymentRepository.findByOrderId(input.orderId)
+                ?: throw NoSuchElementException("Payment not found for order: ${input.orderId}")
+        // redelivery of FulfillmentFailed / PaymentCaptureFailed: already voided, nothing to do
+        if (payment.status == PaymentStatus.VOIDED) return payment
+        PaymentTransitions.ensureCanVoidPayment(payment)
+
+        val result =
+            paymentProcessor.void(
+                VoidRequest(orderId = payment.orderId!!, providerReference = payment.providerReference, reason = input.reason)
+            )
+        if (result.outcome != PaymentProcessorOutcome.APPROVED) {
+            // the models have no void-refused outcome: fail so the event publication stays incomplete and is retried
+            throw IllegalStateException("voidPayment refused by the processor for order ${input.orderId}: ${result.reason}")
+        }
+        // A-01 (P-02): VOIDED is set here, as the outcome of PaymentVoided
+        payment.status = PaymentStatus.VOIDED
+        payment.voidedAt = Instant.now(clock)
+        payment.failureReason = input.reason
+        val saved = paymentRepository.save(payment)
+        eventPublisher.onPaymentVoided(eventsMapper.asPaymentVoided(saved))
+        return saved
     }
 }

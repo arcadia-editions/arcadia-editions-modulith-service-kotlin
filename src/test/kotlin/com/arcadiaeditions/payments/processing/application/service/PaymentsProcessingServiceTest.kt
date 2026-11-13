@@ -320,7 +320,90 @@ class PaymentsProcessingServiceTest {
         org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
     }
 
+    private fun assertVoided(orderId: String, customerId: String, reason: String, providerReference: String?) {
+        val saved = savedPayment(orderId)
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.VOIDED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, saved.voidedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(reason, saved.failureReason)
+        org.junit.jupiter.api.Assertions.assertEquals(providerReference, saved.providerReference)
+        org.junit.jupiter.api.Assertions.assertNull(saved.capturedAt)
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
+        val event = events[0] as PaymentVoided
+        org.junit.jupiter.api.Assertions.assertEquals(orderId, event.orderId)
+        org.junit.jupiter.api.Assertions.assertEquals(customerId, event.customerId)
+        org.junit.jupiter.api.Assertions.assertEquals(providerReference, event.providerReference)
+        org.junit.jupiter.api.Assertions.assertEquals(reason, event.reason)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, event.voidedAt)
+    }
+
     @Test
-    fun voidPaymentTest() { // TODO: implement this test
+    fun voidPaymentTest() {
+        // C-16: ORD-016 Payment AUTHORIZED (PSP-AUTH-016), FulfillmentFailed emitted
+        val payment =
+            paymentsProcessingService.voidPayment(VoidPaymentInput(orderId = "ORD-016", reason = "fulfillment_failed"))
+
+        org.junit.jupiter.api.Assertions.assertEquals(savedPayment("ORD-016").id, payment.id)
+        org.junit.jupiter.api.Assertions.assertEquals(
+            Instant.parse("2026-10-01T11:15:30Z"),
+            savedPayment("ORD-016").authorizedAt,
+        )
+        assertVoided("ORD-016", "CUST-016", "fulfillment_failed", "PSP-AUTH-016")
+    }
+
+    @Test
+    fun voidPaymentFromAuthorizationRequestedTest() {
+        // C-01: ORD-001 Payment AUTHORIZATION_REQUESTED, no hold reference yet
+        paymentsProcessingService.voidPayment(VoidPaymentInput(orderId = "ORD-001", reason = "fulfillment_failed"))
+
+        assertVoided("ORD-001", "CUST-001", "fulfillment_failed", null)
+    }
+
+    @Test
+    fun voidPaymentFromFailedTest() {
+        // C-12: ORD-012 Payment FAILED (processor_timeout)
+        paymentsProcessingService.voidPayment(VoidPaymentInput(orderId = "ORD-012", reason = "fulfillment_failed"))
+
+        assertVoided("ORD-012", "CUST-012", "fulfillment_failed", null)
+    }
+
+    @Test
+    fun voidPaymentFromCaptureFailedTest() {
+        // C-17: ORD-017 Payment CAPTURE_FAILED (PSP-AUTH-017), PaymentCaptureFailed emitted
+        paymentsProcessingService.voidPayment(VoidPaymentInput(orderId = "ORD-017", reason = "capture_window_closed"))
+
+        assertVoided("ORD-017", "CUST-017", "capture_window_closed", "PSP-AUTH-017")
+    }
+
+    @Test
+    fun voidPaymentRedeliveryTest() {
+        // C-10: ORD-010 Payment already VOIDED at 10:15
+        val payment =
+            paymentsProcessingService.voidPayment(VoidPaymentInput(orderId = "ORD-010", reason = "warehouse_damage"))
+
+        val saved = savedPayment("ORD-010")
+        org.junit.jupiter.api.Assertions.assertEquals(saved.id, payment.id)
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.VOIDED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(Instant.parse("2026-10-01T10:15:00Z"), saved.voidedAt)
+        org.junit.jupiter.api.Assertions.assertEquals("fulfillment_failed", saved.failureReason)
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+    }
+
+    @Test
+    fun voidPaymentInvalidTransitionTest() {
+        // C-05: ORD-005 Payment CAPTURED
+        org.junit.jupiter.api.Assertions.assertThrows(PaymentTransitions.InvalidStateTransitionException::class.java) {
+            paymentsProcessingService.voidPayment(VoidPaymentInput(orderId = "ORD-005", reason = "fulfillment_failed"))
+        }
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.CAPTURED, savedPayment("ORD-005").status)
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+    }
+
+    @Test
+    fun voidPaymentNotFoundTest() {
+        org.junit.jupiter.api.Assertions.assertThrows(NoSuchElementException::class.java) {
+            paymentsProcessingService.voidPayment(VoidPaymentInput(orderId = "ORD-MISSING", reason = "fulfillment_failed"))
+        }
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
     }
 }
