@@ -165,7 +165,7 @@ open class PaymentsProcessingServiceImpl(
             )
         when (result.outcome) {
             PaymentProcessorOutcome.APPROVED -> {
-                // A-01 (P-02): CAPTURED is set here, as the outcome of PaymentCaptured
+                // CAPTURED is the target declared in the ZDL (capturePayment transition), as PaymentCaptured is the outcome
                 payment.status = PaymentStatus.CAPTURED
                 payment.capturedAt = Instant.now(clock)
                 val saved = paymentRepository.save(payment)

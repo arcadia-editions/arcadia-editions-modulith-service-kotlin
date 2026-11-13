@@ -93,9 +93,9 @@ open class InventoryServiceImpl(
         log.debug("Request releaseStock: {}", input)
 
         val all = stockReservationRepository.findByOrderId(input.orderId)
-        // redelivery: only RESERVED / CONFIRMED reservations transition, RELEASED ones are left alone
         val now = clock.instant()
-        // expiry only releases lines still RESERVED and past their deadline, checked inside this transaction
+        // RESERVATION_EXPIRED: only lines still RESERVED and past their deadline are released, checked inside this transaction
+        // any other reason (redelivery): only RESERVED / CONFIRMED reservations transition, RELEASED ones are left alone
         val expiry = input.reason == StockReleaseReason.RESERVATION_EXPIRED
         val toRelease =
             all.filter {

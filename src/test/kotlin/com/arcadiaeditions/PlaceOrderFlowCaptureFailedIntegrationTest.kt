@@ -47,10 +47,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 
 /**
  * place-order-flow, path `orderCancelled` by capture failed (place-order-flow.zfl:172-182, 204-260, end 262-266):
- * FakePaymentProcessor refuses the capture (capture_window_closed), PaymentCaptureFailed voids the authorization, PaymentVoided releases the
- * stock, OrderCancelled ends in OrderCancelledNotificationSent with PAYMENT_VOIDED. Input is the C-10 customer
- * (CUST-010, SKU-001 x1); the capture failure itself is the shape of C-17. FakePaymentProcessor is a singleton bean: reset after the test. Not @Transactional: the module
- * listeners run after commit.
+ * FakePaymentProcessor refuses the capture (capture_window_closed), PaymentCaptureFailed voids the authorization,
+ * PaymentVoided releases the stock, OrderCancelled ends in OrderCancelledNotificationSent with PAYMENT_VOIDED.
+ * Input is the C-10 customer (CUST-010, SKU-001 x1); the capture failure itself is the shape of C-17.
+ * FakePaymentProcessor is a singleton bean: reset after the test. Not @Transactional: the module listeners run
+ * after commit.
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.MOCK,
@@ -93,7 +94,7 @@ class PlaceOrderFlowCaptureFailedIntegrationTest {
         paymentProcessor.captureRefusal = null
     }
 
-    /** C-17 input: the checkout of CUST-010. */
+    /** C-10 input: the checkout of CUST-010. */
     private fun startOrderCheckoutInput() =
         StartOrderCheckoutInput(
             customerId = "CUST-010",
