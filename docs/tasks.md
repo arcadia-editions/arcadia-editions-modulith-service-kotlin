@@ -38,6 +38,7 @@ review: [x] (round 1 FIX: reports/review-S0.md; round 2 PASS at 4b804fe: reports
       done: claude-sonnet sonnet
 - [x] T-37 bounded AFK Test infrastructure: integration tests start their own compose file with ports that clash with nothing (postgres 15432, kafka 29092 advertised as ${HOST}:29092, zookeeper 22181, schema-registry 18081); docker-compose.yml (local dev) unchanged
       tests: mvn -q verify -Dit.test='*RepositoryIntegrationTest' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false
+      done: claude-opus opus
 
 ## S1 completed (tracer bullet)
 path: StartOrderCheckout > startOrderCheckout > reserveStock[StockReservedResult] > OrderCreated > authorizePayment[authorized]
