@@ -100,11 +100,31 @@ open class NotificationsConsumerServiceImpl(
 
         log.debug("Request sendOrderCancelledNotification: {}", input)
 
+        // redelivery of OrderCancelled: one notification per order
+        notificationRepository.findByOrderIdAndType(input.orderId, NotificationType.ORDER_CANCELLED)?.let {
+            return it
+        }
+
+        val now = Instant.now(clock)
         val notification = notificationsConsumerServiceMapper.update(Notification(), input)
-        // TODO: implement this method
-        // emit events
-        eventPublisher.onOrderCancelledNotificationSent(eventsMapper.asOrderCancelledNotificationSent(notification))
-        eventPublisher.onNotificationDeliveryFailed(eventsMapper.asNotificationDeliveryFailed(notification))
-        return notification
+        notification.notificationId = "NTF-" + java.util.UUID.randomUUID()
+        notification.type = NotificationType.ORDER_CANCELLED
+        notification.channel = NotificationChannel.EMAIL
+        notification.recipient = input.customerEmail
+        notification.subject = "Your Arcadia Editions order was cancelled"
+        notification.body = "Your Arcadia Editions order was cancelled: ${input.orderId} (${input.reason})"
+        notification.createdAt = now
+
+        val result = emailSender.send(EmailMessage(input.customerEmail, notification.subject!!, notification.body!!))
+        // the NotificationDeliveryFailed branch (FAILED) is a later task
+        if (!result.sent) throw UnsupportedOperationException("e-mail delivery refused: not implemented")
+        notification.status = NotificationStatus.SENT
+        notification.sentAt = now
+        val saved = notificationRepository.save(notification)
+
+        eventPublisher.onOrderCancelledNotificationSent(
+            eventsMapper.asOrderCancelledNotificationSent(saved, input.reason)
+        )
+        return saved
     }
 }
