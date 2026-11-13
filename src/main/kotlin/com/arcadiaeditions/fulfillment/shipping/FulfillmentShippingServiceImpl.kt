@@ -50,6 +50,7 @@ open class FulfillmentShippingServiceImpl(
             toSave.status = FulfillmentStatus.SCHEDULED
             toSave.scheduledAt = Instant.now(clock)
         } else {
+            // A-01 (P-02): FAILED is set here, as the outcome of FulfillmentFailed
             toSave.status = FulfillmentStatus.FAILED
             toSave.failedAt = Instant.now(clock)
             toSave.failureReason = result.reason

@@ -166,7 +166,7 @@ class PlaceOrderFlowFulfillmentFailedIntegrationTest {
         assertThat(payment.capturedAt).isNull()
         assertThat(payment.declinedAt).isNull()
         assertThat(payment.failedAt).isNull()
-        assertThat(payment.failureReason).isEqualTo("warehouse_damage")
+        assertThat(payment.failureReason).isEqualTo("fulfillment_failed") // A-06, as C-10
 
         // fulfillment.shipping: scheduleFulfillment -> FAILED (refused by the warehouse)
         val fulfillment = fulfillmentRepository.findByOrderId(orderId)!!
