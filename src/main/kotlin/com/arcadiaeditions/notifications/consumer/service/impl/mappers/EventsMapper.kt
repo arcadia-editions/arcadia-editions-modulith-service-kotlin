@@ -13,6 +13,8 @@ interface EventsMapper {
         val INSTANCE: EventsMapper = Mappers.getMapper(EventsMapper::class.java)
     }
 
+    // the event names the field reason, the entity failureReason
+    @org.mapstruct.Mapping(target = "reason", source = "failureReason")
     fun asNotificationDeliveryFailed(
         notification: Notification
     ): com.arcadiaeditions.notifications.consumer.domain.events.NotificationDeliveryFailed
