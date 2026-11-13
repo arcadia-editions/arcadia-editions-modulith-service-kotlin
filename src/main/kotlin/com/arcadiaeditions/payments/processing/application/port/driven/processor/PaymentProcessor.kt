@@ -15,6 +15,9 @@ interface PaymentProcessor {
 
     /** Captures a previously authorized hold. Never throws for a processor outcome: see [outcome]. */
     fun capture(request: CaptureRequest): PaymentProcessorResult
+
+    /** Releases the authorization hold (or cancels a pending one). Never throws for a processor outcome: see [outcome]. */
+    fun void(request: VoidRequest): PaymentProcessorResult
 }
 
 data class AuthorizationRequest(
@@ -33,6 +36,13 @@ data class CaptureRequest(
     val providerReference: String?,
     val amount: BigDecimal,
     val currency: String,
+)
+
+data class VoidRequest(
+    val orderId: String,
+    /** Reference of the authorization hold to release (Payment.providerReference); null when none was placed. */
+    val providerReference: String?,
+    val reason: String,
 )
 
 /** What the processor answered to one call. */
