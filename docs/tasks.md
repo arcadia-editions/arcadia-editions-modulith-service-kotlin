@@ -174,12 +174,13 @@ review: [ ]
       tests: PaymentsProcessingServiceTest
       blocked by: T-07
       done: claude-opus opus
-- [/] T-23 bounded AFK authorizePayment on PaymentRetried (P-01 accepted D): load the existing FAILED Payment by orderId, take amount, currency, customerEmail and paymentMethodId from it, authorize it again through the PaymentProcessor port; with no Payment create it as on OrderCreated; any other state does nothing
+- [x] T-23 bounded AFK authorizePayment on PaymentRetried (P-01 accepted D): load the existing FAILED Payment by orderId, take amount, currency, customerEmail and paymentMethodId from it, authorize it again through the PaymentProcessor port; with no Payment create it as on OrderCreated; any other state does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:132-140, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:56-63, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:85-87, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:133-139
       test data: data.sql C-12
       tests: PaymentsProcessingServiceTest
       adr: docs/proposals/P-01.md (decision D)
       blocked by: T-22
+      done: claude-sonnet sonnet
 - [ ] T-24 bounded AFK Flow test retry: a processor error on the first attempt (fake pm_card_processorErrorOnce), authorized on the retry, ends in OrderConfirmationSent
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:108-140, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-12
