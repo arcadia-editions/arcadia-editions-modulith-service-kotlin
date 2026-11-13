@@ -151,11 +151,12 @@ review: [ ]
       tests: OrdersCheckoutServiceTest
       blocked by: T-09
       done: claude-sonnet sonnet
-- [/] T-20 bounded AFK sendOrderCancelledNotification on OrderCancelled: Notification ORDER_CANCELLED with the reason, SENT, emit OrderCancelledNotificationSent; no duplicate on redelivery
+- [x] T-20 bounded AFK sendOrderCancelledNotification on OrderCancelled: Notification ORDER_CANCELLED with the reason, SENT, emit OrderCancelledNotificationSent; no duplicate on redelivery
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:257-260, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:78-83, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:96-98, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:123-132
       test data: data.sql C-21, data.sql C-08
       tests: NotificationsConsumerServiceTest
       blocked by: T-12
+      done: claude-sonnet sonnet
 - [ ] T-21 bounded AFK Flow test declined: checkout with pm_card_chargeDeclined ends in OrderCancelledNotificationSent, stock back to available
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:108-117, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:223-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-08
