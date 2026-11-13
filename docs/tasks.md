@@ -108,7 +108,7 @@ review: [ ] (round 1 FIX at 2c897e8, suite not run: reports/review-S1.md)
       blocked by: T-06, T-09, T-10, T-11, T-12
       done: claude-opus opus
 
-- [ ] T-38 bounded AFK ReservationExpiredJob off in test contexts: @ConditionalOnProperty catalog-inventory.reservation-expired-job.enabled (true by default), false in application-test.yml; tests that need it call the job method after moving the MutableClock
+- [/] T-38 bounded AFK ReservationExpiredJob off in test contexts: @ConditionalOnProperty catalog-inventory.reservation-expired-job.enabled (true by default), false in application-test.yml; tests that need it call the job method after moving the MutableClock
       tests: InventoryServiceTest, PlaceOrderFlowCompletedIntegrationTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (FIX FIRST T-13/T-31)
       blocked by: T-37
@@ -218,7 +218,7 @@ path: OrderCreated > authorizePayment[failed] > PaymentFailed > retryPayment[ret
       > releaseStock > StockReleased > cancelOrder > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
 review: [ ]
 
-- [ ] T-25 bounded AFK Flow test retries exhausted: every attempt fails (pm_card_processorError), after 3 attempts the order is cancelled with PAYMENT_RETRY_EXHAUSTED
+- [/] T-25 bounded AFK Flow test retries exhausted: every attempt fails (pm_card_processorError), after 3 attempts the order is cancelled with PAYMENT_RETRY_EXHAUSTED
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:124-130, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:223-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-09, data.sql C-13
       tests: PlaceOrderFlowRetryExhaustedIntegrationTest
@@ -241,7 +241,7 @@ review: [ ]
       tests: PaymentsProcessingServiceTest
       blocked by: T-11
       done: claude-opus opus
-- [ ] T-28 bounded AFK Flow test fulfillment failed: ends in OrderCancelledNotificationSent with PAYMENT_VOIDED, payment VOIDED, stock back to available
+- [/] T-28 bounded AFK Flow test fulfillment failed: ends in OrderCancelledNotificationSent with PAYMENT_VOIDED, payment VOIDED, stock back to available
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:160-170, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:204-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-10
       tests: PlaceOrderFlowFulfillmentFailedIntegrationTest
