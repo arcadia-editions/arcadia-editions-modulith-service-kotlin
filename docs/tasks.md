@@ -39,6 +39,9 @@ review: [x] (round 1 FIX: reports/review-S0.md; round 2 PASS at 4b804fe: reports
 - [x] T-37 bounded AFK Test infrastructure: integration tests start their own compose file with ports that clash with nothing (postgres 15432, kafka 29092 advertised as ${HOST}:29092, zookeeper 22181, schema-registry 18081); docker-compose.yml (local dev) unchanged
       tests: mvn -q verify -Dit.test='*RepositoryIntegrationTest' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false
       done: claude-opus opus
+- [/] T-43 advanced AFK Flow tests pass together in one failsafe JVM: 6 of 8 time out with Scenario seeing no events when the Spring context is reused across classes, PlaceOrderFlowRetry asserts absolute stock counters left by earlier tests; also apply the T-37 addition patch (test properties on every context, TCP detection of the reused compose)
+      tests: bash .zenwave/handoff/place-order-flow/docker-run-it.sh mvn -q verify -Dit.test='PlaceOrderFlow*IntegrationTest' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false
+      fixes: .zenwave/handoff/place-order-flow/logs/suite-1f8c0ff.log
 
 ## S1 completed (tracer bullet)
 path: StartOrderCheckout > startOrderCheckout > reserveStock[StockReservedResult] > OrderCreated > authorizePayment[authorized]
