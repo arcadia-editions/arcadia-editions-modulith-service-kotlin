@@ -27,10 +27,11 @@ review: [ ] (round 1 FIX: reports/review-S0.md)
       fixes: .zenwave/handoff/place-order-flow/reports/review-S0.md (FIX FIRST T-02, SHOULD FIX comment, NOTE allowEmptyShould)
       adr: docs/proposals/P-04.md (decision A)
       done: claude-sonnet sonnet + claude-opus opus (round 2 handoff, quota)
-- [/] T-35 mechanical AFK Repository updateTest: flush, clear and reload by id before asserting, so Instants are compared as read back from the database
+- [x] T-35 mechanical AFK Repository updateTest: flush, clear and reload by id before asserting, so Instants are compared as read back from the database
       tests: mvn -q verify -Dit.test='*RepositoryIntegrationTest' -Dtest=none -Dsurefire.failIfNoSpecifiedTests=false
       fixes: .zenwave/handoff/place-order-flow/reports/review-S0.md (SHOULD FIX T-03)
-- [ ] T-36 bounded AFK Modulith modules (P-04 A): @NamedInterface on common.mappers (BaseMapper); declare catalog.inventory, catalog.products, notifications.consumer as application modules; fix the root ModuleMetadata ("Payments Processing" on the root package); remove the BaseMapper and one-module tolerances from ArchitectureTest; keep only the known event cycles; any new violation found is fixed in code or listed in the report
+      done: claude-sonnet sonnet (redo; ITs 35/35 run by orchestrator)
+- [/] T-36 bounded AFK Modulith modules (P-04 A): @NamedInterface on common.mappers (BaseMapper); declare catalog.inventory, catalog.products, notifications.consumer as application modules; fix the root ModuleMetadata ("Payments Processing" on the root package); remove the BaseMapper and one-module tolerances from ArchitectureTest; keep only the known event cycles; any new violation found is fixed in code or listed in the report
       tests: ArchitectureTest, JMoleculesArchitectureTest
       adr: docs/proposals/P-04.md (decision A)
       blocked by: T-34
@@ -97,7 +98,7 @@ review: [ ]
       blocked by: T-01
       fixes: .zenwave/handoff/place-order-flow/reports/review-S0.md (SHOULD FIX T-01: inject the Clock into NotificationsConsumerServiceImpl)
       done: claude-sonnet sonnet
-- [ ] T-13 advanced AFK Flow test completed: from startOrderCheckout to OrderConfirmationSent across the five modules (Spring Modulith Scenario, Testcontainers); add a fixed/mutable test Clock @Bean, Spring contexts get Clock.systemUTC() (review-S0 NOTE; T-32 reuses it)
+- [/] T-13 advanced AFK Flow test completed: from startOrderCheckout to OrderConfirmationSent across the five modules (Spring Modulith Scenario, Testcontainers); add a fixed/mutable test Clock @Bean, Spring contexts get Clock.systemUTC() (review-S0 NOTE; T-32 reuses it)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:73-192, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data.sql C-06, data/jpa/InventoryPosition/1.json
       tests: PlaceOrderFlowCompletedIntegrationTest
@@ -108,12 +109,13 @@ path: StartOrderCheckout > startOrderCheckout > reserveStock[StockUnavailableRes
       > sendStockUnavailableNotification > end stockGone
 review: [ ]
 
-- [ ] T-14 bounded AFK startOrderCheckout UNAVAILABLE: persist no Order (A-05) and emit StockUnavailable with the unavailable items
+- [x] T-14 bounded AFK startOrderCheckout UNAVAILABLE: persist no Order (A-05) and emit StockUnavailable with the unavailable items
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:82-89, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:194-202, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:98, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:126-135
       test data: data.sql C-07, data/jpa/InventoryPosition/3.json
       tests: OrdersCheckoutServiceTest
       blocked by: T-05
-- [ ] T-15 bounded AFK Web: start-checkout when stock is unavailable answers 409 Conflict with a StockUnavailable body (orderId, unavailableItems), no Order (P-03 A; contract not edited)
+      done: claude-sonnet sonnet
+- [/] T-15 bounded AFK Web: start-checkout when stock is unavailable answers 409 Conflict with a StockUnavailable body (orderId, unavailableItems), no Order (P-03 A; contract not edited)
       model: ../arcadia-editions-modulith-api/orders-checkout-openapi.yml:32-52, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:95-98
       test data: data.sql C-07
       tests: OrdersCheckoutApiControllerTest, OrdersCheckoutApiIntegrationTest
@@ -142,7 +144,7 @@ review: [ ]
       tests: InventoryServiceTest
       blocked by: T-08
       done: claude-opus opus
-- [ ] T-19 bounded AFK cancelOrder on StockReleased: Order CREATED or CONFIRMED -> CANCELLED (cancelledAt, cancellationReason = reason, A-07), emit OrderCancelled; already CANCELLED does nothing
+- [/] T-19 bounded AFK cancelOrder on StockReleased: Order CREATED or CONFIRMED -> CANCELLED (cancelledAt, cancellationReason = reason, A-07), emit OrderCancelled; already CANCELLED does nothing
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:246-250, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:86-90, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:105-107, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:159-167
       test data: data.sql C-19, data.sql C-20, data.sql C-08
       tests: OrdersCheckoutServiceTest

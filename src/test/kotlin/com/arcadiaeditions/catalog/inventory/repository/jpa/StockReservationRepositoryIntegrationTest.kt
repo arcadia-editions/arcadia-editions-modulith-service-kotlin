@@ -72,7 +72,12 @@ class StockReservationRepositoryIntegrationTest : BaseRepositoryIntegrationTest(
         stockReservation.releasedAt = now
         stockReservation.releaseReason = StockReleaseReason.values()[0]
 
-        val updated = stockReservationRepository.save(stockReservation)
+        stockReservationRepository.save(stockReservation)
+
+        // read back from the database, not the managed instance
+        entityManager.flush()
+        entityManager.clear()
+        val updated = stockReservationRepository.findByIdOrNull(id) ?: throw NoSuchElementException(" not found with id: $id")
         Assertions.assertEquals("", updated.reservationId)
         Assertions.assertEquals("", updated.orderId)
         Assertions.assertEquals("", updated.sku)
