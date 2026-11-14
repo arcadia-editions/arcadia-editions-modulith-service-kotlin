@@ -233,11 +233,12 @@ review: [ ] (round 2 PASS at 5dc4a45: reports/review-S4-r2.md; reopened by check
       blocked by: T-13, T-23
       done: claude-sonnet sonnet (IT in slice review)
 
-- [/] T-50 bounded AFK authorizePayment on PaymentRetried, declined and failed-again branches: FakePaymentProcessor authorize test hook (as captureRefusal) and method pm_card_processorErrorThenDecline (fails attempt 1, declines after); unit tests from C-12: declined -> DECLINED (declinedAt, failureReason), only PaymentDeclined; failed again -> FAILED (failedAt, attemptCount kept), only PaymentFailed
+- [x] T-50 bounded AFK authorizePayment on PaymentRetried, declined and failed-again branches: FakePaymentProcessor authorize test hook (as captureRefusal) and method pm_card_processorErrorThenDecline (fails attempt 1, declines after); unit tests from C-12: declined -> DECLINED (declinedAt, failureReason), only PaymentDeclined; failed again -> FAILED (failedAt, attemptCount kept), only PaymentFailed
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:132-140, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:84-87, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:113-130
       test data: data.sql C-12
       tests: PaymentsProcessingServiceTest
       fixes: .zenwave/handoff/place-order-flow/reports/check-board.md (M-1)
+      done: claude-sonnet sonnet
 - [ ] T-51 bounded AFK Flow test retry then declined: checkout with pm_card_processorErrorThenDecline ends in OrderCancelledNotificationSent with PAYMENT_DECLINED, payment DECLINED (attempt 2), stock back to available
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:108-140, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:223-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data/jpa/InventoryPosition/1.json
