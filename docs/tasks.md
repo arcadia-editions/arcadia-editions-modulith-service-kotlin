@@ -200,7 +200,7 @@ review: [x] (code PASS: reports/review-S3.md; flow IT green in suite 5dc4a45)
 ## S4 retry loop
 path: OrderCreated > authorizePayment[failed] > PaymentFailed > retryPayment[retried] > PaymentRetried
       > authorizePayment[authorized] > PaymentAuthorized > confirmOrder > ... > end completed
-review: [x] (round 1 FIX: reports/review-S4.md; round 2 PASS at 5dc4a45: reports/review-S4-r2.md)
+review: [ ] (round 2 PASS at 5dc4a45: reports/review-S4-r2.md; reopened by check-board M-1: T-50, T-51)
 
 - [x] T-22 bounded AFK retryPayment on PaymentFailed: load the Payment by orderId, guard FAILED; attemptCount below 3 (A-03) -> attemptCount + 1, stays FAILED, emit PaymentRetried; at 3 -> RETRY_EXHAUSTED, emit PaymentRetryExhausted
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:124-130, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:65-69, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:89-91, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:133-148
@@ -233,6 +233,17 @@ review: [x] (round 1 FIX: reports/review-S4.md; round 2 PASS at 5dc4a45: reports
       blocked by: T-13, T-23
       done: claude-sonnet sonnet (IT in slice review)
 
+- [ ] T-50 bounded AFK authorizePayment on PaymentRetried, declined and failed-again branches: FakePaymentProcessor authorize test hook (as captureRefusal) and method pm_card_processorErrorThenDecline (fails attempt 1, declines after); unit tests from C-12: declined -> DECLINED (declinedAt, failureReason), only PaymentDeclined; failed again -> FAILED (failedAt, attemptCount kept), only PaymentFailed
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:132-140, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:84-87, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:113-130
+      test data: data.sql C-12
+      tests: PaymentsProcessingServiceTest
+      fixes: .zenwave/handoff/place-order-flow/reports/check-board.md (M-1)
+- [ ] T-51 bounded AFK Flow test retry then declined: checkout with pm_card_processorErrorThenDecline ends in OrderCancelledNotificationSent with PAYMENT_DECLINED, payment DECLINED (attempt 2), stock back to available
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:108-140, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:223-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
+      test data: data/jpa/InventoryPosition/1.json
+      tests: PlaceOrderFlowRetryDeclinedIntegrationTest
+      fixes: .zenwave/handoff/place-order-flow/reports/check-board.md (M-1)
+      blocked by: T-50
 ## S5 orderCancelled (retries exhausted)
 path: OrderCreated > authorizePayment[failed] > PaymentFailed > retryPayment[retry-exhausted] > PaymentRetryExhausted
       > releaseStock > StockReleased > cancelOrder > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
