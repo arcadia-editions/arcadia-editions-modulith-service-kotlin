@@ -233,7 +233,7 @@ review: [ ] (round 2 PASS at 5dc4a45: reports/review-S4-r2.md; reopened by check
       blocked by: T-13, T-23
       done: claude-sonnet sonnet (IT in slice review)
 
-- [ ] T-50 bounded AFK authorizePayment on PaymentRetried, declined and failed-again branches: FakePaymentProcessor authorize test hook (as captureRefusal) and method pm_card_processorErrorThenDecline (fails attempt 1, declines after); unit tests from C-12: declined -> DECLINED (declinedAt, failureReason), only PaymentDeclined; failed again -> FAILED (failedAt, attemptCount kept), only PaymentFailed
+- [/] T-50 bounded AFK authorizePayment on PaymentRetried, declined and failed-again branches: FakePaymentProcessor authorize test hook (as captureRefusal) and method pm_card_processorErrorThenDecline (fails attempt 1, declines after); unit tests from C-12: declined -> DECLINED (declinedAt, failureReason), only PaymentDeclined; failed again -> FAILED (failedAt, attemptCount kept), only PaymentFailed
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:132-140, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:84-87, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:113-130
       test data: data.sql C-12
       tests: PaymentsProcessingServiceTest
