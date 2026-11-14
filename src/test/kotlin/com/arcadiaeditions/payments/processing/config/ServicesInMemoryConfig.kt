@@ -39,6 +39,7 @@ open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
         paymentRepository().saveAll(payments)
         eventPublisher.getEvents().clear()
         paymentProcessor.captureRefusal = null
+        paymentProcessor.authorizeRefusal = null
     }
 
     /** The fake processor, for tests that make it refuse (e.g. `captureRefusal`). */

@@ -1,6 +1,8 @@
 package com.arcadiaeditions.payments.processing.application.service
 
 import com.arcadiaeditions.payments.processing.adapter.driven.jpa.inmemory.*
+import com.arcadiaeditions.payments.processing.adapter.driven.processor.FakePaymentProcessor
+import com.arcadiaeditions.payments.processing.application.port.driven.processor.PaymentProcessorResult
 import com.arcadiaeditions.payments.processing.application.port.driven.jpa.*
 import com.arcadiaeditions.payments.processing.application.port.driving.*
 import com.arcadiaeditions.payments.processing.application.port.driving.dto.*
@@ -189,6 +191,80 @@ class PaymentsProcessingServiceTest {
         org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
         val event = events[0] as PaymentAuthorized
         org.junit.jupiter.api.Assertions.assertEquals("ORD-012", event.orderId)
+    }
+
+    private fun retriedInput(orderId: String, customerId: String) =
+        AuthorizePaymentInput(
+            orderId = orderId,
+            customerId = customerId,
+            customerEmail = "",
+            amount = java.math.BigDecimal.ZERO,
+            currency = "",
+            paymentMethodId = "",
+        )
+
+    @Test
+    fun authorizePaymentOnPaymentRetriedDeclinedTest() {
+        // C-12: the retried authorization is declined
+        context.paymentProcessor().authorizeRefusal = PaymentProcessorResult.declined("card_declined")
+
+        paymentsProcessingService.authorizePayment(retriedInput("ORD-012", "CUST-012"))
+
+        val saved = savedPayment("ORD-012")
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.DECLINED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, saved.declinedAt)
+        org.junit.jupiter.api.Assertions.assertEquals("card_declined", saved.failureReason)
+        org.junit.jupiter.api.Assertions.assertNull(saved.authorizedAt)
+        org.junit.jupiter.api.Assertions.assertNull(saved.providerReference)
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
+        val event = events[0] as PaymentDeclined
+        org.junit.jupiter.api.Assertions.assertEquals("ORD-012", event.orderId)
+        org.junit.jupiter.api.Assertions.assertEquals("card_declined", event.reason)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, event.declinedAt)
+    }
+
+    @Test
+    fun authorizePaymentOnPaymentRetriedFailedAgainTest() {
+        // C-12: the retried authorization fails again: stays FAILED, attemptCount kept, only PaymentFailed
+        context.paymentProcessor().authorizeRefusal = PaymentProcessorResult.failed("processor_timeout")
+
+        paymentsProcessingService.authorizePayment(retriedInput("ORD-012", "CUST-012"))
+
+        val saved = savedPayment("ORD-012")
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.FAILED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(1, saved.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, saved.failedAt)
+        org.junit.jupiter.api.Assertions.assertEquals("processor_timeout", saved.failureReason)
+        org.junit.jupiter.api.Assertions.assertNull(saved.declinedAt)
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
+        val event = events[0] as PaymentFailed
+        org.junit.jupiter.api.Assertions.assertEquals("ORD-012", event.orderId)
+        org.junit.jupiter.api.Assertions.assertEquals(1, event.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, event.failedAt)
+    }
+
+    @Test
+    fun processorErrorThenDeclineFailsFirstAttemptThenDeclinesTest() {
+        // pm_card_processorErrorThenDecline: attempt 1 fails, the retry declines
+        val payment = savedPayment("ORD-012")
+        payment.paymentMethodId = FakePaymentProcessor.PROCESSOR_ERROR_THEN_DECLINE_PAYMENT_METHOD
+        paymentRepository.save(payment)
+
+        paymentsProcessingService.authorizePayment(retriedInput("ORD-012", "CUST-012"))
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.FAILED, savedPayment("ORD-012").status)
+        org.junit.jupiter.api.Assertions.assertTrue(events.single() is PaymentFailed)
+
+        events.clear()
+        paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-012"))
+        events.clear()
+        paymentsProcessingService.authorizePayment(retriedInput("ORD-012", "CUST-012"))
+
+        val saved = savedPayment("ORD-012")
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.DECLINED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(2, saved.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertTrue(events.single() is PaymentDeclined)
     }
 
     @Test

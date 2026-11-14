@@ -8,10 +8,10 @@ import org.springframework.stereotype.Component
 
 /**
  * Deterministic stand-in for the payment processor, driven by the processor's test payment method ids:
- * `pm_card_chargeDeclined` declines, `pm_card_processorError` fails, `pm_card_processorErrorOnce` fails on attempt 1 only, any other (e.g. `pm_card_visa`) is approved.
+ * `pm_card_chargeDeclined` declines, `pm_card_processorError` fails, `pm_card_processorErrorOnce` fails on attempt 1 only, `pm_card_processorErrorThenDecline` fails on attempt 1 and declines the retries, any other (e.g. `pm_card_visa`) is approved.
  * `pm_card_processorNoAnswer` never answers: the call waits until a test calls [releaseStalledAuthorizations] (or
  * [STALL_MAX_SECONDS] pass) and then throws, so the authorization rolls back and payment never resolves.
- * Captures always succeed, keeping the authorization reference, unless a test sets [captureRefusal].
+ * Captures always succeed, keeping the authorization reference, unless a test sets [captureRefusal]; a test may also set [authorizeRefusal] to force every authorization's answer.
  * Voids always succeed, keeping the authorization reference.
  * A real processor adapter is a separate task.
  */
@@ -25,6 +25,8 @@ class FakePaymentProcessor : PaymentProcessor {
         const val PROCESSOR_ERROR_PAYMENT_METHOD = "pm_card_processorError"
         /** Fails on the first attempt only (attemptCount 1); approved on the retries. */
         const val PROCESSOR_ERROR_ONCE_PAYMENT_METHOD = "pm_card_processorErrorOnce"
+        /** Fails on the first attempt (attemptCount <= 1), declines the retries. */
+        const val PROCESSOR_ERROR_THEN_DECLINE_PAYMENT_METHOD = "pm_card_processorErrorThenDecline"
         /** The processor never answers the authorization (payment stalled, C-11). */
         const val NO_ANSWER_PAYMENT_METHOD = "pm_card_processorNoAnswer"
         /** Upper bound of a stalled authorization call, so a test that forgets to release does not hold a thread. */
@@ -35,6 +37,9 @@ class FakePaymentProcessor : PaymentProcessor {
 
     /** Test hook: when set, every capture answers this refusal instead of capturing. */
     @Volatile var captureRefusal: PaymentProcessorResult? = null
+
+    /** Test hook: when set, every authorization answers this result instead of the payment method's. */
+    @Volatile var authorizeRefusal: PaymentProcessorResult? = null
 
     @Volatile private var stall = CountDownLatch(1)
 
@@ -49,7 +54,7 @@ class FakePaymentProcessor : PaymentProcessor {
     }
 
     override fun authorize(request: AuthorizationRequest): PaymentProcessorResult =
-        when (request.paymentMethodId) {
+        authorizeRefusal ?: when (request.paymentMethodId) {
             NO_ANSWER_PAYMENT_METHOD -> {
                 val latch = stall
                 stalledOrderIds.add(request.orderId)
@@ -65,6 +70,9 @@ class FakePaymentProcessor : PaymentProcessor {
             PROCESSOR_ERROR_ONCE_PAYMENT_METHOD ->
                 if (request.attemptCount <= 1) PaymentProcessorResult.failed(PROCESSOR_TIMEOUT)
                 else PaymentProcessorResult.approved("PSP-AUTH-" + request.orderId.removePrefix("ORD-"))
+            PROCESSOR_ERROR_THEN_DECLINE_PAYMENT_METHOD ->
+                if (request.attemptCount <= 1) PaymentProcessorResult.failed(PROCESSOR_TIMEOUT)
+                else PaymentProcessorResult.declined(CARD_DECLINED)
             else -> PaymentProcessorResult.approved("PSP-AUTH-" + request.orderId.removePrefix("ORD-"))
         }
 
