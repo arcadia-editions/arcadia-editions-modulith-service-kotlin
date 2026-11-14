@@ -200,7 +200,7 @@ review: [x] (code PASS: reports/review-S3.md; flow IT green in suite 5dc4a45)
 ## S4 retry loop
 path: OrderCreated > authorizePayment[failed] > PaymentFailed > retryPayment[retried] > PaymentRetried
       > authorizePayment[authorized] > PaymentAuthorized > confirmOrder > ... > end completed
-review: [ ] (round 2 PASS at 5dc4a45: reports/review-S4-r2.md; reopened by check-board M-1: T-50, T-51)
+review: [x] (round 2 PASS at 5dc4a45: reports/review-S4-r2.md; T-50/T-51 test-only, verified by orchestrator: suite a44ce8b 102+49 green)
 
 - [x] T-22 bounded AFK retryPayment on PaymentFailed: load the Payment by orderId, guard FAILED; attemptCount below 3 (A-03) -> attemptCount + 1, stays FAILED, emit PaymentRetried; at 3 -> RETRY_EXHAUSTED, emit PaymentRetryExhausted
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:124-130, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:65-69, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:89-91, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:133-148

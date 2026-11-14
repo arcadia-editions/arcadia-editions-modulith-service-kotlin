@@ -142,3 +142,9 @@
 - 2026-11-13 review S8 round 2 (claude-opus): PASS at 5dc4a45. All slices S0-S8 reviewed. T-49 cleanup of r2 NOTEs -> claude-sonnet
 - 2026-11-13 T-49 merged (claude-sonnet sonnet)
 - 2026-11-14 person: keep the AFK ledger in source control (log.md, quota.md, reports/, prompts/, docker-run-it.sh); .gitignore narrowed, files committed on afk/place-order-flow by a claude-sonnet agent
+- 2026-11-14 end-of-flow check (claude-opus): M-1 retry-then-declined untested -> T-50, T-51 (S4 reopened); M-2 NotificationDeliveryFailed no end -> P-07; M-3 refused void no outcome -> P-08
+- 2026-11-14 T-50 -> claude-sonnet (bounded, end-of-flow check M-1), clone .zenwave/work/T-50
+- 2026-11-14 T-50 merged (claude-sonnet sonnet)
+- 2026-11-14 T-51 -> claude-sonnet (bounded, end-of-flow check M-1), clone .zenwave/work/T-51
+- 2026-11-14 T-51 merged (claude-sonnet sonnet (IT green by worker via lock))
+- 2026-11-14 T-50, T-51 merged; final suite a44ce8b: surefire 102/102, failsafe 49/49. S4 closed (test-only additions, no re-review). All AFK tasks done; open: T-33 (HITL), P-02, P-05, P-06, P-07, P-08
