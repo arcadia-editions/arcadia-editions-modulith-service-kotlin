@@ -239,7 +239,7 @@ review: [ ] (round 2 PASS at 5dc4a45: reports/review-S4-r2.md; reopened by check
       tests: PaymentsProcessingServiceTest
       fixes: .zenwave/handoff/place-order-flow/reports/check-board.md (M-1)
       done: claude-sonnet sonnet
-- [ ] T-51 bounded AFK Flow test retry then declined: checkout with pm_card_processorErrorThenDecline ends in OrderCancelledNotificationSent with PAYMENT_DECLINED, payment DECLINED (attempt 2), stock back to available
+- [/] T-51 bounded AFK Flow test retry then declined: checkout with pm_card_processorErrorThenDecline ends in OrderCancelledNotificationSent with PAYMENT_DECLINED, payment DECLINED (attempt 2), stock back to available
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:108-140, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:223-260, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:262-266
       test data: data/jpa/InventoryPosition/1.json
       tests: PlaceOrderFlowRetryDeclinedIntegrationTest
