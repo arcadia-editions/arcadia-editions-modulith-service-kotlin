@@ -1,0 +1,144 @@
+# place-order-flow AFK log
+
+- 2026-11-12 setup: integration worktree .zenwave/work/integration, branch afk/place-order-flow from baseline/place-order-flow-1 (7e239c1)
+- 2026-11-12 S0 base: 7e239c1
+- 2026-11-12 T-01 -> grok launch denied by auto-mode classifier (unsandboxed --always-approve); rerouted to claude-sonnet, clone .zenwave/work/T-01
+- 2026-11-12 T-02 -> claude-sonnet (bounded), clone .zenwave/work/T-02
+- 2026-11-12 T-03 -> claude-sonnet (mechanical; grok unavailable), clone .zenwave/work/T-03
+- 2026-11-12 T-01 merged (claude-sonnet); Clock injected only, no Instants set yet; config/ package is new top-level, check in S0 review vs Modulith modules
+- 2026-11-12 S1 base: 0c1fddd
+- 2026-11-12 T-04 -> claude-sonnet (bounded), clone .zenwave/work/T-04 (cloned from integration)
+- 2026-11-12 routing: codex removed (person's request); committed in integration
+- 2026-11-12 routing: only claude (grok and codex removed, person's request)
+- 2026-11-12 P-03 accepted A by the person; T-15 waits on OpenAPI change + regen (HITL)
+- 2026-11-12 P-03: person says contract compatible, no edit; T-15 unblocked (409 in code)
+- 2026-11-12 T-04 merged (claude-sonnet); added findBySku to generated-once repo; t04-pg origin unknown (T-04 says it did not start it)
+- 2026-11-12 T-05 -> claude-sonnet (bounded), clone .zenwave/work/T-05
+- 2026-11-12 T-03 merged (claude-sonnet); worker run failed on Docker port 5432 (t04-pg); orchestrator rerun 35/35 green
+- 2026-11-12 T-02 merged (claude-sonnet); verified on integration incl T-01; tolerated Modulith findings -> P-04 open (blocks none)
+- 2026-11-12 S0 review -> claude-opus, clone .zenwave/work/review-S0 at 71a5999, range 7e239c1..71a5999
+- 2026-11-12 T-07 -> claude-opus (advanced), clone .zenwave/work/T-07
+- 2026-11-12 T-08 -> claude-sonnet (bounded), clone .zenwave/work/T-08
+- 2026-11-12 T-05 merged (claude-sonnet); orchestrator reran on integration incl ArchitectureTest: green
+- 2026-11-12 T-08 merged (claude-sonnet); verified on integration incl ArchitectureTest + OrdersCheckoutServiceTest
+- 2026-11-12 T-07 merged (claude-opus); verified on integration incl arch tests; note for S1 review: FakePaymentProcessor is a @Component in main with no @Profile (T-33)
+- 2026-11-12 T-09 -> claude-sonnet (bounded), clone .zenwave/work/T-09
+- 2026-11-12 T-10 -> claude-sonnet (bounded), clone .zenwave/work/T-10
+- 2026-11-12 T-11 -> claude-opus (advanced), clone .zenwave/work/T-11
+- 2026-11-12 S0 review round 1 (claude-opus): FIX. Accepted: FIX FIRST tolerance -> T-34; SHOULD FIX repo reload -> T-35; SHOULD FIX Clock in fulfillment/notifications -> folded into T-10/T-12 (fixes:); SHOULD FIX comment + NOTE allowEmptyShould -> T-34; NOTE test Clock bean -> T-13 note; P-04 evidence corrected by orchestrator. Rejected: FQN style notes (cosmetic, generated-code neighbours vary); tautological servicesUseTheFixedClockTest (harmless; files busy with T-09/T-11; drop at the S1 review)
+- 2026-11-12 T-10 merged (claude-sonnet); Clock injected in fulfillment; RED only as compile failure; verified on integration
+- 2026-11-12 T-09 merged (claude-sonnet); verified on integration
+- 2026-11-12 T-11 merged (claude-opus); capture refusal throws placeholder until T-29; providerReference kept from auth
+- 2026-11-12 T-34 -> claude-sonnet (bounded, S0 fix), clone .zenwave/work/T-34
+- 2026-11-12 T-35 -> claude-sonnet (mechanical, S0 fix), clone .zenwave/work/T-35
+- 2026-11-12 T-12 -> claude-sonnet (bounded), clone .zenwave/work/T-12
+- 2026-11-12 P-04 accepted A by the person; T-36 added to S0 (blocked by T-34)
+- 2026-11-12 T-12 merged (claude-sonnet); Clock in notifications; refused email throws (no NotificationDeliveryFailed task on board: check at exit)
+- 2026-11-12 T-35 worker run failed: Docker ports held by sibling project modulith-service-java (compose t01, and likely t04-pg earlier). T-35 waits for orchestrator rerun when Docker is free
+- 2026-11-12 T-06 -> claude-sonnet (mechanical), clone .zenwave/work/T-06
+- 2026-11-12 T-16 -> claude-sonnet (bounded), clone .zenwave/work/T-16
+- 2026-11-13 T-16 merged (claude-sonnet). claude-sonnet out of quota until 01:20 Madrid (T-34 round 2 interrupted)
+- 2026-11-13 T-34 round 2 -> claude-opus (handoff, sonnet out of quota), same clone
+- 2026-11-13 T-18 -> claude-sonnet (bounded; quota reset), clone .zenwave/work/T-18
+- 2026-11-13 T-22 -> claude-sonnet (bounded; quota reset), clone .zenwave/work/T-22
+- 2026-11-13 T-22 merged (claude-opus); redelivery of PaymentFailed not idempotent -> P-05
+- 2026-11-13 T-18 merged (claude-opus); verified with orders + arch tests
+- 2026-11-13 T-06 merged (claude-sonnet); OrdersCheckoutApiIntegrationTest 4/4 run by orchestrator; 404 not in openapi (task asks it)
+- 2026-11-13 T-34 merged (sonnet round 1 + opus round 2); arch tests green on integration
+- 2026-11-13 T-35: worker's changes found reverted in the clone (clean tree, no stash); orchestrator's IT green run was on unchanged code. Redo.
+- 2026-11-13 P-05 open (blocks none): retryPayment redelivery
+- 2026-11-13 T-35 -> claude-sonnet (mechanical redo; quota reset), clone .zenwave/work/T-35
+- 2026-11-13 T-36 -> claude-sonnet (bounded; quota reset), clone .zenwave/work/T-36
+- 2026-11-13 T-14 -> claude-sonnet (bounded; quota reset), clone .zenwave/work/T-14
+- 2026-11-13 T-14 merged (claude-sonnet); StockUnavailableException + noRollbackFor, check in review. Docker lock dir introduced for Testcontainers runs
+- 2026-11-13 T-13 -> claude-opus (advanced), clone .zenwave/work/T-13
+- 2026-11-13 T-15 -> claude-sonnet (bounded), clone .zenwave/work/T-15
+- 2026-11-13 T-35 merged (claude-sonnet redo); repo ITs 35/35 on committed change
+- 2026-11-13 T-19 -> claude-sonnet (bounded), clone .zenwave/work/T-19
+- 2026-11-13 T-36 merged (claude-sonnet): explicit Modulith detection (application.yml), modules annotated, root ModuleMetadata deleted; context start to be checked by full suite
+- 2026-11-13 T-19 merged (claude-sonnet)
+- 2026-11-13 S0 review round 2 -> claude-opus at 4b804fe (both workers implemented part of S0: no independent reviewer)
+- 2026-11-13 T-20 -> claude-sonnet (bounded), clone .zenwave/work/T-20
+- 2026-11-13 T-23 -> claude-sonnet (bounded), clone .zenwave/work/T-23
+- 2026-11-13 T-20 merged (claude-sonnet); reason in body + event (Notification has no reason field)
+- 2026-11-13 T-23 merged (claude-sonnet); listener mapper uses placeholder values for AuthorizePaymentInput on PaymentRetried (P-01 D), check in S4 review
+- 2026-11-13 T-15 IT run disrupted: sibling project modulith-service-java started its review-S1 compose + review-s1-pg during our run (it does not use our lock); 4/5 failed with DB I/O error / wrong responses. T-15 waits for a clean rerun
+- 2026-11-13 T-26 -> claude-sonnet (bounded), clone .zenwave/work/T-26
+- 2026-11-13 T-27 -> claude-opus (advanced), clone .zenwave/work/T-27
+- 2026-11-13 T-26 merged (claude-sonnet)
+- 2026-11-13 T-27 merged (claude-opus); void overwrites earlier failureReason (task says failureReason = reason); refused void throws (no model outcome)
+- 2026-11-13 T-29 -> claude-sonnet (bounded), clone .zenwave/work/T-29
+- 2026-11-13 T-31 -> claude-opus (advanced), clone .zenwave/work/T-31
+- 2026-11-13 T-29 merged (claude-sonnet); redelivered FulfillmentScheduled after CAPTURE_FAILED throws (check in S7 review)
+- 2026-11-13 S0 review round 2 (claude-opus): PASS at 4b804fe, full suite surefire 69/69 failsafe 39/39 (2nd run; 1st run port 5432 held by Rancher host-switch). NOTEs not taken as tasks: dead Rest layer, allowedDependencies, KDoc verify() wording, merge commits without trailers. docker-run.sh now TCP-checks 5432
+- 2026-11-13 T-31 merged (claude-opus); local @Scheduled poll, fixedDelay PT30S property; JPA finder not yet IT-checked
+- 2026-11-13 T-13 merged (claude-opus); IT green by worker via lock; test Clock opt-in via @Import (own context)
+- 2026-11-13 S1 review -> claude-opus at 2c897e8 (both workers implemented S1)
+- 2026-11-13 T-17 -> claude-sonnet (bounded), clone .zenwave/work/T-17
+- 2026-11-13 T-21 -> claude-sonnet (bounded), clone .zenwave/work/T-21
+- 2026-11-13 T-24 -> claude-sonnet (bounded), clone .zenwave/work/T-24
+- 2026-11-13 all workers out of quota until 07:50 Madrid; T-17, T-21, T-24, review-S1 interrupted (work saved in clones)
+- 2026-11-13 07:58 stale docker.lock (since 04:05, no process) removed by orchestrator
+- 2026-11-13 08:03 port 5432 held by Rancher wslrelay.exe (10768) + host-switch.exe (21060) with no container: all IT runs wait (T-17 holds docker.lock since 07:57). Watching 20 min
+- 2026-11-13 T-37 -> claude-opus (test infra; port 5432 held by stale Rancher relays, Docker shared with modulith-service-java), clone .zenwave/work/T-37
+- 2026-11-13 T-37 added (test compose with own ports) -> claude-opus; IT runs of T-17/T-21/T-24/review-S1 paused until it lands
+- 2026-11-13 S1 review round 1 (claude-opus): FIX, suite NOT RUN (port 5432). Accepted: FIX FIRST expiry job in test contexts -> T-38; SHOULD FIX fakes ungated -> T-39; NOTE NotificationDeliveryFailed -> T-42; NOTE T-23 placeholder Payment -> T-41 (S4); NOTE OrderCreated-over-FAILED -> P-05; NOTE expiry/authorize race -> P-06. Rejected: jMolecules hexagonal annotations on new ports (cosmetic). Orphan docker-run.sh pids reported to the person (kill denied to reviewer).
+- 2026-11-13 T-42 -> claude-sonnet (bounded, S1 fix), clone .zenwave/work/T-42
+- 2026-11-13 T-41 -> claude-sonnet (bounded, S1 review fix for S4), clone .zenwave/work/T-41
+- 2026-11-13 T-41 merged (claude-sonnet); listener drops invalid PaymentRetried with a warn (republish-on-restart would loop); zero-amount OrderCreated now rejected too
+- 2026-11-13 T-42 merged (claude-sonnet)
+- 2026-11-13 person: ITs only in slice verification; reuse one long-running test compose (T-37 extended). Docker daemon restarted by the person but Rancher relays still hold 5432
+- 2026-11-13 T-37 merged (claude-opus); repo ITs 35/35 via docker-run-it.sh
+- 2026-11-13 T-15, T-17, T-21, T-24 merged on compile+unit+arch (ITs in slice reviews, person's policy). Long-running test compose arcadia-editions-modulith-it started by orchestrator
+- 2026-11-13 T-38 -> claude-sonnet (bounded, S1 fix), clone .zenwave/work/T-38
+- 2026-11-13 T-25 -> claude-sonnet (bounded), clone .zenwave/work/T-25
+- 2026-11-13 T-28 -> claude-sonnet (bounded), clone .zenwave/work/T-28
+- 2026-11-13 T-25 merged (claude-sonnet sonnet (IT in slice review))
+- 2026-11-13 T-38 merged (claude-sonnet sonnet)
+- 2026-11-13 T-28 merged (claude-sonnet sonnet (IT in slice review))
+- 2026-11-13 T-39 -> claude-sonnet (bounded, S1 fix), clone .zenwave/work/T-39
+- 2026-11-13 T-30 -> claude-sonnet (bounded), clone .zenwave/work/T-30
+- 2026-11-13 T-32 -> claude-opus (bounded; timer + clock), clone .zenwave/work/T-32
+- 2026-11-13 T-30 merged (claude-sonnet sonnet (IT in slice review))
+- 2026-11-13 T-39 merged (claude-sonnet sonnet (fakes on in application-default.yml: question for the person))
+- 2026-11-13 T-32 merged (claude-opus opus (IT in slice review; payment stalls in fake, no row))
+- 2026-11-13 all AFK tasks merged (T-33 HITL left). Full suite at 1f8c0ff running in work/verify via docker-run-it.sh; slice reviews S1 r2..S8 will use it
+- 2026-11-13 T-37 addition (reuse via TCP check, props on every context) delivered as patch (orchestrator removed the clone mid-work: own mistake); apply as T-37b after the suite. docker-run-it.sh busy-wait on 15432 to drop (always busy with reused compose)
+- 2026-11-13 T-43 -> claude-opus (advanced, test infra), clone .zenwave/work/T-43
+- 2026-11-13 suite 1f8c0ff: surefire 94/94; failsafe 48 run 1 fail 6 err (flow tests, shared context/Scenario) -> T-43 (claude-opus) incl. T-37 patch; docker-run-it.sh port wait removed
+- 2026-11-13 review S2 -> claude-opus at 2984d99 (code review; flow ITs pending T-43)
+- 2026-11-13 review S3 -> claude-opus at 2984d99 (code review; flow ITs pending T-43)
+- 2026-11-13 14:05 quota reset passed; resuming T-43, review-S2, review-S3
+- 2026-11-13 review S3 (claude-opus): PASS code, flow IT pending T-43. NOTEs (unused mappers, send* copy) not taken. review S4 -> claude-opus at 6748bcc
+- 2026-11-13 review S2 (claude-opus): PASS code, flow IT pending T-43; NOTE e-mail body names orderId with no Order (fixture text, person). review S5 -> claude-opus at eacdac3
+- 2026-11-13 review S5 (claude-opus): PASS code, flow IT pending T-43; stall leak across tests + KDoc forwarded to T-43. review S6 -> claude-opus at 568718a
+- 2026-11-13 T-44 -> claude-sonnet (bounded, S4 fix), clone .zenwave/work/T-44
+- 2026-11-13 review S4 (claude-opus): FIX (2 SHOULD FIX on T-41: listener catch ineffective under REQUIRES_NEW, amount>0 rule) -> T-44
+- 2026-11-13 review S6 (claude-opus): FIX (SHOULD FIX void reason vs fixture C-10) -> T-45 after T-43; NOTE void refused throws (no model outcome) left
+- 2026-11-13 review S7 -> claude-opus at 8b36765
+- 2026-11-13 T-44 merged (claude-sonnet sonnet (returns unsaved empty Payment on no-op))
+- 2026-11-13 review S8 -> claude-opus at f14c72d
+- 2026-11-13 T-46 -> claude-sonnet (bounded, S7 fix), clone .zenwave/work/T-46
+- 2026-11-13 review S7 (claude-opus): FIX (SHOULD FIX capture redelivery after CAPTURE_FAILED/VOIDED) -> T-46; NOTEs (KDoc, A-01 marker, mapper comment) folded into T-45; captureRefusal global note -> T-43
+- 2026-11-13 T-43 merged (claude-opus opus (8/8 flow ITs green together, run by worker via lock))
+- 2026-11-13 T-47 -> claude-sonnet (bounded, found by T-43), clone .zenwave/work/T-47
+- 2026-11-13 T-45 -> claude-sonnet (bounded, S6/S7 fix), clone .zenwave/work/T-45
+- 2026-11-13 T-43 merged (claude-opus): flow ITs 8/8 together (@DirtiesContext per class, relative counters, no resubmit in flow tests). Product finding -> T-47. T-45 handed out
+- 2026-11-13 T-46 merged (claude-sonnet sonnet)
+- 2026-11-13 T-48 -> claude-sonnet (bounded, S8 fix), clone .zenwave/work/T-48
+- 2026-11-13 review S8 (claude-opus): FIX. Accepted FIX FIRST expiry releases CONFIRMED -> T-48. SHOULD FIX stall resubmit: covered by T-43 (resubmit off in flow tests, rows cleaned) and T-47 (age threshold). NOTEs: C-11 payment state (person), T-38 gating test reflective only
+- 2026-11-13 T-45 merged (claude-sonnet sonnet)
+- 2026-11-13 T-47 merged (claude-sonnet sonnet (app.events.resubmit-incomplete-publications-older-than, default PT5M))
+- 2026-11-13 T-48 merged (claude-sonnet sonnet)
+- 2026-11-13 T-45, T-47, T-48 merged; all AFK tasks done (T-33 HITL left). Full suite at 5dc4a45 running in work/verify
+- 2026-11-13 review S1 round 2 -> claude-opus at 5dc4a45
+- 2026-11-13 review S4 round 2 -> claude-opus at 5dc4a45
+- 2026-11-13 review S6 round 2 -> claude-opus at 5dc4a45
+- 2026-11-13 review S6 round 2 (claude-opus): PASS at 5dc4a45. review S7 round 2 -> claude-opus
+- 2026-11-13 review S4 round 2 (claude-opus): PASS at 5dc4a45 (NOTEs: blank OrderCreated dropped, transient Payment() return). review S8 round 2 -> claude-opus
+- 2026-11-13 review S1 round 2 (claude-opus): PASS at 5dc4a45. NOTEs not taken: hexagonal annotations, property prefixes, unused log, stale compose comment; default-profile fakes is for the person
+- 2026-11-13 review S7 round 2 (claude-opus): PASS at 5dc4a45; NOTEs (CAPTURED comment, C-17 label :96, test name, VOIDED branch test) -> cleanup task after S8
+- 2026-11-13 T-49 -> claude-sonnet (mechanical cleanup), clone .zenwave/work/T-49
+- 2026-11-13 review S8 round 2 (claude-opus): PASS at 5dc4a45. All slices S0-S8 reviewed. T-49 cleanup of r2 NOTEs -> claude-sonnet
+- 2026-11-13 T-49 merged (claude-sonnet sonnet)
+- 2026-11-14 person: keep the AFK ledger in source control (log.md, quota.md, reports/, prompts/, docker-run-it.sh); .gitignore narrowed, files committed on afk/place-order-flow by a claude-sonnet agent

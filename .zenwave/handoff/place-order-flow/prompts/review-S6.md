@@ -1,0 +1,8 @@
+You are the reviewer of slice S6 of the board .zenwave/work/integration/docs/tasks.md. Work in .zenwave/work/review-S6, a read-only checkout at 568718a.
+Follow the skill zenwave-review-slice: .claude/skills/zenwave-review-slice/SKILL.md, with this project's test policy (the person): integration tests run in slice verification only, once.
+Slice tasks: T-26, T-27, T-28. Judge their code against their model: lines; judge the code, not the reports (.zenwave/handoff/place-order-flow/reports/T-*.md). The range 7e239c1..6748bcc holds every slice: judge only this slice's changes, but report anything that contradicts one of its model lines.
+SUITE: do NOT run the full suite. It ran at 1f8c0ff (log .zenwave/handoff/place-order-flow/logs/suite-1f8c0ff.log): surefire 94/94 green; failsafe 48 run, all non-flow ITs green; the flow tests failed together because of shared-context/Scenario event capture (being fixed in T-43, test infra only). Report this slice's flow test(s) (PlaceOrderFlowFulfillmentFailedIntegrationTest) as PENDING T-43, do not count that against the slice, and do not run them.
+Decisions: P-01 D, P-03 A (code only), P-04 A; open: P-02 (assumption A-01), P-05, P-06 (proposals in .zenwave/work/review-S6/docs/proposals/). The S1 review findings already became tasks T-38..T-42 (done): do not repeat them.
+Models: sibling repos ../arcadia-editions-architecture and ../arcadia-editions-modulith-api relative to the repository root. Read only.
+Standards: AGENTS.md, the overlay's project rules, the conventions of the code next to each change.
+Change nothing in the checkout. Write your report to .zenwave/handoff/place-order-flow/reports/review-S6.md and end your final message with it.
