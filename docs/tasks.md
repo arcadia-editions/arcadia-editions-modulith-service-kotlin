@@ -189,10 +189,11 @@ review: [ ]
       model: ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:69-70, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:96-100
       tests: OrdersCheckoutApiControllerTest, OrdersCheckoutApiIntegrationTest
       done: claude-sonnet sonnet
-- [/] T-77 mechanical AFK The 400 of startOrderCheckout proves nothing was reserved: testStartOrderCheckout_400_bounds asserts StockReservation and Order counts unchanged after each request (as OrdersCheckoutServiceTest does for the 409) and the ProblemDetail field (items[0].quantity / items[0].unitPrice); one case per test or per assertion so the second is not hidden; trim the controller-test comment to what it proves; import jakarta.validation.Validation
+- [x] T-77 mechanical AFK The 400 of startOrderCheckout proves nothing was reserved: testStartOrderCheckout_400_bounds asserts StockReservation and Order counts unchanged after each request (as OrdersCheckoutServiceTest does for the 409) and the ProblemDetail field (items[0].quantity / items[0].unitPrice); one case per test or per assertion so the second is not hidden; trim the controller-test comment to what it proves; import jakarta.validation.Validation
       model: ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:69-70, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:96-100
       tests: OrdersCheckoutApiControllerTest, OrdersCheckoutApiIntegrationTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S8.md (SHOULD FIX T-74, NOTEs)
+      done: claude-sonnet sonnet
 
 ## S9 Integrations
 review: [ ]
