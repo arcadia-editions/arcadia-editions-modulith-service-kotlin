@@ -78,11 +78,12 @@ review: [ ]
       tests: PaymentsProcessingServiceTest, PaymentsProcessingServiceEventsListenerMapperTest
       blocked by: T-57
       done: claude-sonnet sonnet
-- [/] T-59 advanced AFK Flow tests of the retry loop: attempts counted only by authorizePayment (1) and reauthorizePayment (2, 3), a redelivered PaymentFailed or PaymentRetried with a stale attemptCount changes nothing, backoff respected (fixed Clock or a test backoff)
+- [x] T-59 advanced AFK Flow tests of the retry loop: attempts counted only by authorizePayment (1) and reauthorizePayment (2, 3), a redelivered PaymentFailed or PaymentRetried with a stale attemptCount changes nothing, backoff respected (fixed Clock or a test backoff)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:124-146, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:254-266
       test data: data.sql C-09, data.sql C-12, data.sql C-13
       tests: PlaceOrderFlowRetryIntegrationTest, PlaceOrderFlowRetryDeclinedIntegrationTest, PlaceOrderFlowRetryExhaustedIntegrationTest
       blocked by: T-58
+      done: claude-opus opus
 
 ## S3 orderCancelled (void refused)
 path: OrderConfirmed > scheduleFulfillment[FulfillmentFailed] > voidPayment[void-failed] > PaymentVoidFailed > releaseStock > StockReleased
@@ -121,7 +122,7 @@ review: [ ]
       test data: data.sql C-21, data.sql C-25, data.sql C-26
       tests: FulfillmentShippingServiceTest, OrdersCheckoutEventsListenerMapperTest
       done: claude-sonnet sonnet
-- [ ] T-65 bounded AFK Flow test capture failed: after the void and the cancellation the Fulfillment is CANCELLED and FulfillmentCancelled was emitted; the order is cancelled once
+- [/] T-65 bounded AFK Flow test capture failed: after the void and the cancellation the Fulfillment is CANCELLED and FulfillmentCancelled was emitted; the order is cancelled once
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:190-200, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:311-320
       test data: data.sql C-26
       tests: PlaceOrderFlowCaptureFailedIntegrationTest
