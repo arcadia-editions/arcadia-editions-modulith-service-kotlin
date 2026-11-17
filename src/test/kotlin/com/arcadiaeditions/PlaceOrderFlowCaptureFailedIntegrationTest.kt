@@ -10,6 +10,8 @@ import com.arcadiaeditions.config.TestClock
 import com.arcadiaeditions.config.TestClockConfiguration
 import com.arcadiaeditions.fulfillment.shipping.FulfillmentRepository
 import com.arcadiaeditions.fulfillment.shipping.domain.FulfillmentStatus
+import com.arcadiaeditions.fulfillment.shipping.domain.events.FulfillmentCancelled
+import java.util.concurrent.CopyOnWriteArrayList
 import com.arcadiaeditions.notifications.consumer.FakeEmailSender
 import com.arcadiaeditions.notifications.consumer.domain.NotificationChannel
 import com.arcadiaeditions.notifications.consumer.domain.NotificationStatus
@@ -38,7 +40,9 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Import
+import org.springframework.context.event.EventListener
 import org.springframework.modulith.test.EnableScenarios
 import org.springframework.modulith.test.Scenario
 import org.springframework.test.annotation.DirtiesContext
@@ -82,6 +86,22 @@ class PlaceOrderFlowCaptureFailedIntegrationTest {
     @Autowired lateinit var clock: MutableClock
 
     private val timeout: Duration = Duration.ofSeconds(30)
+
+    /** Records FulfillmentCancelled as published (no module listens to it: it is for the warehouse). Local to this class. */
+    class FulfillmentCancelledRecorder {
+        val events = CopyOnWriteArrayList<FulfillmentCancelled>()
+
+        @EventListener fun on(event: FulfillmentCancelled) {
+            events.add(event)
+        }
+    }
+
+    @TestConfiguration
+    class RecorderConfiguration {
+        @org.springframework.context.annotation.Bean fun fulfillmentCancelledRecorder() = FulfillmentCancelledRecorder()
+    }
+
+    @Autowired lateinit var cancelledRecorder: FulfillmentCancelledRecorder
 
     @BeforeEach
     fun prepare() {
@@ -145,6 +165,7 @@ class PlaceOrderFlowCaptureFailedIntegrationTest {
         assertThat(order.confirmedAt).isEqualTo(now)
         assertThat(order.cancelledAt).isEqualTo(now)
         assertThat(order.cancellationReason).isEqualTo("PAYMENT_VOIDED")
+        // the order is cancelled once: one OrderCancelledNotification, one e-mail (below)
 
         // catalog.inventory: reserveStock -> RESERVED, confirmStockReservation -> CONFIRMED, releaseStock -> RELEASED
         val reservation = stockReservationRepository.findByOrderId(orderId).single()
@@ -170,12 +191,23 @@ class PlaceOrderFlowCaptureFailedIntegrationTest {
         assertThat(payment.failedAt).isEqualTo(now)
         assertThat(payment.failureReason).isEqualTo("capture_window_closed")
 
-        // fulfillment.shipping: scheduleFulfillment -> SCHEDULED (not undone by the capture failure)
+        // fulfillment.shipping: scheduleFulfillment -> SCHEDULED, then cancelFulfillment on OrderCancelled -> CANCELLED (A-11: reason of OrderCancelled)
+        await().atMost(timeout).untilAsserted {
+            assertThat(fulfillmentRepository.findByOrderId(orderId)!!.status).isEqualTo(FulfillmentStatus.CANCELLED)
+        }
         val fulfillment = fulfillmentRepository.findByOrderId(orderId)!!
-        assertThat(fulfillment.status).isEqualTo(FulfillmentStatus.SCHEDULED)
         assertThat(fulfillment.customerId).isEqualTo("CUST-010")
         assertThat(fulfillment.scheduledAt).isEqualTo(now)
+        assertThat(fulfillment.cancelledAt).isEqualTo(now)
+        assertThat(fulfillment.cancellationReason).isEqualTo(order.cancellationReason)
+        assertThat(fulfillment.cancellationReason).isEqualTo("PAYMENT_VOIDED")
         assertThat(fulfillment.failedAt).isNull()
+        // FulfillmentCancelled emitted once
+        val cancelled = cancelledRecorder.events.filter { it.orderId == orderId }
+        assertThat(cancelled).hasSize(1)
+        assertThat(cancelled.single().fulfillmentId).isEqualTo(fulfillment.fulfillmentId)
+        assertThat(cancelled.single().reason).isEqualTo("PAYMENT_VOIDED")
+        assertThat(cancelled.single().cancelledAt).isEqualTo(now)
 
         // notifications.consumer: sendOrderCancelledNotification -> SENT, one e-mail, none for confirmation
         val notification = notificationRepository.findByOrderIdAndType(orderId, NotificationType.ORDER_CANCELLED)!!
