@@ -165,11 +165,12 @@ review: [ ]
       tests: OrdersCheckoutServiceTest
       blocked by: T-69
       done: claude-sonnet sonnet
-- [/] T-71 mechanical AFK voidPayment on OrderConfirmationRejected (listener and mapper already wired): listener mapper test, void reason = the rejection reason
+- [x] T-71 mechanical AFK voidPayment on OrderConfirmationRejected (listener and mapper already wired): listener mapper test, void reason = the rejection reason
       model: ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:152-161
       test data: data.sql C-22
       tests: OrdersCheckoutEventsListenerMapperTest, PaymentsProcessingServiceTest
       blocked by: T-60
+      done: claude-sonnet sonnet
 - [ ] T-72 advanced AFK Flow test late authorization: the authorization arrives after the timer released the stock; confirmOrder rejects, the hold is voided, releaseStock and cancelOrder are no-ops, the order is cancelled once
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:148-176, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:236-266, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:299-309
       test data: data.sql C-22, data.sql C-23
@@ -180,7 +181,7 @@ review: [ ]
 path: PaymentCaptured > sendOrderConfirmation[failed] > NotificationDeliveryFailed > end notificationFailed
 review: [ ]
 
-- [ ] T-73 bounded AFK Flow test notification failed: the e-mail provider refuses the order confirmation (fake: a refusal test hook), Notification FAILED, ends at NotificationDeliveryFailed with its type
+- [/] T-73 bounded AFK Flow test notification failed: the e-mail provider refuses the order confirmation (fake: a refusal test hook), Notification FAILED, ends at NotificationDeliveryFailed with its type
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:202-213, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:336-345
       test data: data.sql C-29
       tests: PlaceOrderFlowNotificationFailedIntegrationTest
