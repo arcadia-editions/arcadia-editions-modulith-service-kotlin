@@ -29,6 +29,8 @@ open class PaymentsProcessingServiceImpl(
     /** ZFL header: one processor call lasts at most 30 seconds; then it is a technical failure (processor_timeout). */
     @org.springframework.beans.factory.annotation.Value("\${arcadia.payments.processor-timeout:30s}")
     private val processorTimeout: Duration,
+    /** Waits the backoff before a reauthorization (ZFL header: 5 s before attempt 2, 15 s before attempt 3); tests record it instead. */
+    private val backoffSleeper: (Duration) -> Unit = { Thread.sleep(it) },
 ) : PaymentsProcessingService {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass)
@@ -53,6 +55,11 @@ open class PaymentsProcessingServiceImpl(
         const val MAX_PAYMENT_ATTEMPTS = 3
         /** A-06: failureReason of a processor call that did not answer within the timeout. */
         const val PROCESSOR_TIMEOUT = "processor_timeout"
+        /** ZFL header: backoff before attempt 2 and before attempt 3. */
+        val RETRY_BACKOFF: List<Duration> = listOf(Duration.ofSeconds(5), Duration.ofSeconds(15))
+
+        /** Backoff before [attempt] (2, 3, ...); the last one for any later attempt. */
+        fun backoffBefore(attempt: Int): Duration = RETRY_BACKOFF[(attempt - 2).coerceIn(0, RETRY_BACKOFF.size - 1)]
     }
 
     /** One processor call, abandoned after [processorTimeout]: it then answers FAILED (processor_timeout). */
@@ -119,6 +126,11 @@ open class PaymentsProcessingServiceImpl(
                 attemptCount = requested.attemptCount?.toInt() ?: 1,
             )
         val result = callProcessor { paymentProcessor.authorize(request) }
+        return saveAuthorizationOutcome(requested, result)
+    }
+
+    /** Saves the processor's answer on [requested] (AUTHORIZED, DECLINED or FAILED) and emits only its event. */
+    private fun saveAuthorizationOutcome(requested: Payment, result: PaymentProcessorResult): Payment {
         // A-01 (P-02): the outcome state is set here, though the ZDL transition only names AUTHORIZATION_REQUESTED
         val now = Instant.now(clock)
         // a retried authorization starts without the failure of the previous attempt
@@ -257,9 +269,53 @@ open class PaymentsProcessingServiceImpl(
         return saved
     }
 
-    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md (PaymentRetried still reaches authorizePayment, P-01 D, until then)
     override fun reauthorizePayment(input: ReauthorizePaymentInput): Payment {
-        TODO("reauthorizePayment: " + input.orderId)
+
+        log.debug("Request reauthorizePayment: {}", input)
+
+        val payment =
+            paymentRepository.findByOrderId(input.orderId)
+                ?: throw NoSuchElementException("Payment not found for order: ${input.orderId}")
+        if (!isAttemptToRetry(payment, input)) return payment
+
+        // backoff before the next attempt, while the Payment is still FAILED
+        val attempt = (payment.attemptCount?.toInt() ?: 0) + 1
+        backoffSleeper(backoffBefore(attempt))
+
+        // as T-52: the attempt is counted and AUTHORIZATION_REQUESTED committed in its own transaction before the call
+        var noOp = false
+        val requested = newTransaction.execute {
+            val current = paymentRepository.findByOrderId(input.orderId)!!
+            // checked again: a redelivery may have taken this attempt during the backoff
+            if (!isAttemptToRetry(current, input)) {
+                noOp = true
+                return@execute current
+            }
+            current.attemptCount = attempt as Integer
+            current.status = PaymentStatus.AUTHORIZATION_REQUESTED
+            paymentRepository.save(current)
+        }!!
+        if (noOp) return requested
+
+        val request =
+            AuthorizationRequest(
+                orderId = requested.orderId!!,
+                customerId = requested.customerId!!,
+                paymentMethodId = requested.paymentMethodId!!,
+                amount = requested.amount!!,
+                currency = requested.currency!!,
+                attemptCount = attempt,
+            )
+        val result = callProcessor { paymentProcessor.authorize(request) }
+        return saveAuthorizationOutcome(requested, result)
+    }
+
+    /** reauthorizePayment runs only from FAILED for the attempt that failed; anything else is a redelivery or stale. */
+    private fun isAttemptToRetry(payment: Payment, input: ReauthorizePaymentInput): Boolean {
+        val attempts = payment.attemptCount?.toInt() ?: 0
+        if (payment.status == PaymentStatus.FAILED && input.attemptCount.toInt() == attempts) return true
+        log.debug("reauthorizePayment for order {} ignored: status {}, attemptCount {} vs {}", input.orderId, payment.status, attempts, input.attemptCount)
+        return false
     }
 
     // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md

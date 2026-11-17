@@ -20,6 +20,9 @@ open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
     private val eventPublisher = InMemoryEventPublisher()
     private val paymentProcessor = FakePaymentProcessor()
     private val transactionManager = InMemoryTransactionManager()
+    /** Backoff waits the service asked for (reauthorizePayment), recorded instead of slept. */
+    val backoffWaits: MutableList<java.time.Duration> = java.util.Collections.synchronizedList(mutableListOf())
+    val backoffSleeper: (java.time.Duration) -> Unit = { backoffWaits.add(it) }
     protected val paymentsProcessingService =
         PaymentsProcessingServiceImpl(
             paymentRepository(),
@@ -28,6 +31,7 @@ open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
             clock,
             transactionManager,
             java.time.Duration.ofSeconds(30),
+            backoffSleeper,
         )
 
     @Bean
@@ -49,6 +53,7 @@ open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
         paymentProcessor.captureRefusal = null
         paymentProcessor.authorizeRefusal = null
         transactionManager.reset()
+        backoffWaits.clear()
     }
 
     /** The in-memory transaction manager, for tests that check what was committed and when. */
