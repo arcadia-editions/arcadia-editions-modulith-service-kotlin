@@ -94,8 +94,12 @@ one of three things:
 - **A changed signature:** adapt the test call, keeping the assertion.
 - **A module dependency the models now require** (a new cycle through event types): add it to the architecture
   test's tolerance list, with the model line that causes it.
+- **A test asserting behavior the model removed** (a source state a `@transition` no longer allows, an event a command
+  no longer emits): keep the model's version and the test. Record the test in the overlay's known failing tests at
+  the baseline, with the model line and the task that fixes it.
 
-Never weaken an assertion or delete a test. If a failure has another cause, stop and report it.
+Never weaken an assertion or delete a test. If a failure has another cause, stop and report it. New test methods the
+generator adds for new commands are not merged: they call stubs, and the board's tasks write those tests.
 
 ## 6. Leave it for the person
 
