@@ -20,21 +20,23 @@ path: StartOrderCheckout > startOrderCheckout > reserveStock[StockReservedResult
       > capturePayment[PaymentCaptured] > recordPaymentCaptured, sendOrderConfirmation[sent] > end completed
 review: [ ]
 
-- [/] T-52 advanced AFK authorizePayment: commit AUTHORIZATION_REQUESTED (attemptCount 1) in its own transaction before calling the processor, so a call in flight counts as started for getPaymentStatus; a processor call longer than 30 s ends as FAILED with PaymentFailed (processor_timeout)
+- [x] T-52 advanced AFK authorizePayment: commit AUTHORIZATION_REQUESTED (attemptCount 1) in its own transaction before calling the processor, so a call in flight counts as started for getPaymentStatus; a processor call longer than 30 s ends as FAILED with PaymentFailed (processor_timeout)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:42-69, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:107-122, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:119-128
       test data: data.sql C-01, data/jpa/Payment/1.json
       tests: PaymentsProcessingServiceTest
+      done: claude-opus opus
 - [x] T-53 bounded AFK recordPaymentCaptured: on PaymentCaptured set Fulfillment.paymentCapturedAt (SCHEDULED, no state change, no event); no-op when no Fulfillment exists or it is already set (replace the no-op compile stub)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:215-221, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:105-110
       test data: data.sql C-05, data.sql C-06, data.sql C-24
       tests: FulfillmentShippingServiceTest, PaymentsProcessingEventsListenerMapperTest
       done: claude-sonnet sonnet
-- [/] T-54 bounded AFK markReadyToShip: refused while Fulfillment.paymentCapturedAt is null (the warehouse ships only after capture); unchanged otherwise
+- [x] T-54 bounded AFK markReadyToShip: refused while Fulfillment.paymentCapturedAt is null (the warehouse ships only after capture); unchanged otherwise
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:51-56, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:112-114
       test data: data.sql C-04, data.sql C-24
       tests: FulfillmentShippingServiceTest
       blocked by: T-53
-- [ ] T-55 advanced AFK Flow test completed: the Payment passes through AUTHORIZATION_REQUESTED before AUTHORIZED, the Fulfillment records paymentCapturedAt, markReadyToShip works only after it; ends at OrderConfirmationSent
+      done: claude-sonnet sonnet
+- [/] T-55 advanced AFK Flow test completed: the Payment passes through AUTHORIZATION_REQUESTED before AUTHORIZED, the Fulfillment records paymentCapturedAt, markReadyToShip works only after it; ends at OrderConfirmationSent
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:336-345, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:202-221
       test data: data.sql C-06
       tests: PlaceOrderFlowCompletedIntegrationTest
@@ -46,7 +48,7 @@ path: OrderCreated > authorizePayment[failed] > PaymentFailed > retryPayment[ret
       > sendOrderCancelledNotification > end orderCancelled
 review: [ ]
 
-- [ ] T-56 bounded AFK retryPayment: no-op, no event, unless the Payment is FAILED and input.attemptCount == Payment.attemptCount (redelivery); never increments attemptCount; retried below 3 attempts, retry-exhausted at 3
+- [/] T-56 bounded AFK retryPayment: no-op, no event, unless the Payment is FAILED and input.attemptCount == Payment.attemptCount (redelivery); never increments attemptCount; retried below 3 attempts, retry-exhausted at 3
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:124-136, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:138-145
       test data: data.sql C-12, data.sql C-13
       tests: PaymentsProcessingServiceTest, PaymentsProcessingServiceEventsListenerMapperTest
