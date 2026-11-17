@@ -156,6 +156,85 @@ class PaymentsProcessingServiceTest {
         org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
     }
 
+    /** The fake processor, observing what was committed when the authorization call starts (T-52). */
+    private inner class ObservingProcessor(private val delegate: FakePaymentProcessor) :
+        com.arcadiaeditions.payments.processing.application.port.driven.processor.PaymentProcessor by delegate {
+        var statusAtCall: PaymentStatus? = null
+        var attemptCountAtCall: Int? = null
+        var commitsAtCall: Int? = null
+
+        override fun authorize(
+            request: com.arcadiaeditions.payments.processing.application.port.driven.processor.AuthorizationRequest
+        ): PaymentProcessorResult {
+            val payment = paymentRepository.findByOrderId(request.orderId)
+            statusAtCall = payment?.status
+            attemptCountAtCall = payment?.attemptCount?.toInt()
+            commitsAtCall = context.transactionManager().commits
+            return delegate.authorize(request)
+        }
+    }
+
+    private fun serviceWith(
+        processor: com.arcadiaeditions.payments.processing.application.port.driven.processor.PaymentProcessor,
+        timeout: Duration = Duration.ofSeconds(30),
+    ): PaymentsProcessingService =
+        PaymentsProcessingServiceImpl(
+            paymentRepository,
+            context.eventPublisher(),
+            processor,
+            context.clock,
+            context.transactionManager(),
+            timeout,
+        )
+
+    @Test
+    fun authorizePaymentCommitsAuthorizationRequestedBeforeTheProcessorCallTest() {
+        val processor = ObservingProcessor(context.paymentProcessor())
+
+        serviceWith(processor).authorizePayment(authorizeInput("ORD-NEW", "pm_card_visa"))
+
+        // a call in flight is a started payment (getPaymentStatus STARTED): saved and committed before the call
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.AUTHORIZATION_REQUESTED, processor.statusAtCall)
+        org.junit.jupiter.api.Assertions.assertEquals(1, processor.attemptCountAtCall)
+        org.junit.jupiter.api.Assertions.assertEquals(1, processor.commitsAtCall)
+        // in its own transaction, apart from the one of the caller (the listener's)
+        org.junit.jupiter.api.Assertions.assertEquals(
+            listOf(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW),
+            context.transactionManager().begun,
+        )
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.AUTHORIZED, savedPayment("ORD-NEW").status)
+        org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
+        org.junit.jupiter.api.Assertions.assertTrue(events[0] is PaymentAuthorized)
+    }
+
+    @Test
+    fun authorizePaymentProcessorTimeoutTest() {
+        val processor = context.paymentProcessor()
+        try {
+            // pm_card_processorNoAnswer never answers; a short timeout stands for the 30 s of the ZFL
+            serviceWith(processor, Duration.ofMillis(200))
+                .authorizePayment(authorizeInput("ORD-NEW", FakePaymentProcessor.NO_ANSWER_PAYMENT_METHOD))
+        } finally {
+            processor.releaseStalledAuthorizations()
+        }
+
+        val saved = savedPayment("ORD-NEW")
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.FAILED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(1, saved.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, saved.failedAt)
+        org.junit.jupiter.api.Assertions.assertEquals("processor_timeout", saved.failureReason)
+        org.junit.jupiter.api.Assertions.assertNull(saved.providerReference)
+        org.junit.jupiter.api.Assertions.assertNull(saved.authorizedAt)
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
+        val event = events[0] as PaymentFailed
+        org.junit.jupiter.api.Assertions.assertEquals("ORD-NEW", event.orderId)
+        org.junit.jupiter.api.Assertions.assertEquals("CUST-NEW", event.customerId)
+        org.junit.jupiter.api.Assertions.assertEquals(1, event.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals("processor_timeout", event.reason)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, event.failedAt)
+    }
+
     @Test
     fun authorizePaymentOnPaymentRetriedTest() {
         // C-12: ORD-012 Payment FAILED; PaymentRetried carries only orderId and customerId (P-01 D),

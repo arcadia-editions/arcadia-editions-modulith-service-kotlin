@@ -25,6 +25,10 @@ open class PaymentsProcessingServiceImpl(
     private val eventPublisher: EventPublisher,
     private val paymentProcessor: PaymentProcessor,
     private val clock: java.time.Clock,
+    transactionManager: org.springframework.transaction.PlatformTransactionManager,
+    /** ZFL header: one processor call lasts at most 30 seconds; then it is a technical failure (processor_timeout). */
+    @org.springframework.beans.factory.annotation.Value("\${arcadia.payments.processor-timeout:30s}")
+    private val processorTimeout: Duration,
 ) : PaymentsProcessingService {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass)
@@ -34,22 +38,56 @@ open class PaymentsProcessingServiceImpl(
 
     private val eventsMapper: EventsMapper = EventsMapper.INSTANCE
 
+    /** Commits AUTHORIZATION_REQUESTED apart from the caller's transaction, before the processor call (T-52). */
+    private val newTransaction: org.springframework.transaction.support.TransactionTemplate =
+        org.springframework.transaction.support.TransactionTemplate(transactionManager).apply {
+            propagationBehavior = org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW
+        }
+
+    /** Runs each processor call, so the caller can stop waiting after [processorTimeout]. */
+    private val processorCalls: java.util.concurrent.ExecutorService =
+        java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()
+
     companion object {
         /** A-03: payment retry limit; at this attemptCount retryPayment emits PaymentRetryExhausted. */
         const val MAX_PAYMENT_ATTEMPTS = 3
+        /** A-06: failureReason of a processor call that did not answer within the timeout. */
+        const val PROCESSOR_TIMEOUT = "processor_timeout"
+    }
+
+    /** One processor call, abandoned after [processorTimeout]: it then answers FAILED (processor_timeout). */
+    private fun callProcessor(call: () -> PaymentProcessorResult): PaymentProcessorResult {
+        val future = processorCalls.submit<PaymentProcessorResult> { call() }
+        try {
+            return future.get(processorTimeout.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)
+        } catch (e: java.util.concurrent.TimeoutException) {
+            future.cancel(true)
+            log.warn("payment processor did not answer within {}", processorTimeout)
+            return PaymentProcessorResult.failed(PROCESSOR_TIMEOUT)
+        } catch (e: java.util.concurrent.ExecutionException) {
+            throw e.cause ?: e
+        } catch (e: InterruptedException) {
+            future.cancel(true)
+            Thread.currentThread().interrupt()
+            throw e
+        }
     }
 
     override fun authorizePayment(input: AuthorizePaymentInput): Payment {
 
         log.debug("Request authorizePayment: {}", input)
 
-        // P-01 D: PaymentRetried reuses the FAILED Payment of the order (its fields win over the input's);
-        // any other existing state is a redelivery and does nothing
-        val existing = paymentRepository.findByOrderId(input.orderId)
-        if (existing != null && existing.status != PaymentStatus.FAILED) {
-            return existing
-        }
-        val requested =
+        // T-52: AUTHORIZATION_REQUESTED is committed in its own transaction before the processor call, so a call in
+        // flight counts as started (getPaymentStatus); the outcome is saved afterwards, in the caller's transaction
+        var noOp = false
+        val requested = newTransaction.execute {
+            // P-01 D: PaymentRetried reuses the FAILED Payment of the order (its fields win over the input's);
+            // any other existing state is a redelivery and does nothing
+            val existing = paymentRepository.findByOrderId(input.orderId)
+            if (existing != null && existing.status != PaymentStatus.FAILED) {
+                noOp = true
+                return@execute existing
+            }
             if (existing != null) {
                 // attemptCount was already counted by retryPayment
                 existing.status = PaymentStatus.AUTHORIZATION_REQUESTED
@@ -60,25 +98,27 @@ open class PaymentsProcessingServiceImpl(
                 // would be resubmitted forever)
                 if (input.customerEmail.isBlank() || input.currency.isBlank() || input.paymentMethodId.isBlank()) {
                     log.warn("authorizePayment for order {}: no Payment exists and the input is incomplete, ignored", input.orderId)
-                    return Payment()
+                    noOp = true
+                    return@execute Payment()
                 }
                 val payment = paymentsProcessingServiceMapper.update(Payment(), input)
                 payment.status = PaymentStatus.AUTHORIZATION_REQUESTED
                 payment.attemptCount = 1 as Integer
                 paymentRepository.save(payment)
             }
+        }!!
+        if (noOp) return requested
 
-        val result =
-            paymentProcessor.authorize(
-                AuthorizationRequest(
-                    orderId = requested.orderId!!,
-                    customerId = requested.customerId!!,
-                    paymentMethodId = requested.paymentMethodId!!,
-                    amount = requested.amount!!,
-                    currency = requested.currency!!,
-                    attemptCount = requested.attemptCount?.toInt() ?: 1,
-                )
+        val request =
+            AuthorizationRequest(
+                orderId = requested.orderId!!,
+                customerId = requested.customerId!!,
+                paymentMethodId = requested.paymentMethodId!!,
+                amount = requested.amount!!,
+                currency = requested.currency!!,
+                attemptCount = requested.attemptCount?.toInt() ?: 1,
             )
+        val result = callProcessor { paymentProcessor.authorize(request) }
         // A-01 (P-02): the outcome state is set here, though the ZDL transition only names AUTHORIZATION_REQUESTED
         val now = Instant.now(clock)
         // a retried authorization starts without the failure of the previous attempt
