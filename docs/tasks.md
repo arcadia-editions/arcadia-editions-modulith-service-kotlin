@@ -42,6 +42,17 @@ review: [ ]
       tests: PlaceOrderFlowCompletedIntegrationTest
       blocked by: T-52, T-54
       done: claude-opus opus
+- [!] T-75 bounded AFK Processor exception is a failure: callProcessor maps a processor exception (not only the timeout) to FAILED + PaymentFailed with the P-10 reason, for authorizePayment and reauthorizePayment; unit test with a throwing processor; one A-06 constant shared with FakePaymentProcessor; shut the processor-call executor down (@PreDestroy); fix the stale FakePaymentProcessor KDoc (pm_card_processorNoAnswer now ends FAILED after the timeout)
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:107-122, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:119-136
+      test data: data.sql C-01, data.sql C-12
+      tests: PaymentsProcessingServiceTest
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (FIX FIRST T-52, NOTEs)
+      blocked: P-10
+- [/] T-76 mechanical AFK markReadyToShip refusal names its cause: not InvalidStateTransitionException with allowedStates [SCHEDULED] from SCHEDULED, but an exception (or message) that says the payment is not captured yet (paymentCapturedAt null); FulfillmentTransitions is generated, do not edit it; adjust the refusal assertions (FulfillmentShippingServiceTest, PlaceOrderFlowCompletedIntegrationTest)
+      model: ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:112-114
+      test data: data.sql C-04, data.sql C-24
+      tests: FulfillmentShippingServiceTest
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (SHOULD FIX T-54)
 
 ## S2 retry loop (retried, retry-exhausted)
 path: OrderCreated > authorizePayment[failed] > PaymentFailed > retryPayment[retried] > PaymentRetried > reauthorizePayment[authorized|declined|failed]
@@ -54,12 +65,13 @@ review: [ ]
       test data: data.sql C-12, data.sql C-13
       tests: PaymentsProcessingServiceTest, PaymentsProcessingServiceEventsListenerMapperTest
       done: claude-sonnet sonnet
-- [/] T-57 advanced AFK reauthorizePayment: from FAILED with input.attemptCount == Payment.attemptCount, wait the backoff (5 s before attempt 2, 15 s before attempt 3), increment attemptCount and commit AUTHORIZATION_REQUESTED before the processor call (as T-52), 30 s timeout; outcomes AUTHORIZED / DECLINED / FAILED with their events; any other state or a stale attemptCount is a no-op (replace the TODO compile stub)
+- [x] T-57 advanced AFK reauthorizePayment: from FAILED with input.attemptCount == Payment.attemptCount, wait the backoff (5 s before attempt 2, 15 s before attempt 3), increment attemptCount and commit AUTHORIZATION_REQUESTED before the processor call (as T-52), 30 s timeout; outcomes AUTHORIZED / DECLINED / FAILED with their events; any other state or a stale attemptCount is a no-op (replace the TODO compile stub)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:42-69, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:138-146, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:130-136
       test data: data.sql C-12, data.sql C-14
       tests: PaymentsProcessingServiceTest
       blocked by: T-52, T-56
-- [ ] T-58 mechanical AFK Wire PaymentRetried to reauthorizePayment (PaymentsProcessingServiceEventsListener + asReauthorizePaymentInput, as the 0.10.0 generator writes it) and make authorizePayment creation only: drop the P-01 D branch that reuses a FAILED Payment and the placeholder mapping
+      done: claude-opus opus
+- [/] T-58 mechanical AFK Wire PaymentRetried to reauthorizePayment (PaymentsProcessingServiceEventsListener + asReauthorizePaymentInput, as the 0.10.0 generator writes it) and make authorizePayment creation only: drop the P-01 D branch that reuses a FAILED Payment and the placeholder mapping
       model: ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:119-136
       test data: data.sql C-01, data.sql C-12
       tests: PaymentsProcessingServiceTest, PaymentsProcessingServiceEventsListenerMapperTest
@@ -141,11 +153,12 @@ review: [ ]
       test data: data.sql C-02, data.sql C-03, data.sql C-23
       tests: InventoryServiceTest
       done: claude-sonnet sonnet
-- [/] T-70 bounded AFK confirmOrder rejections: a CANCELLED order emits OrderConfirmationRejected (ORDER_CANCELLED) without calling inventory; NOT_HELD emits OrderConfirmationRejected (STOCK_NOT_HELD) and the order stays CREATED; rejectedAt from the Clock
+- [x] T-70 bounded AFK confirmOrder rejections: a CANCELLED order emits OrderConfirmationRejected (ORDER_CANCELLED) without calling inventory; NOT_HELD emits OrderConfirmationRejected (STOCK_NOT_HELD) and the order stays CREATED; rejectedAt from the Clock
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:148-164, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:101-108, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:177-183
       test data: data.sql C-02, data.sql C-22, data.sql C-23
       tests: OrdersCheckoutServiceTest
       blocked by: T-69
+      done: claude-sonnet sonnet
 - [ ] T-71 mechanical AFK voidPayment on OrderConfirmationRejected (listener and mapper already wired): listener mapper test, void reason = the rejection reason
       model: ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:152-161
       test data: data.sql C-22
