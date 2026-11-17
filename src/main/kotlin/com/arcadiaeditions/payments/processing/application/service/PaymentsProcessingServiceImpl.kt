@@ -88,31 +88,16 @@ open class PaymentsProcessingServiceImpl(
         // flight counts as started (getPaymentStatus); the outcome is saved afterwards, in the caller's transaction
         var noOp = false
         val requested = newTransaction.execute {
-            // P-01 D: PaymentRetried reuses the FAILED Payment of the order (its fields win over the input's);
-            // any other existing state is a redelivery and does nothing
+            // creation only: a Payment for the order in any state means a redelivery, nothing to do
             val existing = paymentRepository.findByOrderId(input.orderId)
-            if (existing != null && existing.status != PaymentStatus.FAILED) {
+            if (existing != null) {
                 noOp = true
                 return@execute existing
             }
-            if (existing != null) {
-                // attemptCount was already counted by retryPayment
-                existing.status = PaymentStatus.AUTHORIZATION_REQUESTED
-                paymentRepository.save(existing)
-            } else {
-                // no Payment: PaymentRetried maps placeholders, never create from them; a logged no-op, not an
-                // exception (it would mark the listener's REQUIRES_NEW transaction rollback-only and the publication
-                // would be resubmitted forever)
-                if (input.customerEmail.isBlank() || input.currency.isBlank() || input.paymentMethodId.isBlank()) {
-                    log.warn("authorizePayment for order {}: no Payment exists and the input is incomplete, ignored", input.orderId)
-                    noOp = true
-                    return@execute Payment()
-                }
-                val payment = paymentsProcessingServiceMapper.update(Payment(), input)
-                payment.status = PaymentStatus.AUTHORIZATION_REQUESTED
-                payment.attemptCount = 1 as Integer
-                paymentRepository.save(payment)
-            }
+            val payment = paymentsProcessingServiceMapper.update(Payment(), input)
+            payment.status = PaymentStatus.AUTHORIZATION_REQUESTED
+            payment.attemptCount = 1 as Integer
+            paymentRepository.save(payment)
         }!!
         if (noOp) return requested
 

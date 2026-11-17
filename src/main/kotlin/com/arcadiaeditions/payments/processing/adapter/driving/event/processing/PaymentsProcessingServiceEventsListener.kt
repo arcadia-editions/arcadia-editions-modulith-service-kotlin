@@ -19,8 +19,8 @@ class PaymentsProcessingServiceEventsListener(private val paymentsProcessingServ
         PaymentsProcessingServiceEventsListenerMapper.INSTANCE
 
     @ApplicationModuleListener
-    fun authorizePayment(event: PaymentRetried) {
-        paymentsProcessingService.authorizePayment(mapper.asAuthorizePaymentInput(event))
+    fun reauthorizePayment(event: PaymentRetried) {
+        paymentsProcessingService.reauthorizePayment(mapper.asReauthorizePaymentInput(event))
     }
 
     @ApplicationModuleListener
