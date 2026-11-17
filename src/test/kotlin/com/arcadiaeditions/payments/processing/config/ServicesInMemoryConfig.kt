@@ -52,6 +52,7 @@ open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
         eventPublisher.getEvents().clear()
         paymentProcessor.captureRefusal = null
         paymentProcessor.authorizeRefusal = null
+        paymentProcessor.voidRefusal = null
         transactionManager.reset()
         backoffWaits.clear()
     }
