@@ -36,11 +36,12 @@ review: [ ]
       tests: FulfillmentShippingServiceTest
       blocked by: T-53
       done: claude-sonnet sonnet
-- [/] T-55 advanced AFK Flow test completed: the Payment passes through AUTHORIZATION_REQUESTED before AUTHORIZED, the Fulfillment records paymentCapturedAt, markReadyToShip works only after it; ends at OrderConfirmationSent
+- [x] T-55 advanced AFK Flow test completed: the Payment passes through AUTHORIZATION_REQUESTED before AUTHORIZED, the Fulfillment records paymentCapturedAt, markReadyToShip works only after it; ends at OrderConfirmationSent
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:336-345, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:202-221
       test data: data.sql C-06
       tests: PlaceOrderFlowCompletedIntegrationTest
       blocked by: T-52, T-54
+      done: claude-opus opus
 
 ## S2 retry loop (retried, retry-exhausted)
 path: OrderCreated > authorizePayment[failed] > PaymentFailed > retryPayment[retried] > PaymentRetried > reauthorizePayment[authorized|declined|failed]
@@ -48,11 +49,12 @@ path: OrderCreated > authorizePayment[failed] > PaymentFailed > retryPayment[ret
       > sendOrderCancelledNotification > end orderCancelled
 review: [ ]
 
-- [/] T-56 bounded AFK retryPayment: no-op, no event, unless the Payment is FAILED and input.attemptCount == Payment.attemptCount (redelivery); never increments attemptCount; retried below 3 attempts, retry-exhausted at 3
+- [x] T-56 bounded AFK retryPayment: no-op, no event, unless the Payment is FAILED and input.attemptCount == Payment.attemptCount (redelivery); never increments attemptCount; retried below 3 attempts, retry-exhausted at 3
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:124-136, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:138-145
       test data: data.sql C-12, data.sql C-13
       tests: PaymentsProcessingServiceTest, PaymentsProcessingServiceEventsListenerMapperTest
-- [ ] T-57 advanced AFK reauthorizePayment: from FAILED with input.attemptCount == Payment.attemptCount, wait the backoff (5 s before attempt 2, 15 s before attempt 3), increment attemptCount and commit AUTHORIZATION_REQUESTED before the processor call (as T-52), 30 s timeout; outcomes AUTHORIZED / DECLINED / FAILED with their events; any other state or a stale attemptCount is a no-op (replace the TODO compile stub)
+      done: claude-sonnet sonnet
+- [/] T-57 advanced AFK reauthorizePayment: from FAILED with input.attemptCount == Payment.attemptCount, wait the backoff (5 s before attempt 2, 15 s before attempt 3), increment attemptCount and commit AUTHORIZATION_REQUESTED before the processor call (as T-52), 30 s timeout; outcomes AUTHORIZED / DECLINED / FAILED with their events; any other state or a stale attemptCount is a no-op (replace the TODO compile stub)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:42-69, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:138-146, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:130-136
       test data: data.sql C-12, data.sql C-14
       tests: PaymentsProcessingServiceTest
@@ -98,10 +100,11 @@ path: FulfillmentScheduled > capturePayment[PaymentCaptureFailed] > voidPayment[
       > cancelOrder > OrderCancelled > cancelFulfillment > FulfillmentCancelled, sendOrderCancelledNotification > end orderCancelled
 review: [ ]
 
-- [/] T-64 bounded AFK cancelFulfillment: on OrderCancelled, SCHEDULED or READY_TO_SHIP becomes CANCELLED with cancelledAt and cancellationReason = OrderCancelled.reason (A-11), emits FulfillmentCancelled; no-op, no event, when there is no Fulfillment or it is CANCELLED or FAILED (replace the no-op compile stub)
+- [x] T-64 bounded AFK cancelFulfillment: on OrderCancelled, SCHEDULED or READY_TO_SHIP becomes CANCELLED with cancelledAt and cancellationReason = OrderCancelled.reason (A-11), emits FulfillmentCancelled; no-op, no event, when there is no Fulfillment or it is CANCELLED or FAILED (replace the no-op compile stub)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:311-320, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:116-119, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:151-157
       test data: data.sql C-21, data.sql C-25, data.sql C-26
       tests: FulfillmentShippingServiceTest, OrdersCheckoutEventsListenerMapperTest
+      done: claude-sonnet sonnet
 - [ ] T-65 bounded AFK Flow test capture failed: after the void and the cancellation the Fulfillment is CANCELLED and FulfillmentCancelled was emitted; the order is cancelled once
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:190-200, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:311-320
       test data: data.sql C-26
@@ -133,7 +136,7 @@ path: PaymentAuthorized (after expiry) > confirmOrder > confirmStockReservation[
       > OrderConfirmationRejected > voidPayment[voided] > PaymentVoided > releaseStock (no-op, RELEASED) > end orderCancelled
 review: [ ]
 
-- [ ] T-69 bounded AFK confirmStockReservation NOT_HELD: when the order has no RESERVED or CONFIRMED reservation (released by the timer) answer NOT_HELD, no change, no event; CONFIRMED stays the redelivery answer
+- [/] T-69 bounded AFK confirmStockReservation NOT_HELD: when the order has no RESERVED or CONFIRMED reservation (released by the timer) answer NOT_HELD, no change, no event; CONFIRMED stays the redelivery answer
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:166-176, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:161-163
       test data: data.sql C-02, data.sql C-03, data.sql C-23
       tests: InventoryServiceTest
@@ -166,7 +169,7 @@ review: [ ]
 ## S8 Polish
 review: [ ]
 
-- [ ] T-74 mechanical AFK startOrderCheckout validation: quantity >= 1 and unitPrice >= 0 (ZDL bounds, P-09) answer 400 before any reservation; getOrder answers 400 on an invalid id (the generated testGetOrder_400 of 0.10.1, overlay response)
+- [/] T-74 mechanical AFK startOrderCheckout validation: quantity >= 1 and unitPrice >= 0 (ZDL bounds, P-09) answer 400 before any reservation; getOrder answers 400 on an invalid id (the generated testGetOrder_400 of 0.10.1, overlay response)
       model: ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:68-69, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:95-99
       tests: OrdersCheckoutApiControllerTest, OrdersCheckoutApiIntegrationTest
 
