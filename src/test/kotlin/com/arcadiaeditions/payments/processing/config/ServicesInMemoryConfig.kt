@@ -19,8 +19,16 @@ open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
     val clock: java.time.Clock = com.arcadiaeditions.config.TestClock.FIXED
     private val eventPublisher = InMemoryEventPublisher()
     private val paymentProcessor = FakePaymentProcessor()
+    private val transactionManager = InMemoryTransactionManager()
     protected val paymentsProcessingService =
-        PaymentsProcessingServiceImpl(paymentRepository(), eventPublisher, paymentProcessor, clock)
+        PaymentsProcessingServiceImpl(
+            paymentRepository(),
+            eventPublisher,
+            paymentProcessor,
+            clock,
+            transactionManager,
+            java.time.Duration.ofSeconds(30),
+        )
 
     @Bean
     open fun <T : PaymentsProcessingService> paymentsProcessingService(): T {
@@ -40,7 +48,11 @@ open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
         eventPublisher.getEvents().clear()
         paymentProcessor.captureRefusal = null
         paymentProcessor.authorizeRefusal = null
+        transactionManager.reset()
     }
+
+    /** The in-memory transaction manager, for tests that check what was committed and when. */
+    fun transactionManager(): InMemoryTransactionManager = transactionManager
 
     /** The fake processor, for tests that make it refuse (e.g. `captureRefusal`). */
     fun paymentProcessor(): FakePaymentProcessor = paymentProcessor
