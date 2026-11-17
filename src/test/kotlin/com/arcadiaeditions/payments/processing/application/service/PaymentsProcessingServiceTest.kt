@@ -769,4 +769,39 @@ class PaymentsProcessingServiceTest {
         org.junit.jupiter.api.Assertions.assertNull(payment)
         org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
     }
+
+    private fun assertStarted(orderId: String, status: PaymentStatus) {
+        val before = paymentRepository.findAll().map { it.id to it.status }
+        val result = paymentsProcessingService.getPaymentStatus(GetPaymentStatusInput(orderId = orderId))
+
+        org.junit.jupiter.api.Assertions.assertEquals(GetPaymentStatusOutcome.STARTED, result.outcome)
+        org.junit.jupiter.api.Assertions.assertNull(result.noPayment)
+        org.junit.jupiter.api.Assertions.assertEquals(orderId, result.started!!.orderId)
+        org.junit.jupiter.api.Assertions.assertEquals(status, result.started!!.status)
+        org.junit.jupiter.api.Assertions.assertEquals(before, paymentRepository.findAll().map { it.id to it.status })
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+    }
+
+    @Test
+    fun getPaymentStatusAuthorizationRequestedTest() {
+        // C-01: ORD-001 Payment AUTHORIZATION_REQUESTED counts as started
+        assertStarted("ORD-001", PaymentStatus.AUTHORIZATION_REQUESTED)
+    }
+
+    @Test
+    fun getPaymentStatusFailedTest() {
+        // C-14: ORD-014 Payment FAILED: any existing Payment is STARTED
+        assertStarted("ORD-014", PaymentStatus.FAILED)
+    }
+
+    @Test
+    fun getPaymentStatusNoPaymentTest() {
+        // C-30: ORD-030 no Payment
+        val result = paymentsProcessingService.getPaymentStatus(GetPaymentStatusInput(orderId = "ORD-030"))
+
+        org.junit.jupiter.api.Assertions.assertEquals(GetPaymentStatusOutcome.NO_PAYMENT, result.outcome)
+        org.junit.jupiter.api.Assertions.assertNull(result.started)
+        org.junit.jupiter.api.Assertions.assertEquals("ORD-030", result.noPayment!!.orderId)
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+    }
 }
