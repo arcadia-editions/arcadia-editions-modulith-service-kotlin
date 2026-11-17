@@ -81,5 +81,32 @@ class OrdersCheckoutApiControllerTest {
         Assertions.assertEquals(404, response.statusCode.value())
     }
 
+    // T-74: ZDL bounds quantity min(1), unitPrice min(0): the @Valid of the API answers 400 before the controller runs
+    private fun inputWith(quantity: Int, unitPrice: Double) = StartOrderCheckoutInputDTO(
+        customerId = "CUST-001", customerEmail = "customer01@example.com", paymentMethodId = "pm_card_visa",
+        currency = "EUR",
+        items = mutableListOf(OrderItemInputDTO(sku = "SKU-001", quantity = quantity, unitPrice = unitPrice)),
+        shippingAddress = ShippingAddressInputDTO(name = "Alex Example", line1 = "Calle Ficticia 1", city = "Madrid", postalCode = "28001", country = "ES"),
+    )
+
+    private fun violations(dto: StartOrderCheckoutInputDTO): Set<String> =
+        jakarta.validation.Validation.buildDefaultValidatorFactory().use { f ->
+            f.validator.validate(dto).map { it.propertyPath.toString() }.toSet()
+        }
+
+    @Test
+    fun startOrderCheckoutQuantityBelowOneIsInvalidTest() {
+        Assertions.assertEquals(setOf("items[0].quantity"), violations(inputWith(0, 10.0)))
+    }
+
+    @Test
+    fun startOrderCheckoutNegativeUnitPriceIsInvalidTest() {
+        Assertions.assertEquals(setOf("items[0].unitPrice"), violations(inputWith(1, -0.01)))
+    }
+
+    @Test
+    fun startOrderCheckoutBoundsAreValidTest() {
+        Assertions.assertTrue(violations(inputWith(1, 0.0)).isEmpty())
+    }
 
 }

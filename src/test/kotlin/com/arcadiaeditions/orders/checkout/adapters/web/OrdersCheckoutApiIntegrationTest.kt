@@ -154,4 +154,43 @@ open class OrdersCheckoutApiIntegrationTest : BaseWebTestClientTest() {
         .expectStatus().isEqualTo(404)
         }
 
+        /**
+        * Test: startOrderCheckout with quantity 0 or negative unitPrice answers 400 before any reservation (T-74).
+        */
+        @Test
+        fun testStartOrderCheckout_400_bounds() {
+        for ((quantity, unitPrice) in listOf(0 to 10, 1 to -1)) {
+        val requestBody = """
+            {
+              "customerId" : "CUST-001",
+              "customerEmail" : "customer01@example.com",
+              "paymentMethodId" : "pm_card_visa",
+              "currency" : "EUR",
+              "items" : [ { "sku" : "SKU-001", "quantity" : $quantity, "unitPrice" : $unitPrice } ],
+              "shippingAddress" : {
+                "name" : "Alex Example", "line1" : "Calle Ficticia 1", "city" : "Madrid",
+                "postalCode" : "28001", "country" : "ES"
+              }
+            }
+        """
+        webTestClient.method(POST).uri("/api/orders/start-checkout")
+        .accept(MediaType.APPLICATION_JSON)
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(requestBody)
+        .exchange()
+        .expectStatus().isEqualTo(400)
+        }
+        }
+
+        /**
+        * Test: getOrder for an invalid (non numeric) id answers 400.
+        */
+        @Test
+        fun testGetOrder_400() {
+        webTestClient.method(GET).uri("/api/orders/{id}", "not-a-number")
+        .accept(MediaType.APPLICATION_JSON)
+        .exchange()
+        .expectStatus().isEqualTo(400)
+        }
+
 }
