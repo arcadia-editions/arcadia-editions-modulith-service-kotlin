@@ -227,7 +227,9 @@ class PlaceOrderFlowCompletedIntegrationTest {
         assertThat(capturing.fulfillmentStatus).isEqualTo(FulfillmentStatus.SCHEDULED)
         assertThat(capturing.paymentCapturedAt).isNull()
         assertThat(capturing.markReadyToShipError)
-            .isInstanceOf(FulfillmentTransitions.InvalidStateTransitionException::class.java)
+            .isInstanceOf(IllegalStateException::class.java)
+            .isNotInstanceOf(FulfillmentTransitions.InvalidStateTransitionException::class.java)
+            .hasMessageContaining("payment not captured yet")
         assertThat(capturing.fulfillmentStatusAfterRefusal).isEqualTo(FulfillmentStatus.SCHEDULED)
     }
 

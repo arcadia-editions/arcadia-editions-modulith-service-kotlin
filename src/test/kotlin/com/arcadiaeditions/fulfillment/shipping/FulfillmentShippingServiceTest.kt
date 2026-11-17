@@ -204,11 +204,13 @@ class FulfillmentShippingServiceTest {
         val id = fulfillmentRepository.findAll().single { it.orderId == "ORD-004" }.id!!
         val eventsBefore = events.size
 
-        org.junit.jupiter.api.Assertions.assertThrows(
-            FulfillmentTransitions.InvalidStateTransitionException::class.java
-        ) {
+        val refusal = org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException::class.java) {
             fulfillmentShippingService.markReadyToShip(id)
         }
+        // the cause is named: payment not captured yet, not a state transition refusal
+        org.junit.jupiter.api.Assertions.assertFalse(refusal is FulfillmentTransitions.InvalidStateTransitionException)
+        org.junit.jupiter.api.Assertions.assertTrue(refusal.message!!.contains("payment not captured yet"))
+        org.junit.jupiter.api.Assertions.assertTrue(refusal.message!!.contains("paymentCapturedAt"))
 
         org.junit.jupiter.api.Assertions.assertEquals(
             FulfillmentStatus.SCHEDULED,
