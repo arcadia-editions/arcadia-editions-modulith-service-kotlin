@@ -311,6 +311,24 @@ class InventoryServiceTest {
     }
 
     @Test
+    fun confirmStockReservationNotHeldTest() {
+        // C-23: ORD-023 RELEASED by the timer -> NOT_HELD, no change, no event
+        val before = stockReservationRepository.findAll().single { it.orderId == "ORD-023" }.copy()
+        val soldBefore = position("SKU-001").soldQuantity!!.toInt()
+        val reservedBefore = position("SKU-001").reservedQuantity!!.toInt()
+        val result = inventoryService.confirmStockReservation(ConfirmStockReservationInput(orderId = "ORD-023"))
+
+        org.junit.jupiter.api.Assertions.assertEquals(ConfirmStockReservationOutcome.NOT_HELD, result.outcome)
+        org.junit.jupiter.api.Assertions.assertEquals("ORD-023", result.notHeld!!.orderId)
+        org.junit.jupiter.api.Assertions.assertNull(result.confirmed)
+        org.junit.jupiter.api.Assertions.assertEquals(0, confirmedEvents().size)
+        val after = stockReservationRepository.findAll().single { it.orderId == "ORD-023" }
+        org.junit.jupiter.api.Assertions.assertEquals(before, after)
+        org.junit.jupiter.api.Assertions.assertEquals(soldBefore, position("SKU-001").soldQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(reservedBefore, position("SKU-001").reservedQuantity!!.toInt())
+    }
+
+    @Test
     fun confirmStockReservationTwiceTest() {
         inventoryService.confirmStockReservation(ConfirmStockReservationInput(orderId = "ORD-002"))
         inventoryService.confirmStockReservation(ConfirmStockReservationInput(orderId = "ORD-002"))

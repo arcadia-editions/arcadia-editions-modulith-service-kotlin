@@ -133,7 +133,6 @@ open class InventoryServiceImpl(
         return all
     }
 
-    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md (NOT_HELD outcome)
     override fun confirmStockReservation(input: ConfirmStockReservationInput): ConfirmStockReservationResult {
 
         log.debug("Request confirmStockReservation: {}", input)
@@ -142,6 +141,14 @@ open class InventoryServiceImpl(
         // redelivery: only RESERVED reservations transition, CONFIRMED ones are left alone
         val toConfirm = all.filter { it.status == ReservationStatus.RESERVED }
         if (toConfirm.isEmpty()) {
+            // no RESERVED nor CONFIRMED reservation (released by the timer): nothing held
+            if (all.none { it.status == ReservationStatus.CONFIRMED }) {
+                return ConfirmStockReservationResult(
+                    outcome = ConfirmStockReservationOutcome.NOT_HELD,
+                    confirmed = null,
+                    notHeld = StockReservationNotHeldResult(orderId = input.orderId),
+                )
+            }
             return confirmedResult(input.orderId, all.firstNotNullOfOrNull { it.confirmedAt })
         }
         val now = clock.instant()
