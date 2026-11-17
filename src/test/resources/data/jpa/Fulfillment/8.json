@@ -25,5 +25,8 @@
     "scheduledAt": null,
     "readyAt": null,
     "failedAt": "2026-10-01T10:47:00Z",
-    "failureReason": "warehouse_damage"
+    "failureReason": "warehouse_damage",
+    "paymentCapturedAt": null,
+    "cancelledAt": null,
+    "cancellationReason": null
 }

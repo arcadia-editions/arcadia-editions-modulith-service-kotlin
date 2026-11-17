@@ -15,5 +15,6 @@
     "failedAt": null,
     "capturedAt": "2026-10-01T11:13:00Z",
     "voidedAt": null,
+    "voidFailedAt": null,
     "failureReason": null
 }

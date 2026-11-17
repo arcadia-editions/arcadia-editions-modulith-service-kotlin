@@ -1,0 +1,14 @@
+{
+    "id": 1301,
+    "version": 0,
+    "reservationId": "RES-027",
+    "orderId": "ORD-027",
+    "sku": "SKU-006",
+    "quantity": 1,
+    "status": "CONFIRMED",
+    "reservedAt": "2026-10-01T11:20:00Z",
+    "expiresAt": "2026-10-01T11:30:00Z",
+    "confirmedAt": "2026-10-01T11:21:00Z",
+    "releasedAt": null,
+    "releaseReason": null
+}

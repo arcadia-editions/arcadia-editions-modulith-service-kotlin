@@ -15,5 +15,6 @@
     "failedAt": "2026-10-01T11:59:30Z",
     "capturedAt": null,
     "voidedAt": null,
+    "voidFailedAt": null,
     "failureReason": "processor_timeout"
 }

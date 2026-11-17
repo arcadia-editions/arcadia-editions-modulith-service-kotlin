@@ -24,7 +24,7 @@ repositories must be cloned next to this one.
 | Domain summary | none yet: `../arcadia-editions-architecture/README.md` and `zenwave-architecture.yml` |
 | Board of the flow in progress | `docs/tasks.md` (archived boards in `docs/tasks/`) |
 | Model gap proposals | `docs/proposals/` |
-| Test data and scenario matrix | `src/test/resources/data.sql` (header: scenario and coverage matrices, chains `C-01`..`C-21`, assumptions `A-01`..`A-08`, the fixed test "now" `2026-10-01T12:00:00Z` read by tests through a fixed `Clock`) and `src/test/resources/data/jpa/<Entity>/<n>.json` |
+| Test data and scenario matrix | `src/test/resources/data.sql` (header: scenario and coverage matrices, chains `C-01`..`C-30`, assumptions `A-02`..`A-12`, the fixed test "now" `2026-10-01T12:00:00Z` read by tests through a fixed `Clock`) and `src/test/resources/data/jpa/<Entity>/<n>.json` |
 | Generation script | `zenwave-scripts.zw` (projects generated with ZenWave SDK) |
 | Protected files | root `ModuleMetadata.kt` (removed, T-36); `common/mappers/BaseMapper.kt` (`@NamedInterface("mappers")`); every `*Repository.kt` and its in-memory twin (custom finders); `OrdersCheckoutApiIntegrationTest`, `DockerComposeInitializer`, `data.sql` and fixtures (hand-written) |
 
@@ -95,3 +95,4 @@ The orchestrator gives the workers the focused command (with the task's `tests:`
 | Test | Cause | Fixed by |
 |---|---|---|
 | `PaymentsProcessingServiceTest.voidPaymentFromFailedTest`, `.voidPaymentFromAuthorizationRequestedTest` | assert the old void from `FAILED` / `AUTHORIZATION_REQUESTED`; 0.10.0 narrows `voidPayment` to `[AUTHORIZED, CAPTURE_FAILED]`, anything else a no-op (P-06, P-08) | the voidPayment task of the board |
+| `InventoryServiceTest.reservationExpiredJobTest`, `.reservationExpiredJobTwiceTest`, `.reservationExpiredJobOncePerOrderTest` | assert the old timer (every due reservation released, ORD-014 included, exactly the due set before C-30); 0.10.0 runs `expireReservation`, which releases only on `NO_PAYMENT` (C-30) and leaves ORD-014 (payment started, C-14) | the expireReservation task of the board |

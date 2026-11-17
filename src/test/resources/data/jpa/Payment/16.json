@@ -15,5 +15,6 @@
     "failedAt": "2026-10-01T11:10:00Z",
     "capturedAt": null,
     "voidedAt": null,
+    "voidFailedAt": null,
     "failureReason": "capture_window_closed"
 }

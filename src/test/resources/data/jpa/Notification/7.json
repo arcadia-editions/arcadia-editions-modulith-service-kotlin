@@ -1,0 +1,18 @@
+{
+    "id": 301,
+    "version": 0,
+    "notificationId": "NTF-024",
+    "customerId": "CUST-024",
+    "orderId": "ORD-024",
+    "skus": [],
+    "type": "ORDER_CONFIRMATION",
+    "channel": "EMAIL",
+    "status": "SENT",
+    "subject": "Your Arcadia Editions order is confirmed",
+    "body": "Your Arcadia Editions order is confirmed: ORD-024",
+    "recipient": "customer24@example.com",
+    "createdAt": "2026-10-01T11:06:00Z",
+    "sentAt": "2026-10-01T11:06:05Z",
+    "failedAt": null,
+    "failureReason": null
+}

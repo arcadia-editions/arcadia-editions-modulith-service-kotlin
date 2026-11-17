@@ -25,5 +25,8 @@
     "scheduledAt": "2026-10-01T11:07:00Z",
     "readyAt": null,
     "failedAt": null,
-    "failureReason": null
+    "failureReason": null,
+    "paymentCapturedAt": null,
+    "cancelledAt": null,
+    "cancellationReason": null
 }

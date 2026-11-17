@@ -1,0 +1,13 @@
+{
+    "id": 251,
+    "version": 0,
+    "sku": "SKU-006",
+    "name": "Harbour Lights, Second Printing",
+    "description": "Second printing, paperback",
+    "price": 30.0,
+    "currency": "EUR",
+    "editionSize": 200,
+    "trackingMode": "QUANTITY",
+    "launchAt": "2026-08-01T12:00:00Z",
+    "status": "PUBLISHED"
+}

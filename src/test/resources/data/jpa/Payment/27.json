@@ -1,0 +1,20 @@
+{
+    "id": 1301,
+    "version": 0,
+    "orderId": "ORD-028",
+    "customerId": "CUST-028",
+    "paymentMethodId": "pm_card_visa",
+    "customerEmail": "customer28@example.com",
+    "amount": 49.99,
+    "currency": "EUR",
+    "status": "VOID_FAILED",
+    "providerReference": "PSP-AUTH-028",
+    "attemptCount": 1,
+    "authorizedAt": "2026-10-01T09:20:30Z",
+    "declinedAt": null,
+    "failedAt": null,
+    "capturedAt": null,
+    "voidedAt": null,
+    "voidFailedAt": "2026-10-01T09:26:00Z",
+    "failureReason": "fulfillment_failed"
+}

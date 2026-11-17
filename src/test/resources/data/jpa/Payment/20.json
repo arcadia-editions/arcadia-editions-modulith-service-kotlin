@@ -15,5 +15,6 @@
     "failedAt": null,
     "capturedAt": null,
     "voidedAt": null,
+    "voidFailedAt": null,
     "failureReason": "card_declined"
 }

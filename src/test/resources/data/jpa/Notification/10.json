@@ -1,0 +1,18 @@
+{
+    "id": 451,
+    "version": 0,
+    "notificationId": "NTF-029",
+    "customerId": "CUST-029",
+    "orderId": "ORD-029",
+    "skus": [],
+    "type": "ORDER_CONFIRMATION",
+    "channel": "EMAIL",
+    "status": "FAILED",
+    "subject": "Your Arcadia Editions order is confirmed",
+    "body": "Your Arcadia Editions order is confirmed: ORD-029",
+    "recipient": "customer29@example.com",
+    "createdAt": "2026-10-01T11:31:00Z",
+    "sentAt": null,
+    "failedAt": "2026-10-01T11:31:05Z",
+    "failureReason": "smtp_rejected"
+}
