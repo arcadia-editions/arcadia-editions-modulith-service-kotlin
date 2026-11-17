@@ -307,8 +307,22 @@ open class PaymentsProcessingServiceImpl(
         return false
     }
 
-    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md
+    /** Read only, for the reservation timer: STARTED for any existing Payment, NO_PAYMENT otherwise. */
+    @Transactional(readOnly = true)
     override fun getPaymentStatus(input: GetPaymentStatusInput): GetPaymentStatusResult {
-        TODO("getPaymentStatus: " + input.orderId)
+        val payment = paymentRepository.findByOrderId(input.orderId)
+        return if (payment == null) {
+            GetPaymentStatusResult(
+                outcome = GetPaymentStatusOutcome.NO_PAYMENT,
+                noPayment = NoPaymentResult(orderId = input.orderId),
+                started = null,
+            )
+        } else {
+            GetPaymentStatusResult(
+                outcome = GetPaymentStatusOutcome.STARTED,
+                noPayment = null,
+                started = PaymentStartedResult(orderId = input.orderId, status = payment.status),
+            )
+        }
     }
 }
