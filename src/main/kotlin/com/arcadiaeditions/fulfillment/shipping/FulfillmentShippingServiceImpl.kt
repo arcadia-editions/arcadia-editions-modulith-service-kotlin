@@ -75,13 +75,8 @@ open class FulfillmentShippingServiceImpl(
         FulfillmentTransitions.ensureCanMarkReadyToShip(existingFulfillment)
         // the warehouse ships only after capture: refused (no transition, no event) until paymentCapturedAt is set
         if (existingFulfillment.paymentCapturedAt == null) {
-            throw FulfillmentTransitions.InvalidStateTransitionException(
-                entityType = "Fulfillment",
-                entityId = existingFulfillment.id,
-                naturalId = null,
-                operation = "markReadyToShip",
-                currentState = existingFulfillment.status,
-                allowedStates = listOf(FulfillmentStatus.SCHEDULED),
+            throw IllegalStateException(
+                "markReadyToShip refused for Fulfillment id=$id: payment not captured yet (paymentCapturedAt is null)"
             )
         }
         existingFulfillment.status = FulfillmentStatus.READY_TO_SHIP
