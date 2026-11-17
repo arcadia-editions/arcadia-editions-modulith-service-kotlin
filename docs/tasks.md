@@ -89,10 +89,11 @@ path: OrderConfirmed > scheduleFulfillment[FulfillmentFailed] > voidPayment[void
       > cancelOrder > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
 review: [ ]
 
-- [/] T-60 bounded AFK voidPayment: no-op, no event, when there is no Payment or it is not AUTHORIZED or CAPTURE_FAILED (rewrite voidPaymentFromFailedTest and voidPaymentFromAuthorizationRequestedTest to assert the no-op); a refused void sets VOID_FAILED and voidFailedAt and emits PaymentVoidFailed instead of throwing (fake processor: a void-refusal test hook)
+- [x] T-60 bounded AFK voidPayment: no-op, no event, when there is no Payment or it is not AUTHORIZED or CAPTURE_FAILED (rewrite voidPaymentFromFailedTest and voidPaymentFromAuthorizationRequestedTest to assert the no-op); a refused void sets VOID_FAILED and voidFailedAt and emits PaymentVoidFailed instead of throwing (fake processor: a void-refusal test hook)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:236-252, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:152-161, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:243-249
       test data: data.sql C-01, data.sql C-10, data.sql C-12, data.sql C-16, data.sql C-17, data.sql C-27
       tests: PaymentsProcessingServiceTest
+      done: claude-sonnet sonnet
 - [x] T-61 mechanical AFK releaseStock on PaymentVoidFailed (listener and mapper already wired): reason PAYMENT_VOID_FAILED from a CONFIRMED reservation, sold back to available; listener mapper test
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:254-266, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:142-148
       test data: data.sql C-27, data.sql C-28
@@ -103,7 +104,7 @@ review: [ ]
       test data: data.sql C-28
       tests: NotificationsConsumerServiceTest
       done: claude-sonnet sonnet
-- [ ] T-63 advanced AFK Flow test void refused: fulfillment fails, the void is refused, the stock is released (PAYMENT_VOID_FAILED), the order is cancelled once and the customer told; ends at OrderCancelledNotificationSent with the Payment VOID_FAILED
+- [/] T-63 advanced AFK Flow test void refused: fulfillment fails, the void is refused, the stock is released (PAYMENT_VOID_FAILED), the order is cancelled once and the customer told; ends at OrderCancelledNotificationSent with the Payment VOID_FAILED
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:236-266, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:299-309, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:322-345
       test data: data.sql C-28
       tests: PlaceOrderFlowVoidFailedIntegrationTest
@@ -130,7 +131,7 @@ path: ReservationExpired (10 minutes after OrderCreated) > expireReservation > g
       > OrderCancelled > sendOrderCancelledNotification > end orderCancelled; getPaymentStatus[PaymentStartedResult]: no release, payment owns the end
 review: [ ]
 
-- [ ] T-66 bounded AFK getPaymentStatus: read-only; NO_PAYMENT when no Payment exists for orderId, STARTED otherwise (AUTHORIZATION_REQUESTED included) (replace the TODO compile stub)
+- [/] T-66 bounded AFK getPaymentStatus: read-only; NO_PAYMENT when no Payment exists for orderId, STARTED otherwise (AUTHORIZATION_REQUESTED included) (replace the TODO compile stub)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:293-297, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:163-164
       test data: data.sql C-01, data.sql C-14, data.sql C-30
       tests: PaymentsProcessingServiceTest
