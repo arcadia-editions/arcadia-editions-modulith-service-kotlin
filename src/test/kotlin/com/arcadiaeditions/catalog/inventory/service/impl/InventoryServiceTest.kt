@@ -181,6 +181,38 @@ class InventoryServiceTest {
     }
 
     @Test
+    fun releaseStockVoidFailedFromConfirmedTest() {
+        // C-27: ORD-027 CONFIRMED x1 (SKU-006 x1), PaymentVoidFailed
+        inventoryService.releaseStock(ReleaseStockInput(orderId = "ORD-027", reason = StockReleaseReason.PAYMENT_VOID_FAILED))
+
+        val saved = stockReservationRepository.findAll().single { it.orderId == "ORD-027" }
+        org.junit.jupiter.api.Assertions.assertEquals(ReservationStatus.RELEASED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, saved.releasedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(StockReleaseReason.PAYMENT_VOID_FAILED, saved.releaseReason)
+        org.junit.jupiter.api.Assertions.assertEquals(Instant.parse("2026-10-01T11:21:00Z"), saved.confirmedAt)
+        // sold -> available
+        val sku6 = position("SKU-006")
+        org.junit.jupiter.api.Assertions.assertEquals(17, sku6.availableQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(1, sku6.reservedQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(2, sku6.soldQuantity!!.toInt())
+        val events = releasedEvents()
+        org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
+        org.junit.jupiter.api.Assertions.assertEquals(StockReleaseReason.PAYMENT_VOID_FAILED, events[0].reason)
+        org.junit.jupiter.api.Assertions.assertEquals("RES-027", events[0].items!!.single().reservationId)
+    }
+
+    @Test
+    fun releaseStockVoidFailedRedeliveryTest() {
+        // C-28: ORD-028 already RELEASED (PAYMENT_VOID_FAILED) -> no-op, no event
+        inventoryService.releaseStock(ReleaseStockInput(orderId = "ORD-028", reason = StockReleaseReason.PAYMENT_VOID_FAILED))
+
+        org.junit.jupiter.api.Assertions.assertEquals(0, releasedEvents().size)
+        val saved = stockReservationRepository.findAll().single { it.orderId == "ORD-028" }
+        org.junit.jupiter.api.Assertions.assertEquals(ReservationStatus.RELEASED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(Instant.parse("2026-10-01T09:26:10Z"), saved.releasedAt)
+    }
+
+    @Test
     fun releaseStockRedeliveryTest() {
         // C-08: ORD-008 already RELEASED -> nothing changes, no event
         val before = stockReservationRepository.findAll().single { it.orderId == "ORD-008" }.copy()
