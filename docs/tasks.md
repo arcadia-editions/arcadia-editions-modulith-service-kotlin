@@ -104,11 +104,12 @@ review: [ ]
       test data: data.sql C-28
       tests: NotificationsConsumerServiceTest
       done: claude-sonnet sonnet
-- [/] T-63 advanced AFK Flow test void refused: fulfillment fails, the void is refused, the stock is released (PAYMENT_VOID_FAILED), the order is cancelled once and the customer told; ends at OrderCancelledNotificationSent with the Payment VOID_FAILED
+- [x] T-63 advanced AFK Flow test void refused: fulfillment fails, the void is refused, the stock is released (PAYMENT_VOID_FAILED), the order is cancelled once and the customer told; ends at OrderCancelledNotificationSent with the Payment VOID_FAILED
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:236-266, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:299-309, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:322-345
       test data: data.sql C-28
       tests: PlaceOrderFlowVoidFailedIntegrationTest
       blocked by: T-60, T-61, T-62
+      done: claude-opus opus
 
 ## S4 orderCancelled (capture failed, fulfillment cancelled)
 path: FulfillmentScheduled > capturePayment[PaymentCaptureFailed] > voidPayment[voided] > PaymentVoided > releaseStock > StockReleased
@@ -131,11 +132,12 @@ path: ReservationExpired (10 minutes after OrderCreated) > expireReservation > g
       > OrderCancelled > sendOrderCancelledNotification > end orderCancelled; getPaymentStatus[PaymentStartedResult]: no release, payment owns the end
 review: [ ]
 
-- [/] T-66 bounded AFK getPaymentStatus: read-only; NO_PAYMENT when no Payment exists for orderId, STARTED otherwise (AUTHORIZATION_REQUESTED included) (replace the TODO compile stub)
+- [x] T-66 bounded AFK getPaymentStatus: read-only; NO_PAYMENT when no Payment exists for orderId, STARTED otherwise (AUTHORIZATION_REQUESTED included) (replace the TODO compile stub)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:293-297, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:163-164
       test data: data.sql C-01, data.sql C-14, data.sql C-30
       tests: PaymentsProcessingServiceTest
-- [ ] T-67 advanced AFK expireReservation and the timer: ReservationExpiredJob calls expireReservation instead of releaseStock; it calls getPaymentStatus and releases the RESERVED lines (RESERVATION_EXPIRED, StockReleased) only on NO_PAYMENT; no-op on STARTED or when nothing is RESERVED; rewrite reservationExpiredJob{,Twice,OncePerOrder}Test for 0.10.0 (C-30 released, C-14 kept) (replace the TODO compile stub)
+      done: claude-sonnet sonnet
+- [/] T-67 advanced AFK expireReservation and the timer: ReservationExpiredJob calls expireReservation instead of releaseStock; it calls getPaymentStatus and releases the RESERVED lines (RESERVATION_EXPIRED, StockReleased) only on NO_PAYMENT; no-op on STARTED or when nothing is RESERVED; rewrite reservationExpiredJob{,Twice,OncePerOrder}Test for 0.10.0 (C-30 released, C-14 kept) (replace the TODO compile stub)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:42-69, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:268-291, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:150-158
       test data: data.sql C-01, data.sql C-11, data.sql C-14, data.sql C-30
       tests: InventoryServiceTest
@@ -162,7 +164,7 @@ review: [ ]
       tests: OrdersCheckoutServiceTest
       blocked by: T-69
       done: claude-sonnet sonnet
-- [ ] T-71 mechanical AFK voidPayment on OrderConfirmationRejected (listener and mapper already wired): listener mapper test, void reason = the rejection reason
+- [/] T-71 mechanical AFK voidPayment on OrderConfirmationRejected (listener and mapper already wired): listener mapper test, void reason = the rejection reason
       model: ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:152-161
       test data: data.sql C-22
       tests: OrdersCheckoutEventsListenerMapperTest, PaymentsProcessingServiceTest
@@ -184,7 +186,7 @@ review: [ ]
       blocked by: T-55
 
 ## S8 Polish
-review: [ ]
+review: [x]
 
 - [x] T-74 mechanical AFK startOrderCheckout validation: quantity >= 1 and unitPrice >= 0 (ZDL bounds, P-09) answer 400 before any reservation; getOrder answers 400 on an invalid id (the generated testGetOrder_400 of 0.10.1, overlay response)
       model: ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:69-70, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:96-100
