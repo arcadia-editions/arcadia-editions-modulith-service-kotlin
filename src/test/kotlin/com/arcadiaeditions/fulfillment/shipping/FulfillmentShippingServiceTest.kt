@@ -216,4 +216,53 @@ class FulfillmentShippingServiceTest {
         )
         org.junit.jupiter.api.Assertions.assertEquals(eventsBefore, events.size)
     }
+
+    // C-25: SCHEDULED, OrderCancelled -> CANCELLED, FulfillmentCancelled
+    @Test
+    fun cancelFulfillmentTest() {
+        val fulfillment = fulfillmentShippingService.cancelFulfillment(CancelFulfillmentInput("ORD-025", "PAYMENT_VOIDED"))
+
+        val saved = fulfillmentRepository.findAll().single { it.orderId == "ORD-025" }
+        org.junit.jupiter.api.Assertions.assertEquals(saved.id, fulfillment!!.id)
+        org.junit.jupiter.api.Assertions.assertEquals(FulfillmentStatus.CANCELLED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, saved.cancelledAt)
+        org.junit.jupiter.api.Assertions.assertEquals("PAYMENT_VOIDED", saved.cancellationReason)
+        org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
+        val event = events[0] as com.arcadiaeditions.fulfillment.shipping.domain.events.FulfillmentCancelled
+        org.junit.jupiter.api.Assertions.assertEquals("FUL-025", event.fulfillmentId)
+        org.junit.jupiter.api.Assertions.assertEquals("ORD-025", event.orderId)
+        org.junit.jupiter.api.Assertions.assertEquals("CUST-025", event.customerId)
+        org.junit.jupiter.api.Assertions.assertEquals("PAYMENT_VOIDED", event.reason)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, event.cancelledAt)
+    }
+
+    // READY_TO_SHIP (C-06) is cancellable too
+    @Test
+    fun cancelFulfillmentFromReadyToShipTest() {
+        fulfillmentShippingService.cancelFulfillment(CancelFulfillmentInput("ORD-006", "PAYMENT_VOID_FAILED"))
+
+        val saved = fulfillmentRepository.findAll().single { it.orderId == "ORD-006" }
+        org.junit.jupiter.api.Assertions.assertEquals(FulfillmentStatus.CANCELLED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
+    }
+
+    // C-21 no Fulfillment, C-26 CANCELLED (redelivery), C-10 FAILED: no-op, no event
+    @Test
+    fun cancelFulfillmentNoOpTest() {
+        for (orderId in listOf("ORD-021", "ORD-026", "ORD-010")) {
+            val before = fulfillmentRepository.findAll().map { it.id to it.status to it.cancelledAt }
+
+            fulfillmentShippingService.cancelFulfillment(CancelFulfillmentInput(orderId, "OTHER"))
+
+            org.junit.jupiter.api.Assertions.assertEquals(
+                before,
+                fulfillmentRepository.findAll().map { it.id to it.status to it.cancelledAt },
+            )
+        }
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+        org.junit.jupiter.api.Assertions.assertEquals(
+            "PAYMENT_VOIDED",
+            fulfillmentRepository.findAll().single { it.orderId == "ORD-026" }.cancellationReason,
+        )
+    }
 }

@@ -105,6 +105,27 @@ open class FulfillmentShippingServiceImpl(
         return fulfillmentRepository.save(existingFulfillment)
     }
 
-    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md (no-op until then)
-    override fun cancelFulfillment(input: CancelFulfillmentInput): Fulfillment? = null
+    override fun cancelFulfillment(input: CancelFulfillmentInput): Fulfillment? {
+
+        log.debug("Request cancelFulfillment: {}", input)
+
+        // no Fulfillment: no-op
+        val existingFulfillment = fulfillmentRepository.findByOrderId(input.orderId) ?: return null
+        // CANCELLED (redelivery) or FAILED: no-op, no event
+        if (
+            existingFulfillment.status != FulfillmentStatus.SCHEDULED &&
+                existingFulfillment.status != FulfillmentStatus.READY_TO_SHIP
+        ) {
+            return existingFulfillment
+        }
+        FulfillmentTransitions.ensureCanCancelFulfillment(existingFulfillment)
+        existingFulfillment.status = FulfillmentStatus.CANCELLED
+        existingFulfillment.cancelledAt = Instant.now(clock)
+        // A-11: the reason of OrderCancelled
+        existingFulfillment.cancellationReason = input.reason
+        val fulfillment = fulfillmentRepository.save(existingFulfillment)
+        // emit events
+        eventPublisher.onFulfillmentCancelled(eventsMapper.asFulfillmentCancelled(fulfillment))
+        return fulfillment
+    }
 }
