@@ -1,5 +1,6 @@
 package com.arcadiaeditions.notifications.consumer.service.impl
 
+import com.arcadiaeditions.notifications.consumer.*
 import com.arcadiaeditions.notifications.consumer.domain.*
 import com.arcadiaeditions.notifications.consumer.domain.events.*
 import com.arcadiaeditions.notifications.consumer.events.*
@@ -22,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional
 open class NotificationsConsumerServiceImpl(
     private val notificationRepository: NotificationRepository,
     private val eventPublisher: EventPublisher,
+    private val emailSender: EmailSender,
+    private val clock: Clock,
 ) : NotificationsConsumerService {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass)
@@ -35,35 +38,100 @@ open class NotificationsConsumerServiceImpl(
 
         log.debug("Request sendOrderConfirmation: {}", input)
 
+        // redelivery of PaymentCaptured: one confirmation per order
+        notificationRepository.findByOrderIdAndType(input.orderId, NotificationType.ORDER_CONFIRMATION)?.let {
+            return it
+        }
+
+        val now = Instant.now(clock)
         val notification = notificationsConsumerServiceMapper.update(Notification(), input)
-        // TODO: implement this method
-        // emit events
-        eventPublisher.onOrderConfirmationSent(eventsMapper.asOrderConfirmationSent(notification))
-        eventPublisher.onNotificationDeliveryFailed(eventsMapper.asNotificationDeliveryFailed(notification))
-        return notification
+        notification.notificationId = "NTF-" + java.util.UUID.randomUUID()
+        notification.type = NotificationType.ORDER_CONFIRMATION
+        notification.channel = NotificationChannel.EMAIL
+        notification.recipient = input.customerEmail
+        notification.subject = "Your Arcadia Editions order is confirmed"
+        notification.body = "Your Arcadia Editions order is confirmed: ${input.orderId}"
+        notification.createdAt = now
+
+        val result = emailSender.send(EmailMessage(input.customerEmail, notification.subject!!, notification.body!!))
+        if (!result.sent) return deliveryFailed(notification, now, result.reason)
+        // A-01 (P-02): SENT is set here, as the outcome of OrderConfirmationSent
+        notification.status = NotificationStatus.SENT
+        notification.sentAt = now
+        val saved = notificationRepository.save(notification)
+
+        eventPublisher.onOrderConfirmationSent(eventsMapper.asOrderConfirmationSent(saved))
+        return saved
     }
 
     override fun sendStockUnavailableNotification(input: SendStockUnavailableNotificationInput): Notification {
 
         log.debug("Request sendStockUnavailableNotification: {}", input)
 
+        // redelivery of StockUnavailable: one notification per order
+        notificationRepository.findByOrderIdAndType(input.orderId, NotificationType.STOCK_UNAVAILABLE)?.let {
+            return it
+        }
+
+        val now = Instant.now(clock)
         val notification = notificationsConsumerServiceMapper.update(Notification(), input)
-        // TODO: implement this method
-        // emit events
-        eventPublisher.onStockUnavailableNotificationSent(eventsMapper.asStockUnavailableNotificationSent(notification))
-        eventPublisher.onNotificationDeliveryFailed(eventsMapper.asNotificationDeliveryFailed(notification))
-        return notification
+        notification.notificationId = "NTF-" + java.util.UUID.randomUUID()
+        notification.type = NotificationType.STOCK_UNAVAILABLE
+        notification.channel = NotificationChannel.EMAIL
+        notification.recipient = input.customerEmail
+        notification.skus = input.unavailableItems.map { it.sku }.toMutableList()
+        notification.subject = "Sorry, this edition is sold out"
+        notification.body = "Sorry, this edition is sold out: ${input.orderId}"
+        notification.createdAt = now
+
+        val result = emailSender.send(EmailMessage(input.customerEmail, notification.subject!!, notification.body!!))
+        if (!result.sent) return deliveryFailed(notification, now, result.reason)
+        notification.status = NotificationStatus.SENT
+        notification.sentAt = now
+        val saved = notificationRepository.save(notification)
+
+        eventPublisher.onStockUnavailableNotificationSent(eventsMapper.asStockUnavailableNotificationSent(saved))
+        return saved
     }
 
     override fun sendOrderCancelledNotification(input: SendOrderCancelledNotificationInput): Notification {
 
         log.debug("Request sendOrderCancelledNotification: {}", input)
 
+        // redelivery of OrderCancelled: one notification per order
+        notificationRepository.findByOrderIdAndType(input.orderId, NotificationType.ORDER_CANCELLED)?.let {
+            return it
+        }
+
+        val now = Instant.now(clock)
         val notification = notificationsConsumerServiceMapper.update(Notification(), input)
-        // TODO: implement this method
-        // emit events
-        eventPublisher.onOrderCancelledNotificationSent(eventsMapper.asOrderCancelledNotificationSent(notification))
-        eventPublisher.onNotificationDeliveryFailed(eventsMapper.asNotificationDeliveryFailed(notification))
-        return notification
+        notification.notificationId = "NTF-" + java.util.UUID.randomUUID()
+        notification.type = NotificationType.ORDER_CANCELLED
+        notification.channel = NotificationChannel.EMAIL
+        notification.recipient = input.customerEmail
+        notification.subject = "Your Arcadia Editions order was cancelled"
+        notification.body = "Your Arcadia Editions order was cancelled: ${input.orderId} (${input.reason})"
+        notification.createdAt = now
+
+        val result = emailSender.send(EmailMessage(input.customerEmail, notification.subject!!, notification.body!!))
+        if (!result.sent) return deliveryFailed(notification, now, result.reason)
+        notification.status = NotificationStatus.SENT
+        notification.sentAt = now
+        val saved = notificationRepository.save(notification)
+
+        eventPublisher.onOrderCancelledNotificationSent(
+            eventsMapper.asOrderCancelledNotificationSent(saved, input.reason)
+        )
+        return saved
+    }
+
+    /** The provider refused: Notification FAILED, NotificationDeliveryFailed only. */
+    private fun deliveryFailed(notification: Notification, now: Instant, reason: String?): Notification {
+        notification.status = NotificationStatus.FAILED
+        notification.failedAt = now
+        notification.failureReason = reason
+        val saved = notificationRepository.save(notification)
+        eventPublisher.onNotificationDeliveryFailed(eventsMapper.asNotificationDeliveryFailed(saved))
+        return saved
     }
 }

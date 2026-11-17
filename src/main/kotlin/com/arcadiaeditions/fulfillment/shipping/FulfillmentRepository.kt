@@ -11,4 +11,7 @@ import org.springframework.stereotype.Repository
 @Suppress("unused")
 @Repository
 @org.jmolecules.ddd.annotation.Repository
-interface FulfillmentRepository : JpaRepository<Fulfillment, Long> {}
+interface FulfillmentRepository : JpaRepository<Fulfillment, Long> {
+
+    fun findByOrderId(orderId: String): Fulfillment?
+}

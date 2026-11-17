@@ -11,15 +11,17 @@ failed twice, or is already busy (Codex runs one job at a time).
 
 | Work | First | Then | Then |
 |---|---|---|---|
-| mechanical (follows a pattern already in the code) | grok | claude-sonnet | codex-terra |
-| bounded (fully described by the model and the test data) | claude-sonnet | codex-terra | claude-opus |
-| advanced (several contexts, a scheduler, an external API) | codex-sol | claude-opus | claude-sonnet |
-| review (one slice, full suite) | claude-opus | codex-sol | claude-sonnet |
+| mechanical (follows a pattern already in the code) | claude-sonnet | claude-opus | |
+| bounded (fully described by the model and the test data) | claude-sonnet | claude-opus | |
+| advanced (several contexts, a scheduler, an external API) | claude-opus | claude-sonnet | |
+| review (one slice, full suite) | claude-opus | claude-sonnet | |
 
 A review is done by a worker that implemented none of the slice when there is one. If there is none, an implementer
 reviews it and the orchestrator says so in its report.
 
 ## Workers
+
+Only Claude workers are used (the person, 2026-11-12): no task or review goes to codex-terra, codex-sol or grok.
 
 | Name | How it runs | Model | Notes |
 |---|---|---|---|
@@ -61,4 +63,12 @@ src/test/resources/data/*
 ## Commands of this project
 
 The orchestrator and the workers use the ones in `docs/zenwave-sdd-overlay.md`. Only set here what is specific to
-unattended work: nothing by default.
+unattended work:
+
+- Integration tests run only in slice verification (the person, 2026-11-13). Workers and the orchestrator check each
+  task with its unit tests, the compile and ArchitectureTest; flow-test tasks are written and compiled, then run in
+  the slice review's full suite (the reviewer reruns a failing flow test once alone before reporting it).
+- One long-running test compose (`docker compose -f docker-compose-test.yml up -d`, project `arcadia-editions-modulith-it`, ports
+  15432/29092/22181/18081, T-37) is reused by every integration run; tests restore their data. Never two integration
+  runs at once: always through `.zenwave/handoff/place-order-flow/docker-run-it.sh` (lock). Docker is shared with
+  `arcadia-editions-modulith-service-java`; host 5432/9092/2181/8081 may be held by others.

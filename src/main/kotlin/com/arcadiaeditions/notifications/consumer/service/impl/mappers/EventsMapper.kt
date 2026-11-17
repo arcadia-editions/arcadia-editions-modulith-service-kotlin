@@ -13,6 +13,8 @@ interface EventsMapper {
         val INSTANCE: EventsMapper = Mappers.getMapper(EventsMapper::class.java)
     }
 
+    // the event names the field reason, the entity failureReason
+    @org.mapstruct.Mapping(target = "reason", source = "failureReason")
     fun asNotificationDeliveryFailed(
         notification: Notification
     ): com.arcadiaeditions.notifications.consumer.domain.events.NotificationDeliveryFailed
@@ -25,7 +27,10 @@ interface EventsMapper {
         notification: Notification
     ): com.arcadiaeditions.notifications.consumer.domain.events.OrderConfirmationSent
 
+    // the reason is not stored on Notification: it comes from the command input
+    @org.mapstruct.Mapping(target = "reason", source = "reason")
     fun asOrderCancelledNotificationSent(
-        notification: Notification
+        notification: Notification,
+        reason: String?,
     ): com.arcadiaeditions.notifications.consumer.domain.events.OrderCancelledNotificationSent
 }

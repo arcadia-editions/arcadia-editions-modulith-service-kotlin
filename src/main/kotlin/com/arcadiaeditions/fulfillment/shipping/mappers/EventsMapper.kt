@@ -4,6 +4,7 @@ import com.arcadiaeditions.common.mappers.BaseMapper
 import com.arcadiaeditions.fulfillment.shipping.domain.*
 import com.arcadiaeditions.fulfillment.shipping.dtos.*
 import org.mapstruct.Mapper
+import org.mapstruct.Mapping
 import org.mapstruct.factory.Mappers
 
 @Mapper(uses = [BaseMapper::class])
@@ -17,6 +18,7 @@ interface EventsMapper {
         fulfillment: Fulfillment
     ): com.arcadiaeditions.fulfillment.shipping.domain.events.FulfillmentScheduled
 
+    @Mapping(target = "reason", source = "failureReason")
     fun asFulfillmentFailed(
         fulfillment: Fulfillment
     ): com.arcadiaeditions.fulfillment.shipping.domain.events.FulfillmentFailed

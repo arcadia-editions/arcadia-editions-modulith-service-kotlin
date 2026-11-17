@@ -20,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional
 open class FulfillmentShippingServiceImpl(
     private val fulfillmentRepository: FulfillmentRepository,
     private val eventPublisher: EventPublisher,
+    private val warehouse: Warehouse,
+    private val clock: Clock,
 ) : FulfillmentShippingService {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass)
@@ -33,11 +35,33 @@ open class FulfillmentShippingServiceImpl(
 
         log.debug("Request scheduleFulfillment: {}", input)
 
-        val fulfillment = fulfillmentShippingServiceMapper.update(Fulfillment(), input)
-        // TODO: implement this method
+        // redelivery: the orderId already has a Fulfillment
+        fulfillmentRepository.findByOrderId(input.orderId)?.let {
+            return it
+        }
+
+        val result =
+            warehouse.schedule(
+                WarehouseRequest(input.orderId, input.items.map { WarehouseItem(it.sku, it.quantity.toInt()) })
+            )
+        val toSave = fulfillmentShippingServiceMapper.update(Fulfillment(), input)
+        toSave.fulfillmentId = "FUL-" + input.orderId.removePrefix("ORD-")
+        if (result.scheduled) {
+            toSave.status = FulfillmentStatus.SCHEDULED
+            toSave.scheduledAt = Instant.now(clock)
+        } else {
+            // A-01 (P-02): FAILED is set here, as the outcome of FulfillmentFailed
+            toSave.status = FulfillmentStatus.FAILED
+            toSave.failedAt = Instant.now(clock)
+            toSave.failureReason = result.reason
+        }
+        val fulfillment = fulfillmentRepository.save(toSave)
         // emit events
-        eventPublisher.onFulfillmentScheduled(eventsMapper.asFulfillmentScheduled(fulfillment))
-        eventPublisher.onFulfillmentFailed(eventsMapper.asFulfillmentFailed(fulfillment))
+        if (result.scheduled) {
+            eventPublisher.onFulfillmentScheduled(eventsMapper.asFulfillmentScheduled(fulfillment))
+        } else {
+            eventPublisher.onFulfillmentFailed(eventsMapper.asFulfillmentFailed(fulfillment))
+        }
         return fulfillment
     }
 

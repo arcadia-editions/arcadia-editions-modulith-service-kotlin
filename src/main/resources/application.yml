@@ -9,6 +9,10 @@ springdoc:
       - name: Arcadia Editions Modulith
         url: /orders-checkout-openapi.yml
 
+app:
+  events:
+    resubmit-incomplete-publications-older-than: PT5M
+
 management:
   endpoints.web.exposure.include: "*"
 
@@ -27,6 +31,7 @@ spring:
       password: password
       roles: USER
   modulith:
+    detection-strategy: explicitly-annotated
     events:
       externalization:
         enabled: true

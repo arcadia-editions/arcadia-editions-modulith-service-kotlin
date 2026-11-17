@@ -1,6 +1,7 @@
 package com.arcadiaeditions.notifications.consumer.config
 
 import com.arcadiaeditions.config.TestDataLoader
+import com.arcadiaeditions.notifications.consumer.*
 import com.arcadiaeditions.notifications.consumer.domain.*
 import com.arcadiaeditions.notifications.consumer.domain.events.*
 import com.arcadiaeditions.notifications.consumer.events.*
@@ -15,9 +16,11 @@ import org.springframework.context.annotation.Profile
 @Profile("in-memory")
 open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
 
+    val clock: java.time.Clock = com.arcadiaeditions.config.TestClock.FIXED
     private val eventPublisher = InMemoryEventPublisher()
+    private val emailSender = FakeEmailSender()
     protected val notificationsConsumerService =
-        NotificationsConsumerServiceImpl(notificationRepository(), eventPublisher)
+        NotificationsConsumerServiceImpl(notificationRepository(), eventPublisher, emailSender, clock)
 
     @Bean
     open fun <T : NotificationsConsumerService> notificationsConsumerService(): T {
@@ -35,7 +38,11 @@ open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
         notificationRepository().deleteAll()
         notificationRepository().saveAll(notifications)
         eventPublisher.getEvents().clear()
+        emailSender.sent.clear()
     }
+
+    /** The fake e-mail sender, to assert what was sent. */
+    fun emailSender(): FakeEmailSender = emailSender
 
     @Bean
     fun eventPublisher(): InMemoryEventPublisher {

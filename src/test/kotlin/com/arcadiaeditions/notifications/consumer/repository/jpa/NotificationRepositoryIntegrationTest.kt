@@ -4,6 +4,7 @@ import com.arcadiaeditions.common.BaseRepositoryIntegrationTest
 import com.arcadiaeditions.notifications.consumer.domain.*
 import jakarta.persistence.EntityManager
 import java.time.*
+import java.time.temporal.ChronoUnit
 import java.util.List
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -61,6 +62,7 @@ class NotificationRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
 
     @Test
     fun updateTest() {
+        val now = Instant.now().truncatedTo(ChronoUnit.MICROS)
         val id = 1L
         val notification =
             notificationRepository.findByIdOrNull(id) ?: throw NoSuchElementException(" not found with id: $id")
@@ -74,12 +76,17 @@ class NotificationRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         notification.subject = ""
         notification.body = ""
         notification.recipient = ""
-        notification.createdAt = Instant.now()
-        notification.sentAt = Instant.now()
-        notification.failedAt = Instant.now()
+        notification.createdAt = now
+        notification.sentAt = now
+        notification.failedAt = now
         notification.failureReason = ""
 
-        val updated = notificationRepository.save(notification)
+        notificationRepository.save(notification)
+
+        // read back from the database, not the managed instance
+        entityManager.flush()
+        entityManager.clear()
+        val updated = notificationRepository.findByIdOrNull(id) ?: throw NoSuchElementException(" not found with id: $id")
         Assertions.assertEquals("", updated.notificationId)
         Assertions.assertEquals("", updated.customerId)
         Assertions.assertEquals("", updated.orderId)
@@ -90,9 +97,9 @@ class NotificationRepositoryIntegrationTest : BaseRepositoryIntegrationTest() {
         Assertions.assertEquals("", updated.subject)
         Assertions.assertEquals("", updated.body)
         Assertions.assertEquals("", updated.recipient)
-        Assertions.assertEquals(Instant.now(), updated.createdAt)
-        Assertions.assertEquals(Instant.now(), updated.sentAt)
-        Assertions.assertEquals(Instant.now(), updated.failedAt)
+        Assertions.assertEquals(now, updated.createdAt)
+        Assertions.assertEquals(now, updated.sentAt)
+        Assertions.assertEquals(now, updated.failedAt)
         Assertions.assertEquals("", updated.failureReason)
     }
 

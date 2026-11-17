@@ -15,7 +15,10 @@ import org.springframework.context.annotation.Profile
 open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
 
     private val eventPublisher = InMemoryEventPublisher()
-    protected val fulfillmentShippingService = FulfillmentShippingServiceImpl(fulfillmentRepository(), eventPublisher)
+    val clock: java.time.Clock = com.arcadiaeditions.config.TestClock.FIXED
+    val warehouse = FakeWarehouse()
+    protected val fulfillmentShippingService =
+        FulfillmentShippingServiceImpl(fulfillmentRepository(), eventPublisher, warehouse, clock)
 
     @Bean
     open fun <T : FulfillmentShippingService> fulfillmentShippingService(): T {

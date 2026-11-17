@@ -1,12 +1,8 @@
 package com.arcadiaeditions.config
 
-import java.io.BufferedReader
 import java.io.File
 import java.io.IOException
-import java.io.InputStreamReader
 import java.net.Socket
-import java.util.ArrayList
-import java.util.stream.Stream
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.boot.test.util.TestPropertyValues
@@ -26,14 +22,21 @@ class DockerComposeInitializer : ApplicationContextInitializer<ConfigurableAppli
     @org.springframework.test.context.ContextConfiguration(initializers = [DockerComposeInitializer::class])
     annotation class EnableDockerCompose
 
-    private data class Service(val name: String, val port: Int, val envVar: String, val envValueTemplate: String?)
+    private data class Service(
+        val name: String,
+        val port: Int,
+        val hostPort: Int,
+        val envVar: String,
+        val envValueTemplate: String,
+    )
 
     companion object {
-        private const val DOCKER_COMPOSE_FILE = "./docker-compose.yml"
+        /** Test-only compose: own project name and host ports (15432, 29092, 22181, 18081), not docker-compose.yml. */
+        private const val DOCKER_COMPOSE_FILE = "./docker-compose-test.yml"
         private val SERVICES =
             listOf(
-                Service("postgresql", 5432, "DATASOURCE_URL", "jdbc:postgresql://%s:%s/app"),
-                Service("kafka", 9092, "KAFKA_BOOTSTRAP_SERVERS", "%s:%s"),
+                Service("postgresql", 5432, 15432, "DATASOURCE_URL", "jdbc:postgresql://%s:%s/app"),
+                Service("kafka", 9092, 29092, "KAFKA_BOOTSTRAP_SERVERS", "%s:%s"),
             )
 
         val HOST: String = DockerClientFactory.instance().dockerHostIpAddress()
@@ -54,67 +57,40 @@ class DockerComposeInitializer : ApplicationContextInitializer<ConfigurableAppli
         }
 
         var isContainerRunning = false
+        private var properties: List<String> = emptyList()
     }
 
     override fun initialize(ctx: ConfigurableApplicationContext) {
-        if (isDockerComposeRunningAllServices(SERVICES)) {
-            log.info("Docker Compose Containers are running from local docker-compose. Skipping TestContainers...")
-        } else {
+        if (isContainerRunning) {
+            log.info("Docker Compose Containers are already running from TestContainers. Skipping...")
+        } else if (isTestComposeRunning()) {
             log.info(
-                "Docker Compose Containers are not running from local docker-compose. Starting from TestContainers..."
+                "Test compose {} is already running on {}. Skipping TestContainers...",
+                DOCKER_COMPOSE_FILE,
+                SERVICES.map { it.hostPort },
             )
-            if (isContainerRunning) {
-                log.info("Docker Compose Containers are already running from TestContainers. Skipping...")
-            } else {
-                log.info("Starting Docker Compose Containers from TestContainers...")
-                container.start()
-                isContainerRunning = true
-
-                for (service in SERVICES) {
+            properties = SERVICES.map { "${it.envVar}=${String.format(it.envValueTemplate, "localhost", it.hostPort)}" }
+        } else {
+            log.info("Test compose is not running. Starting {} from TestContainers...", DOCKER_COMPOSE_FILE)
+            container.start()
+            isContainerRunning = true
+            properties =
+                SERVICES.map { service ->
                     val port = container.getServicePort(service.name, service.port)
                     log.info("DockerCompose exposed port for {}: {}", service.name, "$HOST:$port")
                     log.info("DockerCompose Service {} listening: {}", service.name, isPortOpen(HOST, port))
-                    if (service.envValueTemplate != null) {
-                        TestPropertyValues.of(
-                                "${service.envVar}=${String.format(service.envValueTemplate, HOST, port)}"
-                            )
-                            .applyTo(ctx.environment)
-                    }
+                    "${service.envVar}=${String.format(service.envValueTemplate, HOST, port)}"
                 }
-            }
         }
+        TestPropertyValues.of(properties).applyTo(ctx.environment)
     }
 
-    private fun isDockerComposeRunningAllServices(services: List<Service>): Boolean {
-        val serviceNames = services.map { it.name }
-        return Stream.of("docker-compose", "docker-compose.exe").anyMatch { cmd ->
-            try {
-                getDockerComposeRunningServices(cmd, "-f", DOCKER_COMPOSE_FILE, "ps", "--services")
-                    .containsAll(serviceNames)
-            } catch (e: IOException) {
-                false
-            } catch (e: InterruptedException) {
-                false
-            }
-        }
-    }
-
-    @Throws(IOException::class, InterruptedException::class)
-    fun getDockerComposeRunningServices(vararg command: String): List<String> {
-        val services = ArrayList<String>()
-        val process = ProcessBuilder(*command).start()
-        val reader = BufferedReader(InputStreamReader(process.inputStream))
-
-        var line: String?
-        while (reader.readLine().also { line = it } != null) {
-            if (!line!!.isEmpty()) {
-                services.add(line!!)
-            }
-        }
-
-        process.waitFor()
-        return services
-    }
+    /**
+     * True when the test compose was started once by hand, to be reused by every IT run:
+     * `docker compose -f docker-compose-test.yml -p arcadia-kotlin-it up -d`. Checked by its own host ports (15432,
+     * 29092), never the dev docker-compose.yml ones (5432, 9092).
+     */
+    private fun isTestComposeRunning(): Boolean = SERVICES.all { isPortOpen("localhost", it.hostPort) }
 
     fun isPortOpen(host: String, port: Int): Boolean {
         return try {
