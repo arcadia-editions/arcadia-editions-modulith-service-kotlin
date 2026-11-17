@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component
  * `pm_card_processorNoAnswer` never answers: the call waits until a test calls [releaseStalledAuthorizations] (or
  * [STALL_MAX_SECONDS] pass) and then throws, so the authorization rolls back and payment never resolves.
  * Captures always succeed, keeping the authorization reference, unless a test sets [captureRefusal]; a test may also set [authorizeRefusal] to force every authorization's answer.
- * Voids always succeed, keeping the authorization reference.
+ * Voids always succeed, keeping the authorization reference, unless a test sets [voidRefusal].
  * A real processor adapter is a separate task.
  */
 @Component
@@ -40,6 +40,9 @@ class FakePaymentProcessor : PaymentProcessor {
 
     /** Test hook: when set, every authorization answers this result instead of the payment method's. */
     @Volatile var authorizeRefusal: PaymentProcessorResult? = null
+
+    /** Test hook: when set, every void answers this refusal instead of voiding. */
+    @Volatile var voidRefusal: PaymentProcessorResult? = null
 
     @Volatile private var stall = CountDownLatch(1)
 
@@ -83,7 +86,8 @@ class FakePaymentProcessor : PaymentProcessor {
             )
 
     override fun void(request: VoidRequest): PaymentProcessorResult =
-        PaymentProcessorResult.approved(
-            request.providerReference ?: ("PSP-VOID-" + request.orderId.removePrefix("ORD-"))
-        )
+        voidRefusal
+            ?: PaymentProcessorResult.approved(
+                request.providerReference ?: ("PSP-VOID-" + request.orderId.removePrefix("ORD-"))
+            )
 }

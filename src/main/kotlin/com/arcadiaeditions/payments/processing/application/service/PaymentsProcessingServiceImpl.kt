@@ -226,29 +226,33 @@ open class PaymentsProcessingServiceImpl(
         }
     }
 
-    override fun voidPayment(input: VoidPaymentInput): Payment {
+    override fun voidPayment(input: VoidPaymentInput): Payment? {
 
         log.debug("Request voidPayment: {}", input)
 
-        val payment =
-            paymentRepository.findByOrderId(input.orderId)
-                ?: throw NoSuchElementException("Payment not found for order: ${input.orderId}")
-        // redelivery of FulfillmentFailed / PaymentCaptureFailed: already voided, nothing to do
-        if (payment.status == PaymentStatus.VOIDED) return payment
-        PaymentTransitions.ensureCanVoidPayment(payment)
+        // no Payment, or nothing to void (not AUTHORIZED or CAPTURE_FAILED: redelivery, or no hold yet): no-op, no event
+        val payment = paymentRepository.findByOrderId(input.orderId)
+        if (payment == null || (payment.status != PaymentStatus.AUTHORIZED && payment.status != PaymentStatus.CAPTURE_FAILED)) {
+            log.debug("voidPayment for order {} ignored: status {}", input.orderId, payment?.status)
+            return payment
+        }
 
         val result =
             paymentProcessor.void(
                 VoidRequest(orderId = payment.orderId!!, providerReference = payment.providerReference, reason = input.reason)
             )
+        payment.failureReason = input.reason
         if (result.outcome != PaymentProcessorOutcome.APPROVED) {
-            // the models have no void-refused outcome: fail so the event publication stays incomplete and is retried
-            throw IllegalStateException("voidPayment refused by the processor for order ${input.orderId}: ${result.reason}")
+            // void-failed: left to ops, only PaymentVoidFailed (releaseStock follows)
+            payment.status = PaymentStatus.VOID_FAILED
+            payment.voidFailedAt = Instant.now(clock)
+            val saved = paymentRepository.save(payment)
+            eventPublisher.onPaymentVoidFailed(eventsMapper.asPaymentVoidFailed(saved))
+            return saved
         }
         // VOIDED is the target declared in the ZDL (voidPayment transition), as PaymentVoided is the outcome
         payment.status = PaymentStatus.VOIDED
         payment.voidedAt = Instant.now(clock)
-        payment.failureReason = input.reason
         val saved = paymentRepository.save(payment)
         eventPublisher.onPaymentVoided(eventsMapper.asPaymentVoided(saved))
         return saved

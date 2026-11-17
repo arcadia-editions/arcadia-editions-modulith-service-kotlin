@@ -679,20 +679,57 @@ class PaymentsProcessingServiceTest {
         assertVoided("ORD-016", "CUST-016", "fulfillment_failed", "PSP-AUTH-016")
     }
 
+    /** The Payment is left as it was and no event is emitted. */
+    private fun assertVoidNoOp(orderId: String, status: PaymentStatus, reason: String = "fulfillment_failed") {
+        val before = savedPayment(orderId).copy()
+        val payment = paymentsProcessingService.voidPayment(VoidPaymentInput(orderId = orderId, reason = reason))
+
+        org.junit.jupiter.api.Assertions.assertEquals(before.id, payment!!.id)
+        val saved = savedPayment(orderId)
+        org.junit.jupiter.api.Assertions.assertEquals(status, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(before, saved)
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+    }
+
     @Test
     fun voidPaymentFromAuthorizationRequestedTest() {
-        // C-01: ORD-001 Payment AUTHORIZATION_REQUESTED, no hold reference yet
-        paymentsProcessingService.voidPayment(VoidPaymentInput(orderId = "ORD-001", reason = "fulfillment_failed"))
-
-        assertVoided("ORD-001", "CUST-001", "fulfillment_failed", null)
+        // C-01: ORD-001 Payment AUTHORIZATION_REQUESTED: nothing to void, no-op
+        assertVoidNoOp("ORD-001", PaymentStatus.AUTHORIZATION_REQUESTED)
     }
 
     @Test
     fun voidPaymentFromFailedTest() {
-        // C-12: ORD-012 Payment FAILED (processor_timeout)
-        paymentsProcessingService.voidPayment(VoidPaymentInput(orderId = "ORD-012", reason = "fulfillment_failed"))
+        // C-12: ORD-012 Payment FAILED (processor_timeout): nothing to void, no-op
+        assertVoidNoOp("ORD-012", PaymentStatus.FAILED)
+    }
 
-        assertVoided("ORD-012", "CUST-012", "fulfillment_failed", null)
+    @Test
+    fun voidPaymentRefusedTest() {
+        // C-16: ORD-016 Payment AUTHORIZED; the processor refuses the void
+        context.paymentProcessor().voidRefusal = PaymentProcessorResult.failed("void_window_closed")
+
+        val payment =
+            paymentsProcessingService.voidPayment(VoidPaymentInput(orderId = "ORD-016", reason = "fulfillment_failed"))
+
+        val saved = savedPayment("ORD-016")
+        org.junit.jupiter.api.Assertions.assertEquals(saved.id, payment!!.id)
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.VOID_FAILED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, saved.voidFailedAt)
+        org.junit.jupiter.api.Assertions.assertNull(saved.voidedAt)
+        org.junit.jupiter.api.Assertions.assertEquals("PSP-AUTH-016", saved.providerReference)
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
+        val event = events[0] as PaymentVoidFailed
+        org.junit.jupiter.api.Assertions.assertEquals("ORD-016", event.orderId)
+        org.junit.jupiter.api.Assertions.assertEquals("CUST-016", event.customerId)
+        org.junit.jupiter.api.Assertions.assertEquals("PSP-AUTH-016", event.providerReference)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, event.failedAt)
+    }
+
+    @Test
+    fun voidPaymentRedeliveryAfterVoidFailedTest() {
+        // C-27: ORD-027 Payment VOID_FAILED: redelivery, no-op
+        assertVoidNoOp("ORD-027", PaymentStatus.VOID_FAILED)
     }
 
     @Test
@@ -718,20 +755,18 @@ class PaymentsProcessingServiceTest {
     }
 
     @Test
-    fun voidPaymentInvalidTransitionTest() {
-        // C-05: ORD-005 Payment CAPTURED
-        org.junit.jupiter.api.Assertions.assertThrows(PaymentTransitions.InvalidStateTransitionException::class.java) {
-            paymentsProcessingService.voidPayment(VoidPaymentInput(orderId = "ORD-005", reason = "fulfillment_failed"))
-        }
-        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.CAPTURED, savedPayment("ORD-005").status)
-        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+    fun voidPaymentFromCapturedTest() {
+        // C-05: ORD-005 Payment CAPTURED: not voidable, no-op
+        assertVoidNoOp("ORD-005", PaymentStatus.CAPTURED)
     }
 
     @Test
-    fun voidPaymentNotFoundTest() {
-        org.junit.jupiter.api.Assertions.assertThrows(NoSuchElementException::class.java) {
+    fun voidPaymentNoPaymentTest() {
+        // no Payment for the order: no-op, no event
+        val payment =
             paymentsProcessingService.voidPayment(VoidPaymentInput(orderId = "ORD-MISSING", reason = "fulfillment_failed"))
-        }
+
+        org.junit.jupiter.api.Assertions.assertNull(payment)
         org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
     }
 }
