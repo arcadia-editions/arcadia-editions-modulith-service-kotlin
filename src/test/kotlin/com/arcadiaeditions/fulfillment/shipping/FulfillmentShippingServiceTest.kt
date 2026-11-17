@@ -187,6 +187,33 @@ class FulfillmentShippingServiceTest {
     }
 
     @Test
-    fun markReadyToShipTest() { // TODO: implement this test
+    fun markReadyToShipTest() {
+        // C-24: SCHEDULED, payment captured
+        val id = fulfillmentRepository.findAll().single { it.orderId == "ORD-024" }.id!!
+        val eventsBefore = events.size
+
+        val fulfillment = fulfillmentShippingService.markReadyToShip(id)
+
+        org.junit.jupiter.api.Assertions.assertEquals(FulfillmentStatus.READY_TO_SHIP, fulfillment.status)
+        org.junit.jupiter.api.Assertions.assertEquals(eventsBefore + 1, events.size)
+    }
+
+    @Test
+    fun markReadyToShipRefusedWithoutPaymentCapturedTest() {
+        // C-04: SCHEDULED, paymentCapturedAt null
+        val id = fulfillmentRepository.findAll().single { it.orderId == "ORD-004" }.id!!
+        val eventsBefore = events.size
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+            FulfillmentTransitions.InvalidStateTransitionException::class.java
+        ) {
+            fulfillmentShippingService.markReadyToShip(id)
+        }
+
+        org.junit.jupiter.api.Assertions.assertEquals(
+            FulfillmentStatus.SCHEDULED,
+            fulfillmentRepository.findById(id).get().status,
+        )
+        org.junit.jupiter.api.Assertions.assertEquals(eventsBefore, events.size)
     }
 }
