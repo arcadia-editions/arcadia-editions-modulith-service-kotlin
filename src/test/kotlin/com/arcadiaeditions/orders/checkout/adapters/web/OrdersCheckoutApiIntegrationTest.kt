@@ -4,6 +4,9 @@ import com.arcadiaeditions.orders.checkout.adapters.web.*
 import com.arcadiaeditions.orders.checkout.adapters.web.dtos.*
 import com.arcadiaeditions.common.BaseWebTestClientTest
 
+import com.arcadiaeditions.catalog.inventory.repository.jpa.StockReservationRepository
+import com.arcadiaeditions.orders.checkout.core.outbound.jpa.OrderRepository
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
@@ -17,6 +20,12 @@ import org.springframework.http.HttpMethod.*
  * Integration tests for the [OrdersCheckoutApi] REST controller.
  */
 open class OrdersCheckoutApiIntegrationTest : BaseWebTestClientTest() {
+
+        @Autowired
+        private lateinit var stockReservationRepository: StockReservationRepository
+
+        @Autowired
+        private lateinit var orderRepository: OrderRepository
 
 
 
@@ -155,11 +164,24 @@ open class OrdersCheckoutApiIntegrationTest : BaseWebTestClientTest() {
         }
 
         /**
-        * Test: startOrderCheckout with quantity 0 or negative unitPrice answers 400 before any reservation (T-74).
+        * Test: startOrderCheckout with quantity 0 answers 400 on items[0].quantity and reserves nothing (T-74).
         */
         @Test
-        fun testStartOrderCheckout_400_bounds() {
-        for ((quantity, unitPrice) in listOf(0 to 10, 1 to -1)) {
+        fun testStartOrderCheckout_400_bounds_quantity() {
+        assertBoundsViolation(0, 10, "startOrderCheckoutInputDTO.items[0].quantity")
+        }
+
+        /**
+        * Test: startOrderCheckout with negative unitPrice answers 400 on items[0].unitPrice and reserves nothing (T-74).
+        */
+        @Test
+        fun testStartOrderCheckout_400_bounds_unitPrice() {
+        assertBoundsViolation(1, -1, "startOrderCheckoutInputDTO.items[0].unitPrice")
+        }
+
+        private fun assertBoundsViolation(quantity: Int, unitPrice: Int, field: String) {
+        val reservations = stockReservationRepository.count()
+        val orders = orderRepository.count()
         val requestBody = """
             {
               "customerId" : "CUST-001",
@@ -179,7 +201,10 @@ open class OrdersCheckoutApiIntegrationTest : BaseWebTestClientTest() {
             .bodyValue(requestBody)
         .exchange()
         .expectStatus().isEqualTo(400)
-        }
+            .expectBody()
+            .jsonPath("$['$field']").isNotEmpty()
+        assertEquals(reservations, stockReservationRepository.count())
+        assertEquals(orders, orderRepository.count())
         }
 
         /**

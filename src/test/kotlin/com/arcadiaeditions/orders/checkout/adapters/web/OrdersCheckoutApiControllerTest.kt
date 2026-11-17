@@ -5,6 +5,7 @@ import com.arcadiaeditions.orders.checkout.adapters.web.dtos.*
 import com.arcadiaeditions.orders.checkout.config.ServicesInMemoryConfig
 import com.arcadiaeditions.orders.checkout.core.inbound.StockUnavailableException
 
+import jakarta.validation.Validation
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -81,7 +82,7 @@ class OrdersCheckoutApiControllerTest {
         Assertions.assertEquals(404, response.statusCode.value())
     }
 
-    // T-74: ZDL bounds quantity min(1), unitPrice min(0): the @Valid of the API answers 400 before the controller runs
+    // T-74: the generated DTO carries the ZDL bounds quantity min(1), unitPrice min(0), cascaded to items
     private fun inputWith(quantity: Int, unitPrice: Double) = StartOrderCheckoutInputDTO(
         customerId = "CUST-001", customerEmail = "customer01@example.com", paymentMethodId = "pm_card_visa",
         currency = "EUR",
@@ -90,7 +91,7 @@ class OrdersCheckoutApiControllerTest {
     )
 
     private fun violations(dto: StartOrderCheckoutInputDTO): Set<String> =
-        jakarta.validation.Validation.buildDefaultValidatorFactory().use { f ->
+        Validation.buildDefaultValidatorFactory().use { f ->
             f.validator.validate(dto).map { it.propertyPath.toString() }.toSet()
         }
 
