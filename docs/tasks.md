@@ -141,7 +141,7 @@ review: [ ]
       test data: data.sql C-02, data.sql C-03, data.sql C-23
       tests: InventoryServiceTest
       done: claude-sonnet sonnet
-- [ ] T-70 bounded AFK confirmOrder rejections: a CANCELLED order emits OrderConfirmationRejected (ORDER_CANCELLED) without calling inventory; NOT_HELD emits OrderConfirmationRejected (STOCK_NOT_HELD) and the order stays CREATED; rejectedAt from the Clock
+- [/] T-70 bounded AFK confirmOrder rejections: a CANCELLED order emits OrderConfirmationRejected (ORDER_CANCELLED) without calling inventory; NOT_HELD emits OrderConfirmationRejected (STOCK_NOT_HELD) and the order stays CREATED; rejectedAt from the Clock
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:148-164, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:101-108, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:177-183
       test data: data.sql C-02, data.sql C-22, data.sql C-23
       tests: OrdersCheckoutServiceTest
@@ -170,9 +170,10 @@ review: [ ]
 ## S8 Polish
 review: [ ]
 
-- [/] T-74 mechanical AFK startOrderCheckout validation: quantity >= 1 and unitPrice >= 0 (ZDL bounds, P-09) answer 400 before any reservation; getOrder answers 400 on an invalid id (the generated testGetOrder_400 of 0.10.1, overlay response)
+- [x] T-74 mechanical AFK startOrderCheckout validation: quantity >= 1 and unitPrice >= 0 (ZDL bounds, P-09) answer 400 before any reservation; getOrder answers 400 on an invalid id (the generated testGetOrder_400 of 0.10.1, overlay response)
       model: ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:68-69, ../arcadia-editions-modulith-api/orders-checkout-domain-model.zdl:95-99
       tests: OrdersCheckoutApiControllerTest, OrdersCheckoutApiIntegrationTest
+      done: claude-sonnet sonnet
 
 ## S9 Integrations
 review: [ ]
