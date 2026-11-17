@@ -80,8 +80,19 @@ open class FulfillmentShippingServiceImpl(
         return fulfillment
     }
 
-    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md (no-op until then)
-    override fun recordPaymentCaptured(input: RecordPaymentCapturedInput): Fulfillment? = null
+    override fun recordPaymentCaptured(input: RecordPaymentCapturedInput): Fulfillment? {
+
+        log.debug("Request recordPaymentCaptured: {}", input)
+
+        // no Fulfillment: no-op
+        val existingFulfillment = fulfillmentRepository.findByOrderId(input.orderId) ?: return null
+        // not SCHEDULED, or already recorded (redelivery): no-op, no event
+        if (existingFulfillment.status != FulfillmentStatus.SCHEDULED || existingFulfillment.paymentCapturedAt != null) {
+            return existingFulfillment
+        }
+        existingFulfillment.paymentCapturedAt = input.capturedAt
+        return fulfillmentRepository.save(existingFulfillment)
+    }
 
     // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md (no-op until then)
     override fun cancelFulfillment(input: CancelFulfillmentInput): Fulfillment? = null
