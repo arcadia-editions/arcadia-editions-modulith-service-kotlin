@@ -111,6 +111,11 @@ review: [ ]
       tests: PlaceOrderFlowVoidFailedIntegrationTest
       blocked by: T-60, T-61, T-62
       done: claude-opus opus
+- [/] T-78 mechanical AFK voidPayment tests prove what T-60 claims: assertVoidNoOp compares fields (status, failureReason, voidedAt, voidFailedAt), not the entity (Payment.equals is by id); voidPaymentRefusedTest asserts saved.failureReason and PaymentVoidFailed.reason = the void input reason (C-27); log.warn the processor's refusal reason on a refused void (ops own VOID_FAILED); voidable check as `status in listOf(AUTHORIZED, CAPTURE_FAILED)`; feat/test commit types are the orchestrator's
+      model: ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:152-161, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:243-249
+      test data: data.sql C-01, data.sql C-12, data.sql C-16, data.sql C-27
+      tests: PaymentsProcessingServiceTest
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S3.md (SHOULD FIX T-60 x2, NOTEs)
 
 ## S4 orderCancelled (capture failed, fulfillment cancelled)
 path: FulfillmentScheduled > capturePayment[PaymentCaptureFailed] > voidPayment[voided] > PaymentVoided > releaseStock > StockReleased
@@ -122,11 +127,12 @@ review: [ ]
       test data: data.sql C-21, data.sql C-25, data.sql C-26
       tests: FulfillmentShippingServiceTest, OrdersCheckoutEventsListenerMapperTest
       done: claude-sonnet sonnet
-- [/] T-65 bounded AFK Flow test capture failed: after the void and the cancellation the Fulfillment is CANCELLED and FulfillmentCancelled was emitted; the order is cancelled once
+- [x] T-65 bounded AFK Flow test capture failed: after the void and the cancellation the Fulfillment is CANCELLED and FulfillmentCancelled was emitted; the order is cancelled once
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:190-200, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:311-320
       test data: data.sql C-26
       tests: PlaceOrderFlowCaptureFailedIntegrationTest
       blocked by: T-60, T-64
+      done: claude-sonnet sonnet
 
 ## S5 orderCancelled (reservation expired, query timer)
 path: ReservationExpired (10 minutes after OrderCreated) > expireReservation > getPaymentStatus[NoPaymentResult] > StockReleased > cancelOrder
@@ -138,12 +144,13 @@ review: [ ]
       test data: data.sql C-01, data.sql C-14, data.sql C-30
       tests: PaymentsProcessingServiceTest
       done: claude-sonnet sonnet
-- [/] T-67 advanced AFK expireReservation and the timer: ReservationExpiredJob calls expireReservation instead of releaseStock; it calls getPaymentStatus and releases the RESERVED lines (RESERVATION_EXPIRED, StockReleased) only on NO_PAYMENT; no-op on STARTED or when nothing is RESERVED; rewrite reservationExpiredJob{,Twice,OncePerOrder}Test for 0.10.0 (C-30 released, C-14 kept) (replace the TODO compile stub)
+- [x] T-67 advanced AFK expireReservation and the timer: ReservationExpiredJob calls expireReservation instead of releaseStock; it calls getPaymentStatus and releases the RESERVED lines (RESERVATION_EXPIRED, StockReleased) only on NO_PAYMENT; no-op on STARTED or when nothing is RESERVED; rewrite reservationExpiredJob{,Twice,OncePerOrder}Test for 0.10.0 (C-30 released, C-14 kept) (replace the TODO compile stub)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:42-69, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:268-291, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:150-158
       test data: data.sql C-01, data.sql C-11, data.sql C-14, data.sql C-30
       tests: InventoryServiceTest
       blocked by: T-52, T-66
-- [ ] T-68 advanced AFK Flow test reservation expired: with no payment started the stock is released and the order cancelled; with a payment started (pm_card_processorNoAnswer) the timer releases nothing and payment ends the order (timeout, retries); the skipped race of baseline 1 is covered
+      done: claude-opus opus
+- [/] T-68 advanced AFK Flow test reservation expired: with no payment started the stock is released and the order cancelled; with a payment started (pm_card_processorNoAnswer) the timer releases nothing and payment ends the order (timeout, retries); the skipped race of baseline 1 is covered
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:42-69, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:268-309
       test data: data.sql C-11, data.sql C-30
       tests: PlaceOrderFlowReservationExpiredIntegrationTest
@@ -171,7 +178,7 @@ review: [ ]
       tests: OrdersCheckoutEventsListenerMapperTest, PaymentsProcessingServiceTest
       blocked by: T-60
       done: claude-sonnet sonnet
-- [ ] T-72 advanced AFK Flow test late authorization: the authorization arrives after the timer released the stock; confirmOrder rejects, the hold is voided, releaseStock and cancelOrder are no-ops, the order is cancelled once
+- [/] T-72 advanced AFK Flow test late authorization: the authorization arrives after the timer released the stock; confirmOrder rejects, the hold is voided, releaseStock and cancelOrder are no-ops, the order is cancelled once
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:148-176, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:236-266, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:299-309
       test data: data.sql C-22, data.sql C-23
       tests: PlaceOrderFlowLateAuthorizationIntegrationTest
@@ -181,11 +188,12 @@ review: [ ]
 path: PaymentCaptured > sendOrderConfirmation[failed] > NotificationDeliveryFailed > end notificationFailed
 review: [ ]
 
-- [/] T-73 bounded AFK Flow test notification failed: the e-mail provider refuses the order confirmation (fake: a refusal test hook), Notification FAILED, ends at NotificationDeliveryFailed with its type
+- [x] T-73 bounded AFK Flow test notification failed: the e-mail provider refuses the order confirmation (fake: a refusal test hook), Notification FAILED, ends at NotificationDeliveryFailed with its type
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:202-213, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:336-345
       test data: data.sql C-29
       tests: PlaceOrderFlowNotificationFailedIntegrationTest
       blocked by: T-55
+      done: claude-sonnet sonnet
 
 ## S8 Polish
 review: [x]
