@@ -159,13 +159,16 @@ open class PaymentsProcessingServiceImpl(
         val payment =
             paymentRepository.findByOrderId(input.orderId)
                 ?: throw NoSuchElementException("Payment not found for order: ${input.orderId}")
-        PaymentTransitions.ensureCanRetryPayment(payment)
+        // redelivery or stale PaymentFailed (another attempt, or the Payment already moved on): no-op, no event
+        val attempts = payment.attemptCount?.toInt() ?: 0
+        if (payment.status != PaymentStatus.FAILED || input.attemptCount?.toInt() != attempts) {
+            log.debug("retryPayment for order {} ignored: status {}, attemptCount {} vs {}", input.orderId, payment.status, attempts, input.attemptCount)
+            return payment
+        }
 
         val now = Instant.now(clock)
-        val attempts = payment.attemptCount?.toInt() ?: 0
         if (attempts < MAX_PAYMENT_ATTEMPTS) {
-            // retried: stays FAILED, the next attempt is counted here; authorizePayment runs it on PaymentRetried (T-23)
-            payment.attemptCount = (attempts + 1) as Integer
+            // retried: stays FAILED, attemptCount is never incremented here (reauthorizePayment counts it)
             val saved = paymentRepository.save(payment)
             eventPublisher.onPaymentRetried(eventsMapper.asPaymentRetried(saved).copy(retriedAt = now))
             return saved

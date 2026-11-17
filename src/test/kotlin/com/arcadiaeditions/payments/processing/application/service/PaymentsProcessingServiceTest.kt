@@ -338,6 +338,11 @@ class PaymentsProcessingServiceTest {
         events.clear()
         paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-012", attemptCount = 1 as Integer))
         events.clear()
+        // retryPayment no longer counts the attempt (reauthorizePayment will, T-57): count it here for the 2nd call
+        val failed = savedPayment("ORD-012")
+        org.junit.jupiter.api.Assertions.assertEquals(1, failed.attemptCount!!.toInt())
+        failed.attemptCount = 2 as Integer
+        paymentRepository.save(failed)
         paymentsProcessingService.authorizePayment(retriedInput("ORD-012", "CUST-012"))
 
         val saved = savedPayment("ORD-012")
@@ -391,7 +396,7 @@ class PaymentsProcessingServiceTest {
         val saved = savedPayment("ORD-012")
         org.junit.jupiter.api.Assertions.assertEquals(saved.id, payment.id)
         org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.FAILED, saved.status)
-        org.junit.jupiter.api.Assertions.assertEquals(2, saved.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(1, saved.attemptCount!!.toInt())
         org.junit.jupiter.api.Assertions.assertEquals(Instant.parse("2026-10-01T11:59:30Z"), saved.failedAt)
         org.junit.jupiter.api.Assertions.assertEquals("processor_timeout", saved.failureReason)
 
@@ -399,7 +404,7 @@ class PaymentsProcessingServiceTest {
         val event = events[0] as PaymentRetried
         org.junit.jupiter.api.Assertions.assertEquals("ORD-012", event.orderId)
         org.junit.jupiter.api.Assertions.assertEquals("CUST-012", event.customerId)
-        org.junit.jupiter.api.Assertions.assertEquals(2, event.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(1, event.attemptCount!!.toInt())
         org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, event.retriedAt)
     }
 
@@ -424,12 +429,33 @@ class PaymentsProcessingServiceTest {
     }
 
     @Test
-    fun retryPaymentInvalidTransitionTest() {
-        // C-04: ORD-004 Payment AUTHORIZED
-        org.junit.jupiter.api.Assertions.assertThrows(PaymentTransitions.InvalidStateTransitionException::class.java) {
-            paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-004", attemptCount = 1 as Integer))
-        }
+    fun retryPaymentOtherStateIsNoOpTest() {
+        // C-04: ORD-004 Payment AUTHORIZED: redelivery, no-op, no event
+        val payment = paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-004", attemptCount = 1 as Integer))
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.AUTHORIZED, payment.status)
         org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.AUTHORIZED, savedPayment("ORD-004").status)
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+    }
+
+    @Test
+    fun retryPaymentStaleAttemptCountIsNoOpTest() {
+        // C-12: Payment attempt 1; a PaymentFailed of attempt 2 (or 0) is a redelivery of another attempt
+        for (stale in listOf(0, 2, 3)) {
+            paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-012", attemptCount = stale as Integer))
+        }
+        val saved = savedPayment("ORD-012")
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.FAILED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(1, saved.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+    }
+
+    @Test
+    fun retryPaymentAlreadyExhaustedIsNoOpTest() {
+        // C-13 after retry-exhausted: a redelivered PaymentFailed finds RETRY_EXHAUSTED, no second event
+        paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-013", attemptCount = 3 as Integer))
+        events.clear()
+        paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-013", attemptCount = 3 as Integer))
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.RETRY_EXHAUSTED, savedPayment("ORD-013").status)
         org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
     }
 
