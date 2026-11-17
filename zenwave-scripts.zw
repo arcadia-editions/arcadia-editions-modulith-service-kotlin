@@ -1,5 +1,5 @@
 @import("io.zenwave360.sdk.plugins.customizations:kotlin-backend-application:2.9.0")
-@import("com.arcadiaeditions.modulith.application.arcadia-editions-modulith:service-all:0.10.0")
+@import("com.arcadiaeditions.modulith.application.arcadia-editions-modulith:service-all:0.10.1")
 config {
 
     basePackage "com.arcadiaeditions"

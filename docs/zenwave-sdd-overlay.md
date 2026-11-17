@@ -32,9 +32,10 @@ Required sibling clones: `../arcadia-editions-architecture` (ZFL), `../arcadia-e
 
 **This project reads the models from a packaged artifact:**
 
-- artifact `com.arcadiaeditions.modulith.application.arcadia-editions-modulith:service-all:0.9.0` (GitHub Packages,
-  repo id `github`), folder `com/arcadiaeditions/modulith/application/arcadia-editions-modulith/`;
-- extract: `unzip -o -q -j ~/.m2/repository/com/arcadiaeditions/modulith/application/arcadia-editions-modulith/service-all/0.9.0/service-all-0.9.0.jar 'com/arcadiaeditions/modulith/application/arcadia-editions-modulith/*' -d target/models`;
+- artifact and version: the `@import(...)` line of `zenwave-scripts.zw` (source of truth; `pom.xml`
+  `arcadia-models.version` must match), from GitHub Packages (repo id `github`), folder
+  `com/arcadiaeditions/modulith/application/arcadia-editions-modulith/`;
+- extract: `V=$(grep -o 'service-all:[^")]*' zenwave-scripts.zw | head -1 | cut -d: -f2); unzip -o -q -j ~/.m2/repository/com/arcadiaeditions/modulith/application/arcadia-editions-modulith/service-all/$V/service-all-$V.jar 'com/arcadiaeditions/modulith/application/arcadia-editions-modulith/*' -d target/models`;
 - staleness (prints nothing when in sync): `for f in ../arcadia-editions-modulith-api/*.zdl ../arcadia-editions-modulith-api/*.yml; do diff -q --strip-trailing-cr "$f" "target/models/$(basename "$f")"; done`;
 - repackage: release a new version from `arcadia-editions-architecture` CI, or locally `bash ../arcadia-editions-modulith-api/package-local-service-all.sh`, then bump the version in `zenwave-scripts.zw` and `pom.xml` (`arcadia-models.version`).
 
@@ -73,7 +74,7 @@ mkdir -p target && mvn -q -DskipTests clean compile 2>&1 | tee target/compile.lo
 # focused tests of a task (the implementer runs only these)
 mvn -q test -Dtest='TestClass'   # the task's tests:
 # full suite with integration tests and containers (once per slice review)
-# about 4 minutes; needs Docker (Testcontainers starts docker-compose: postgres, kafka). Add -Dmaven.test.failure.ignore=true
+# about 4 to 6 minutes (3:34 and 5:25 on 2026-11-17); needs Docker (Testcontainers starts docker-compose: postgres, kafka). Add -Dmaven.test.failure.ignore=true
 # to reach the failsafe ITs while unit tests still fail (baseline 2026-11-12)
 mvn -q verify
 # lint the models
