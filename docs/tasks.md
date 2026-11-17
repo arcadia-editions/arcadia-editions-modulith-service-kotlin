@@ -20,11 +20,11 @@ path: StartOrderCheckout > startOrderCheckout > reserveStock[StockReservedResult
       > capturePayment[PaymentCaptured] > recordPaymentCaptured, sendOrderConfirmation[sent] > end completed
 review: [ ]
 
-- [ ] T-52 advanced AFK authorizePayment: commit AUTHORIZATION_REQUESTED (attemptCount 1) in its own transaction before calling the processor, so a call in flight counts as started for getPaymentStatus; a processor call longer than 30 s ends as FAILED with PaymentFailed (processor_timeout)
+- [/] T-52 advanced AFK authorizePayment: commit AUTHORIZATION_REQUESTED (attemptCount 1) in its own transaction before calling the processor, so a call in flight counts as started for getPaymentStatus; a processor call longer than 30 s ends as FAILED with PaymentFailed (processor_timeout)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:42-69, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:107-122, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:119-128
       test data: data.sql C-01, data/jpa/Payment/1.json
       tests: PaymentsProcessingServiceTest
-- [ ] T-53 bounded AFK recordPaymentCaptured: on PaymentCaptured set Fulfillment.paymentCapturedAt (SCHEDULED, no state change, no event); no-op when no Fulfillment exists or it is already set (replace the no-op compile stub)
+- [/] T-53 bounded AFK recordPaymentCaptured: on PaymentCaptured set Fulfillment.paymentCapturedAt (SCHEDULED, no state change, no event); no-op when no Fulfillment exists or it is already set (replace the no-op compile stub)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:215-221, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:105-110
       test data: data.sql C-05, data.sql C-06, data.sql C-24
       tests: FulfillmentShippingServiceTest, PaymentsProcessingEventsListenerMapperTest
@@ -74,7 +74,7 @@ review: [ ]
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:236-252, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:152-161, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:243-249
       test data: data.sql C-01, data.sql C-10, data.sql C-12, data.sql C-16, data.sql C-17, data.sql C-27
       tests: PaymentsProcessingServiceTest
-- [ ] T-61 mechanical AFK releaseStock on PaymentVoidFailed (listener and mapper already wired): reason PAYMENT_VOID_FAILED from a CONFIRMED reservation, sold back to available; listener mapper test
+- [/] T-61 mechanical AFK releaseStock on PaymentVoidFailed (listener and mapper already wired): reason PAYMENT_VOID_FAILED from a CONFIRMED reservation, sold back to available; listener mapper test
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:254-266, ../arcadia-editions-modulith-api/catalog-inventory-domain-model.zdl:142-148
       test data: data.sql C-27, data.sql C-28
       tests: InventoryServiceTest, PaymentsProcessingEventsListenerMapperTest
