@@ -31,4 +31,9 @@ class PaymentsProcessingEventsListener(private val inventoryService: InventorySe
     fun onPaymentVoided(event: com.arcadiaeditions.payments.processing.domain.event.PaymentVoided) {
         inventoryService.releaseStock(mapper.asReleaseStockInput(event))
     }
+
+    @ApplicationModuleListener
+    fun onPaymentVoidFailed(event: com.arcadiaeditions.payments.processing.domain.event.PaymentVoidFailed) {
+        inventoryService.releaseStock(mapper.asReleaseStockInput(event))
+    }
 }

@@ -257,7 +257,7 @@ class PaymentsProcessingServiceTest {
         org.junit.jupiter.api.Assertions.assertTrue(events.single() is PaymentFailed)
 
         events.clear()
-        paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-012"))
+        paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-012", attemptCount = 1 as Integer))
         events.clear()
         paymentsProcessingService.authorizePayment(retriedInput("ORD-012", "CUST-012"))
 
@@ -306,7 +306,7 @@ class PaymentsProcessingServiceTest {
         // C-12: ORD-012 Payment FAILED (attempt 1 of 3), PaymentFailed emitted
         val before = paymentRepository.findAll().size
 
-        val payment = paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-012"))
+        val payment = paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-012", attemptCount = 1 as Integer))
 
         org.junit.jupiter.api.Assertions.assertEquals(before, paymentRepository.findAll().size)
         val saved = savedPayment("ORD-012")
@@ -327,7 +327,7 @@ class PaymentsProcessingServiceTest {
     @Test
     fun retryPaymentExhaustedTest() {
         // C-13: ORD-013 Payment FAILED at the retry limit (attempt 3, A-03)
-        val payment = paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-013"))
+        val payment = paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-013", attemptCount = 3 as Integer))
 
         val saved = savedPayment("ORD-013")
         org.junit.jupiter.api.Assertions.assertEquals(saved.id, payment.id)
@@ -348,7 +348,7 @@ class PaymentsProcessingServiceTest {
     fun retryPaymentInvalidTransitionTest() {
         // C-04: ORD-004 Payment AUTHORIZED
         org.junit.jupiter.api.Assertions.assertThrows(PaymentTransitions.InvalidStateTransitionException::class.java) {
-            paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-004"))
+            paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-004", attemptCount = 1 as Integer))
         }
         org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.AUTHORIZED, savedPayment("ORD-004").status)
         org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
@@ -357,7 +357,7 @@ class PaymentsProcessingServiceTest {
     @Test
     fun retryPaymentNotFoundTest() {
         org.junit.jupiter.api.Assertions.assertThrows(NoSuchElementException::class.java) {
-            paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-MISSING"))
+            paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-MISSING", attemptCount = 1 as Integer))
         }
         org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
     }
@@ -501,7 +501,7 @@ class PaymentsProcessingServiceTest {
         val payment =
             paymentsProcessingService.voidPayment(VoidPaymentInput(orderId = "ORD-016", reason = "fulfillment_failed"))
 
-        org.junit.jupiter.api.Assertions.assertEquals(savedPayment("ORD-016").id, payment.id)
+        org.junit.jupiter.api.Assertions.assertEquals(savedPayment("ORD-016").id, payment!!.id)
         org.junit.jupiter.api.Assertions.assertEquals(
             Instant.parse("2026-10-01T11:15:30Z"),
             savedPayment("ORD-016").authorizedAt,
@@ -540,7 +540,7 @@ class PaymentsProcessingServiceTest {
             paymentsProcessingService.voidPayment(VoidPaymentInput(orderId = "ORD-010", reason = "warehouse_damage"))
 
         val saved = savedPayment("ORD-010")
-        org.junit.jupiter.api.Assertions.assertEquals(saved.id, payment.id)
+        org.junit.jupiter.api.Assertions.assertEquals(saved.id, payment!!.id)
         org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.VOIDED, saved.status)
         org.junit.jupiter.api.Assertions.assertEquals(Instant.parse("2026-10-01T10:15:00Z"), saved.voidedAt)
         org.junit.jupiter.api.Assertions.assertEquals("fulfillment_failed", saved.failureReason)

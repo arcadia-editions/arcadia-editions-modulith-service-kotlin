@@ -26,6 +26,7 @@ repositories must be cloned next to this one.
 | Model gap proposals | `docs/proposals/` |
 | Test data and scenario matrix | `src/test/resources/data.sql` (header: scenario and coverage matrices, chains `C-01`..`C-21`, assumptions `A-01`..`A-08`, the fixed test "now" `2026-10-01T12:00:00Z` read by tests through a fixed `Clock`) and `src/test/resources/data/jpa/<Entity>/<n>.json` |
 | Generation script | `zenwave-scripts.zw` (projects generated with ZenWave SDK) |
+| Protected files | root `ModuleMetadata.kt` (removed, T-36); `common/mappers/BaseMapper.kt` (`@NamedInterface("mappers")`); every `*Repository.kt` and its in-memory twin (custom finders); `OrdersCheckoutApiIntegrationTest`, `DockerComposeInitializer`, `data.sql` and fixtures (hand-written) |
 
 Required sibling clones: `../arcadia-editions-architecture` (ZFL), `../arcadia-editions-modulith-api` (ZDL, OpenAPI).
 
@@ -64,8 +65,9 @@ Required sibling clones: `../arcadia-editions-architecture` (ZFL), `../arcadia-e
 ```bash
 # JDK and tools
 export JAVA_HOME=$HOME/.sdkman/candidates/java/current   # JDK 25; no mvnw: Maven from PATH
-# regenerate after a model change (the person runs it; never the orchestrator or its workers):
-# run each plugin of zenwave-scripts.zw (IDE play button, or the `jbang zw -p` command each one shows), with --force
+# regenerate after a model change: a HITL step, by the person or assisted by zenwave-regenerate (scratch worktree,
+# --force there, merge only what the change adds; never the Protected files). Never the orchestrator or its workers.
+# The 8 plugins of zenwave-scripts.zw (`jbang zw -f -p <Plugin> ...`); kotlin-backend-application 2.9.0-SNAPSHOT until released
 # compile, and collect MapStruct warnings
 mkdir -p target && mvn -q -DskipTests clean compile 2>&1 | tee target/compile.log
 # focused tests of a task (the implementer runs only these)
@@ -88,11 +90,8 @@ The orchestrator gives the workers the focused command (with the task's `tests:`
 - Decisions already taken that the models don't show: `../arcadia-editions-architecture/docs/case-study-decisions.md`, `docs/proposals/` (P-01 superseded by reauthorizePayment; P-02, P-05..P-08 accepted 2026-11-17)
 - Known lint warnings: none (2026-11-17)
 
-## Known failing tests at the baseline (2026-11-12)
+## Known failing tests at the baseline (2026-11-17, models 0.10.0)
 
 | Test | Cause | Fixed by |
 |---|---|---|
-| `ArchitectureTest.respectsLayersForHexagonalArchitecture`, `.respectsOnionArchitecture` | archetype rule for one layout; modules mix layouts, cross-module event types | T-02 |
-| `OrdersCheckoutApiControllerTest.startOrderCheckoutTest`, `.getOrderTest` | startOrderCheckout unimplemented (null orderId); getOrder with id 0 | T-06 |
-| `OrdersCheckoutApiIntegrationTest.testStartOrderCheckout_201`, `.testGetOrder_200`, `.testGetOrder_400` | web/service not implemented | T-06 |
-| `*RepositoryIntegrationTest.updateTest` (flaky, any entity with an `Instant`) | asserts `Instant.now()` against the value read back at DB precision | T-03 |
+| `PaymentsProcessingServiceTest.voidPaymentFromFailedTest`, `.voidPaymentFromAuthorizationRequestedTest` | assert the old void from `FAILED` / `AUTHORIZATION_REQUESTED`; 0.10.0 narrows `voidPayment` to `[AUTHORIZED, CAPTURE_FAILED]`, anything else a no-op (P-06, P-08) | the voidPayment task of the board |

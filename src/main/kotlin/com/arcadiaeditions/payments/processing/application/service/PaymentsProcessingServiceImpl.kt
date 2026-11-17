@@ -213,4 +213,14 @@ open class PaymentsProcessingServiceImpl(
         eventPublisher.onPaymentVoided(eventsMapper.asPaymentVoided(saved))
         return saved
     }
+
+    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md (PaymentRetried still reaches authorizePayment, P-01 D, until then)
+    override fun reauthorizePayment(input: ReauthorizePaymentInput): Payment {
+        TODO("reauthorizePayment: " + input.orderId)
+    }
+
+    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md
+    override fun getPaymentStatus(input: GetPaymentStatusInput): GetPaymentStatusResult {
+        TODO("getPaymentStatus: " + input.orderId)
+    }
 }

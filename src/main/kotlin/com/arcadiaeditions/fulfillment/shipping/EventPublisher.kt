@@ -10,4 +10,6 @@ interface EventPublisher {
     fun onFulfillmentReadyToShip(event: FulfillmentReadyToShip)
 
     fun onFulfillmentFailed(event: FulfillmentFailed)
+
+    fun onFulfillmentCancelled(event: FulfillmentCancelled)
 }

@@ -21,4 +21,11 @@ class OrdersCheckoutEventsListener(private val paymentsProcessingService: Paymen
     fun onOrderCreated(event: com.arcadiaeditions.orders.checkout.core.domain.events.OrderCreated) {
         paymentsProcessingService.authorizePayment(mapper.asAuthorizePaymentInput(event))
     }
+
+    @ApplicationModuleListener
+    fun onOrderConfirmationRejected(
+        event: com.arcadiaeditions.orders.checkout.core.domain.events.OrderConfirmationRejected
+    ) {
+        paymentsProcessingService.voidPayment(mapper.asVoidPaymentInput(event))
+    }
 }

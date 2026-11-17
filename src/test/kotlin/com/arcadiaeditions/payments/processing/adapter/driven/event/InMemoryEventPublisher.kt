@@ -43,4 +43,8 @@ class InMemoryEventPublisher : EventPublisher {
     override fun onPaymentVoided(event: PaymentVoided) {
         events.add(event)
     }
+
+    override fun onPaymentVoidFailed(event: PaymentVoidFailed) {
+        events.add(event)
+    }
 }

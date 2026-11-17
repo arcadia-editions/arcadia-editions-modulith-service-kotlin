@@ -20,4 +20,9 @@ class OrdersCheckoutEventsListener(private val fulfillmentShippingService: Fulfi
     fun onOrderConfirmed(event: com.arcadiaeditions.orders.checkout.core.domain.events.OrderConfirmed) {
         fulfillmentShippingService.scheduleFulfillment(mapper.asScheduleFulfillmentInput(event))
     }
+
+    @ApplicationModuleListener
+    fun onOrderCancelled(event: com.arcadiaeditions.orders.checkout.core.domain.events.OrderCancelled) {
+        fulfillmentShippingService.cancelFulfillment(mapper.asCancelFulfillmentInput(event))
+    }
 }

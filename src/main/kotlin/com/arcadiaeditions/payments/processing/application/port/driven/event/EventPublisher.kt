@@ -21,4 +21,6 @@ interface EventPublisher {
     fun onPaymentCaptured(event: PaymentCaptured)
 
     fun onPaymentVoided(event: PaymentVoided)
+
+    fun onPaymentVoidFailed(event: PaymentVoidFailed)
 }

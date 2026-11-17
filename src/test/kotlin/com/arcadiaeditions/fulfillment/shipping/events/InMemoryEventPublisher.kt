@@ -23,4 +23,8 @@ class InMemoryEventPublisher : EventPublisher {
     override fun onFulfillmentFailed(event: FulfillmentFailed) {
         events.add(event)
     }
+
+    override fun onFulfillmentCancelled(event: FulfillmentCancelled) {
+        events.add(event)
+    }
 }

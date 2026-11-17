@@ -79,4 +79,10 @@ open class FulfillmentShippingServiceImpl(
         eventPublisher.onFulfillmentReadyToShip(eventsMapper.asFulfillmentReadyToShip(fulfillment))
         return fulfillment
     }
+
+    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md (no-op until then)
+    override fun recordPaymentCaptured(input: RecordPaymentCapturedInput): Fulfillment? = null
+
+    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md (no-op until then)
+    override fun cancelFulfillment(input: CancelFulfillmentInput): Fulfillment? = null
 }

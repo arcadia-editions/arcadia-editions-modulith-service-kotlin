@@ -17,4 +17,9 @@ interface OrdersCheckoutEventsListenerMapper {
     fun asAuthorizePaymentInput(
         event: com.arcadiaeditions.orders.checkout.core.domain.events.OrderCreated
     ): com.arcadiaeditions.payments.processing.application.port.driving.dto.AuthorizePaymentInput
+
+    /** Add `@Mapping` here when MapStruct cannot infer the conversion. */
+    fun asVoidPaymentInput(
+        event: com.arcadiaeditions.orders.checkout.core.domain.events.OrderConfirmationRejected
+    ): com.arcadiaeditions.payments.processing.application.port.driving.dto.VoidPaymentInput
 }

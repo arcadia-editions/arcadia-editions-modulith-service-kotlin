@@ -17,4 +17,9 @@ interface OrdersCheckoutEventsListenerMapper {
     fun asScheduleFulfillmentInput(
         event: com.arcadiaeditions.orders.checkout.core.domain.events.OrderConfirmed
     ): com.arcadiaeditions.fulfillment.shipping.dtos.ScheduleFulfillmentInput
+
+    /** Add `@Mapping` here when MapStruct cannot infer the conversion. */
+    fun asCancelFulfillmentInput(
+        event: com.arcadiaeditions.orders.checkout.core.domain.events.OrderCancelled
+    ): com.arcadiaeditions.fulfillment.shipping.dtos.CancelFulfillmentInput
 }

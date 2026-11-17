@@ -236,7 +236,7 @@ class InventoryServiceTest {
         // C-02: ORD-002 has two RESERVED reservations (SKU-001 x2, SKU-002 x1)
         val result = inventoryService.confirmStockReservation(ConfirmStockReservationInput(orderId = "ORD-002"))
 
-        org.junit.jupiter.api.Assertions.assertEquals(2, result.size)
+        org.junit.jupiter.api.Assertions.assertEquals(ConfirmStockReservationOutcome.CONFIRMED, result.outcome)
         val saved = stockReservationRepository.findAll().filter { it.orderId == "ORD-002" }
         org.junit.jupiter.api.Assertions.assertEquals(2, saved.size)
         saved.forEach {
@@ -271,7 +271,7 @@ class InventoryServiceTest {
         val result = inventoryService.confirmStockReservation(ConfirmStockReservationInput(orderId = "ORD-003"))
 
         org.junit.jupiter.api.Assertions.assertEquals(0, confirmedEvents().size)
-        org.junit.jupiter.api.Assertions.assertTrue(result.none { it.status != ReservationStatus.CONFIRMED })
+        org.junit.jupiter.api.Assertions.assertEquals(ConfirmStockReservationOutcome.CONFIRMED, result.outcome)
         val after = stockReservationRepository.findAll().single { it.orderId == "ORD-003" }
         org.junit.jupiter.api.Assertions.assertEquals(before.confirmedAt, after.confirmedAt)
         org.junit.jupiter.api.Assertions.assertEquals(5, position("SKU-001").soldQuantity!!.toInt())

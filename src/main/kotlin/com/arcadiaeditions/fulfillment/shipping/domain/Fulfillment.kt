@@ -42,6 +42,11 @@ data class Fulfillment(
     @Column(name = "ready_at") var readyAt: Instant? = null,
     @Column(name = "failed_at") var failedAt: Instant? = null,
     @Column(name = "failure_reason") var failureReason: String? = null,
+
+    /** Set from PaymentCaptured; markReadyToShip requires it. */
+    @Column(name = "payment_captured_at") var paymentCapturedAt: Instant? = null,
+    @Column(name = "cancelled_at") var cancelledAt: Instant? = null,
+    @Column(name = "cancellation_reason") var cancellationReason: String? = null,
 ) : Serializable {
 
     companion object {

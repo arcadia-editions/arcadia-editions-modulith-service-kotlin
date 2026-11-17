@@ -26,6 +26,10 @@ class DefaultEventPublisher(private val applicationEventPublisher: ApplicationEv
         applicationEventPublisher.publishEvent(event)
     }
 
+    override fun onOrderConfirmationRejected(event: OrderConfirmationRejected) {
+        applicationEventPublisher.publishEvent(event)
+    }
+
     override fun onOrderConfirmed(event: OrderConfirmed) {
         applicationEventPublisher.publishEvent(event)
     }

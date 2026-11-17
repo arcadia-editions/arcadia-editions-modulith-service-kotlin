@@ -40,4 +40,8 @@ interface EventsMapper {
 
     @Mapping(target = "reason", source = "failureReason")
     fun asPaymentFailed(payment: Payment): com.arcadiaeditions.payments.processing.domain.event.PaymentFailed
+
+    @Mapping(target = "reason", source = "failureReason")
+    @Mapping(target = "failedAt", source = "voidFailedAt")
+    fun asPaymentVoidFailed(payment: Payment): com.arcadiaeditions.payments.processing.domain.event.PaymentVoidFailed
 }

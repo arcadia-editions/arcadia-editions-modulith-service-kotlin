@@ -40,4 +40,10 @@ interface InventoryServiceMapper {
     // output mappings
     // StockReservation-ReserveStockResult reserveStock
     fun asReserveStockResult(entity: StockReservation): ReserveStockResult
+
+    // ExpireReservationInput-StockReservation expireReservation
+    fun asStockReservation(input: ExpireReservationInput): StockReservation
+
+    @Mapping(target = "id", ignore = true)
+    fun update(@MappingTarget entity: StockReservation, input: ExpireReservationInput): StockReservation
 }

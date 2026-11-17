@@ -1,5 +1,5 @@
 @import("io.zenwave360.sdk.plugins.customizations:kotlin-backend-application:2.9.0")
-@import("com.arcadiaeditions.modulith.application.arcadia-editions-modulith:service-all:0.9.0")
+@import("com.arcadiaeditions.modulith.application.arcadia-editions-modulith:service-all:0.10.0")
 config {
 
     basePackage "com.arcadiaeditions"
@@ -23,7 +23,7 @@ config {
     implementEventListeners true
     includeEmitEventsImplementation true
 
-    --force
+    // --force removed 2026-11-17: would overwrite AFK-implemented generated-once files
 
     plugins {
         /** Generates a Backend Application from the ZDL model. (Headless Core) */

@@ -14,6 +14,8 @@ interface EventPublisher {
 
     fun onStockUnavailable(event: StockUnavailable)
 
+    fun onOrderConfirmationRejected(event: OrderConfirmationRejected)
+
     fun onOrderConfirmed(event: OrderConfirmed)
 
     fun onOrderCancelled(event: OrderCancelled)

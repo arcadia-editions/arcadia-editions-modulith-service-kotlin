@@ -14,9 +14,22 @@ interface InventoryService {
     /**  */
     fun reserveStock(input: ReserveStockInput): ReserveStockResult
 
-    /** With Events: [StockReleased]. */
+    /**
+     * The type of the triggering event sets the reason. No-op, no event, when already RELEASED.
+     *
+     * With Events: [StockReleased].
+     */
     fun releaseStock(input: ReleaseStockInput): List<StockReservation>
 
+    /**
+     * Reservation timer, 10 minutes after OrderCreated. No-op, no event, when no line of the order is RESERVED.
+     * Releases them (RESERVATION_EXPIRED) only when payments answers NO_PAYMENT; on STARTED, payment owns the end and
+     * nothing happens.
+     *
+     * With Events: [StockReleased].
+     */
+    fun expireReservation(input: ExpireReservationInput): List<StockReservation>
+
     /** With Events: [StockReservationConfirmed]. */
-    fun confirmStockReservation(input: ConfirmStockReservationInput): List<StockReservation>
+    fun confirmStockReservation(input: ConfirmStockReservationInput): ConfirmStockReservationResult
 }

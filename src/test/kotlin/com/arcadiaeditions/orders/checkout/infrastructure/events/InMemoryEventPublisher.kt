@@ -28,6 +28,10 @@ class InMemoryEventPublisher : EventPublisher {
         events.add(event)
     }
 
+    override fun onOrderConfirmationRejected(event: OrderConfirmationRejected) {
+        events.add(event)
+    }
+
     override fun onOrderConfirmed(event: OrderConfirmed) {
         events.add(event)
     }

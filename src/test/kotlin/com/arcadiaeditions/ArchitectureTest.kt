@@ -107,12 +107,14 @@ class ArchitectureTest {
          * Known and reported (P-04), not fixed here. Cause: the code layout (each producer module owns its
          * event classes, each consumer's listener imports them), not the models. Anything else fails.
          *
-         * 1. Module cycles, exactly these 4 (the flow's event choreography through event types).
+         * 1. Module cycles, exactly these 5 (the flow's event choreography through event types;
+         *    fulfillment>payments>fulfillment since 0.10.0: PaymentCaptured / FulfillmentFailed listeners).
          */
         val KNOWN_CYCLES = setOf(
             "catalog.inventory>payments>fulfillment>orders>catalog.inventory",
             "catalog.inventory>payments>orders>catalog.inventory",
             "fulfillment>orders>payments>fulfillment",
+            "fulfillment>payments>fulfillment",
             "orders>payments>orders",
         )
         /**

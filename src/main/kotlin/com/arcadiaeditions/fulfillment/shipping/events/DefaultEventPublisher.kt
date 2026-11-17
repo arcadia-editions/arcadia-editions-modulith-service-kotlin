@@ -20,4 +20,8 @@ class DefaultEventPublisher(private val applicationEventPublisher: ApplicationEv
     override fun onFulfillmentFailed(event: FulfillmentFailed) {
         applicationEventPublisher.publishEvent(event)
     }
+
+    override fun onFulfillmentCancelled(event: FulfillmentCancelled) {
+        applicationEventPublisher.publishEvent(event)
+    }
 }

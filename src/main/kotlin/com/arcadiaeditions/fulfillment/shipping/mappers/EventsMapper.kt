@@ -26,4 +26,9 @@ interface EventsMapper {
     fun asFulfillmentReadyToShip(
         fulfillment: Fulfillment
     ): com.arcadiaeditions.fulfillment.shipping.domain.events.FulfillmentReadyToShip
+
+    @Mapping(target = "reason", source = "cancellationReason")
+    fun asFulfillmentCancelled(
+        fulfillment: Fulfillment
+    ): com.arcadiaeditions.fulfillment.shipping.domain.events.FulfillmentCancelled
 }

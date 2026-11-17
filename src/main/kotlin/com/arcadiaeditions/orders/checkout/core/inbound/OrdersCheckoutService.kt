@@ -11,13 +11,26 @@ import java.time.*
 @org.jmolecules.architecture.hexagonal.PrimaryPort
 interface OrdersCheckoutService {
 
-    /** With Events: [[OrderCreated, StockUnavailable]]. */
+    /**
+     * Persists the Order only on OrderCreated; StockUnavailable answers 409 and persists nothing (P-03 A).
+     *
+     * With Events: [[OrderCreated, StockUnavailable]].
+     */
     fun startOrderCheckout(input: StartOrderCheckoutInput): Order
 
-    /** With Events: [OrderConfirmed]. */
+    /**
+     * No-op on CONFIRMED (redelivery). On CANCELLED, or when the stock is no longer held (NOT_HELD), the Order is not
+     * confirmed and OrderConfirmationRejected asks payments to void.
+     *
+     * With Events: [[OrderConfirmed, OrderConfirmationRejected]].
+     */
     fun confirmOrder(input: ConfirmOrderInput): Order
 
-    /** With Events: [OrderCancelled]. */
+    /**
+     * No-op, no event, on CANCELLED (redelivered StockReleased).
+     *
+     * With Events: [OrderCancelled].
+     */
     fun cancelOrder(input: CancelOrderInput): Order
 
     /**  */

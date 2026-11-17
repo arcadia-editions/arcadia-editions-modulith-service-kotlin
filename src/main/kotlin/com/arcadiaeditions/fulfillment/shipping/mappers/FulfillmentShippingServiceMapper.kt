@@ -23,4 +23,16 @@ interface FulfillmentShippingServiceMapper {
     @Mapping(target = "id", ignore = true)
     fun update(@MappingTarget entity: Fulfillment, input: ScheduleFulfillmentInput): Fulfillment
     // output mappings
+
+    // CancelFulfillmentInput-Fulfillment cancelFulfillment
+    fun asFulfillment(input: CancelFulfillmentInput): Fulfillment
+
+    @Mapping(target = "id", ignore = true)
+    fun update(@MappingTarget entity: Fulfillment, input: CancelFulfillmentInput): Fulfillment
+
+    // RecordPaymentCapturedInput-Fulfillment recordPaymentCaptured
+    fun asFulfillment(input: RecordPaymentCapturedInput): Fulfillment
+
+    @Mapping(target = "id", ignore = true)
+    fun update(@MappingTarget entity: Fulfillment, input: RecordPaymentCapturedInput): Fulfillment
 }

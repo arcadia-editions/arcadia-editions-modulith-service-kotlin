@@ -42,4 +42,10 @@ interface PaymentsProcessingServiceMapper {
     @Mapping(target = "id", ignore = true)
     fun update(@MappingTarget entity: Payment, input: CapturePaymentInput): Payment
     // output mappings
+
+    // ReauthorizePaymentInput-Payment reauthorizePayment
+    fun asPayment(input: ReauthorizePaymentInput): Payment
+
+    @Mapping(target = "id", ignore = true)
+    fun update(@MappingTarget entity: Payment, input: ReauthorizePaymentInput): Payment
 }

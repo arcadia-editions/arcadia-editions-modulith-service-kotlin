@@ -41,4 +41,8 @@ class DefaultEventPublisher(private val applicationEventPublisher: ApplicationEv
     override fun onPaymentVoided(event: PaymentVoided) {
         applicationEventPublisher.publishEvent(event)
     }
+
+    override fun onPaymentVoidFailed(event: PaymentVoidFailed) {
+        applicationEventPublisher.publishEvent(event)
+    }
 }

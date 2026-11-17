@@ -7,4 +7,5 @@ import java.math.*
 import java.time.*
 
 /** RetryPaymentInput. */
-@org.jmolecules.ddd.annotation.ValueObject data class RetryPaymentInput(@NotNull val orderId: String) : Serializable {}
+@org.jmolecules.ddd.annotation.ValueObject
+data class RetryPaymentInput(@NotNull val orderId: String, @NotNull val attemptCount: Integer) : Serializable {}

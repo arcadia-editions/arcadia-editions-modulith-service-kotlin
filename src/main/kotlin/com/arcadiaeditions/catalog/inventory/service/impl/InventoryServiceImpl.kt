@@ -133,7 +133,8 @@ open class InventoryServiceImpl(
         return all
     }
 
-    override fun confirmStockReservation(input: ConfirmStockReservationInput): List<StockReservation> {
+    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md (NOT_HELD outcome)
+    override fun confirmStockReservation(input: ConfirmStockReservationInput): ConfirmStockReservationResult {
 
         log.debug("Request confirmStockReservation: {}", input)
 
@@ -141,7 +142,7 @@ open class InventoryServiceImpl(
         // redelivery: only RESERVED reservations transition, CONFIRMED ones are left alone
         val toConfirm = all.filter { it.status == ReservationStatus.RESERVED }
         if (toConfirm.isEmpty()) {
-            return all
+            return confirmedResult(input.orderId, all.firstNotNullOfOrNull { it.confirmedAt })
         }
         val now = clock.instant()
         toConfirm.forEach { reservation ->
@@ -162,6 +163,18 @@ open class InventoryServiceImpl(
             event.addItems(StockReservationConfirmedItem(it.reservationId, it.sku, it.quantity))
         }
         eventPublisher.onStockReservationConfirmed(event)
-        return all
+        return confirmedResult(input.orderId, now)
+    }
+
+    private fun confirmedResult(orderId: String, confirmedAt: Instant?) =
+        ConfirmStockReservationResult(
+            outcome = ConfirmStockReservationOutcome.CONFIRMED,
+            confirmed = StockReservationConfirmedResult(orderId = orderId, confirmedAt = confirmedAt),
+            notHeld = null,
+        )
+
+    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md
+    override fun expireReservation(input: ExpireReservationInput): List<StockReservation> {
+        TODO("expireReservation: " + input.orderId)
     }
 }

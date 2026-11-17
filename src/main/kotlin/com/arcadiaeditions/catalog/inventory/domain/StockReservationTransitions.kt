@@ -36,4 +36,8 @@ object StockReservationTransitions {
             "Invalid state transition for $entityType (${naturalId ?: "id=$entityId"}): " +
                 "operation '$operation' not allowed from state $currentState, allowed states: $allowedStates"
         )
+
+    fun ensureCanExpireReservation(entity: StockReservation) {
+        require("expireReservation", entity, ReservationStatus.RESERVED)
+    }
 }

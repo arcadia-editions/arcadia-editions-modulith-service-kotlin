@@ -11,4 +11,5 @@ enum class PaymentStatus {
     CAPTURED,
     CAPTURE_FAILED,
     VOIDED,
+    VOID_FAILED,
 }

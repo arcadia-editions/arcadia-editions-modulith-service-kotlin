@@ -31,4 +31,10 @@ interface PaymentsProcessingEventsListenerMapper {
     fun asReleaseStockInput(
         event: com.arcadiaeditions.payments.processing.domain.event.PaymentVoided
     ): com.arcadiaeditions.catalog.inventory.service.dtos.ReleaseStockInput
+
+    /** The event type fixes the release reason; the event's own `reason` is the void failure text. */
+    @Mapping(target = "reason", constant = "PAYMENT_VOID_FAILED")
+    fun asReleaseStockInput(
+        event: com.arcadiaeditions.payments.processing.domain.event.PaymentVoidFailed
+    ): com.arcadiaeditions.catalog.inventory.service.dtos.ReleaseStockInput
 }

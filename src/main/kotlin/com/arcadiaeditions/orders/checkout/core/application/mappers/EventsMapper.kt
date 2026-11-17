@@ -23,4 +23,11 @@ interface EventsMapper {
     fun asOrderCancelled(order: Order): com.arcadiaeditions.orders.checkout.core.domain.events.OrderCancelled
 
     fun asStockUnavailable(order: Order): com.arcadiaeditions.orders.checkout.core.domain.events.StockUnavailable
+
+    /** reason and rejectedAt come from the command, not from the Order. */
+    @Mapping(target = "reason", ignore = true)
+    @Mapping(target = "rejectedAt", ignore = true)
+    fun asOrderConfirmationRejected(
+        order: Order
+    ): com.arcadiaeditions.orders.checkout.core.domain.events.OrderConfirmationRejected
 }

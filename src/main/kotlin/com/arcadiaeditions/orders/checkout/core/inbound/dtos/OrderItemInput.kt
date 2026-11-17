@@ -11,5 +11,5 @@ import java.time.*
 data class OrderItemInput(
     @NotNull val sku: String,
     @NotNull @Min(1) val quantity: Integer,
-    @NotNull val unitPrice: BigDecimal,
+    @NotNull @Min(0) val unitPrice: BigDecimal,
 ) : Serializable {}

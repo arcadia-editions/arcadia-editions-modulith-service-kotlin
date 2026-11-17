@@ -10,14 +10,7 @@ object PaymentTransitions {
     }
 
     fun ensureCanVoidPayment(entity: Payment) {
-        require(
-            "voidPayment",
-            entity,
-            PaymentStatus.AUTHORIZED,
-            PaymentStatus.AUTHORIZATION_REQUESTED,
-            PaymentStatus.FAILED,
-            PaymentStatus.CAPTURE_FAILED,
-        )
+        require("voidPayment", entity, PaymentStatus.AUTHORIZED, PaymentStatus.CAPTURE_FAILED)
     }
 
     private fun require(command: String, entity: Payment, vararg allowed: PaymentStatus) {
@@ -47,4 +40,12 @@ object PaymentTransitions {
             "Invalid state transition for $entityType (${naturalId ?: "id=$entityId"}): " +
                 "operation '$operation' not allowed from state $currentState, allowed states: $allowedStates"
         )
+
+    fun ensureCanAuthorizePayment(entity: Payment) {
+        require("authorizePayment", entity, PaymentStatus.AUTHORIZATION_REQUESTED)
+    }
+
+    fun ensureCanReauthorizePayment(entity: Payment) {
+        require("reauthorizePayment", entity, PaymentStatus.FAILED)
+    }
 }

@@ -32,4 +32,8 @@ object FulfillmentTransitions {
             "Invalid state transition for $entityType (${naturalId ?: "id=$entityId"}): " +
                 "operation '$operation' not allowed from state $currentState, allowed states: $allowedStates"
         )
+
+    fun ensureCanCancelFulfillment(entity: Fulfillment) {
+        require("cancelFulfillment", entity, FulfillmentStatus.SCHEDULED, FulfillmentStatus.READY_TO_SHIP)
+    }
 }

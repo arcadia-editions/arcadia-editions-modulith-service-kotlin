@@ -39,6 +39,7 @@ data class Payment(
     @Column(name = "failed_at") var failedAt: Instant? = null,
     @Column(name = "captured_at") var capturedAt: Instant? = null,
     @Column(name = "voided_at") var voidedAt: Instant? = null,
+    @Column(name = "void_failed_at") var voidFailedAt: Instant? = null,
     @Column(name = "failure_reason") var failureReason: String? = null,
 ) : Serializable {
 
