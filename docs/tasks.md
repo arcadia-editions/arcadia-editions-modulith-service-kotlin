@@ -48,11 +48,12 @@ review: [ ]
       tests: PaymentsProcessingServiceTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (FIX FIRST T-52, NOTEs)
       blocked: P-10
-- [/] T-76 mechanical AFK markReadyToShip refusal names its cause: not InvalidStateTransitionException with allowedStates [SCHEDULED] from SCHEDULED, but an exception (or message) that says the payment is not captured yet (paymentCapturedAt null); FulfillmentTransitions is generated, do not edit it; adjust the refusal assertions (FulfillmentShippingServiceTest, PlaceOrderFlowCompletedIntegrationTest)
+- [x] T-76 mechanical AFK markReadyToShip refusal names its cause: not InvalidStateTransitionException with allowedStates [SCHEDULED] from SCHEDULED, but an exception (or message) that says the payment is not captured yet (paymentCapturedAt null); FulfillmentTransitions is generated, do not edit it; adjust the refusal assertions (FulfillmentShippingServiceTest, PlaceOrderFlowCompletedIntegrationTest)
       model: ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:112-114
       test data: data.sql C-04, data.sql C-24
       tests: FulfillmentShippingServiceTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (SHOULD FIX T-54)
+      done: claude-sonnet sonnet
 
 ## S2 retry loop (retried, retry-exhausted)
 path: OrderCreated > authorizePayment[failed] > PaymentFailed > retryPayment[retried] > PaymentRetried > reauthorizePayment[authorized|declined|failed]
@@ -71,12 +72,13 @@ review: [ ]
       tests: PaymentsProcessingServiceTest
       blocked by: T-52, T-56
       done: claude-opus opus
-- [/] T-58 mechanical AFK Wire PaymentRetried to reauthorizePayment (PaymentsProcessingServiceEventsListener + asReauthorizePaymentInput, as the 0.10.0 generator writes it) and make authorizePayment creation only: drop the P-01 D branch that reuses a FAILED Payment and the placeholder mapping
+- [x] T-58 mechanical AFK Wire PaymentRetried to reauthorizePayment (PaymentsProcessingServiceEventsListener + asReauthorizePaymentInput, as the 0.10.0 generator writes it) and make authorizePayment creation only: drop the P-01 D branch that reuses a FAILED Payment and the placeholder mapping
       model: ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:119-136
       test data: data.sql C-01, data.sql C-12
       tests: PaymentsProcessingServiceTest, PaymentsProcessingServiceEventsListenerMapperTest
       blocked by: T-57
-- [ ] T-59 advanced AFK Flow tests of the retry loop: attempts counted only by authorizePayment (1) and reauthorizePayment (2, 3), a redelivered PaymentFailed or PaymentRetried with a stale attemptCount changes nothing, backoff respected (fixed Clock or a test backoff)
+      done: claude-sonnet sonnet
+- [/] T-59 advanced AFK Flow tests of the retry loop: attempts counted only by authorizePayment (1) and reauthorizePayment (2, 3), a redelivered PaymentFailed or PaymentRetried with a stale attemptCount changes nothing, backoff respected (fixed Clock or a test backoff)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:124-146, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:254-266
       test data: data.sql C-09, data.sql C-12, data.sql C-13
       tests: PlaceOrderFlowRetryIntegrationTest, PlaceOrderFlowRetryDeclinedIntegrationTest, PlaceOrderFlowRetryExhaustedIntegrationTest
@@ -87,7 +89,7 @@ path: OrderConfirmed > scheduleFulfillment[FulfillmentFailed] > voidPayment[void
       > cancelOrder > OrderCancelled > sendOrderCancelledNotification > end orderCancelled
 review: [ ]
 
-- [ ] T-60 bounded AFK voidPayment: no-op, no event, when there is no Payment or it is not AUTHORIZED or CAPTURE_FAILED (rewrite voidPaymentFromFailedTest and voidPaymentFromAuthorizationRequestedTest to assert the no-op); a refused void sets VOID_FAILED and voidFailedAt and emits PaymentVoidFailed instead of throwing (fake processor: a void-refusal test hook)
+- [/] T-60 bounded AFK voidPayment: no-op, no event, when there is no Payment or it is not AUTHORIZED or CAPTURE_FAILED (rewrite voidPaymentFromFailedTest and voidPaymentFromAuthorizationRequestedTest to assert the no-op); a refused void sets VOID_FAILED and voidFailedAt and emits PaymentVoidFailed instead of throwing (fake processor: a void-refusal test hook)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:236-252, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:152-161, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:243-249
       test data: data.sql C-01, data.sql C-10, data.sql C-12, data.sql C-16, data.sql C-17, data.sql C-27
       tests: PaymentsProcessingServiceTest
