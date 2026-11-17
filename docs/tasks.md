@@ -71,7 +71,7 @@ path: OrderConfirmed > scheduleFulfillment[FulfillmentFailed] > voidPayment[void
 review: [ ]
 
 - [ ] T-60 bounded AFK voidPayment: no-op, no event, when there is no Payment or it is not AUTHORIZED or CAPTURE_FAILED (rewrite voidPaymentFromFailedTest and voidPaymentFromAuthorizationRequestedTest to assert the no-op); a refused void sets VOID_FAILED and voidFailedAt and emits PaymentVoidFailed instead of throwing (fake processor: a void-refusal test hook)
-      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:236-252, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:152-161, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:243-252
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:236-252, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:152-161, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:243-249
       test data: data.sql C-01, data.sql C-10, data.sql C-12, data.sql C-16, data.sql C-17, data.sql C-27
       tests: PaymentsProcessingServiceTest
 - [ ] T-61 mechanical AFK releaseStock on PaymentVoidFailed (listener and mapper already wired): reason PAYMENT_VOID_FAILED from a CONFIRMED reservation, sold back to available; listener mapper test
@@ -94,7 +94,7 @@ path: FulfillmentScheduled > capturePayment[PaymentCaptureFailed] > voidPayment[
 review: [ ]
 
 - [ ] T-64 bounded AFK cancelFulfillment: on OrderCancelled, SCHEDULED or READY_TO_SHIP becomes CANCELLED with cancelledAt and cancellationReason = OrderCancelled.reason (A-11), emits FulfillmentCancelled; no-op, no event, when there is no Fulfillment or it is CANCELLED or FAILED (replace the no-op compile stub)
-      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:311-320, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:116-119, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:151-158
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:311-320, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:116-119, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:151-157
       test data: data.sql C-21, data.sql C-25, data.sql C-26
       tests: FulfillmentShippingServiceTest, OrdersCheckoutEventsListenerMapperTest
 - [ ] T-65 bounded AFK Flow test capture failed: after the void and the cancellation the Fulfillment is CANCELLED and FulfillmentCancelled was emitted; the order is cancelled once
