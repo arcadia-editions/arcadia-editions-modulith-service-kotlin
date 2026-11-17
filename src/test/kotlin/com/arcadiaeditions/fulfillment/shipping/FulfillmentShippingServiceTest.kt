@@ -126,6 +126,66 @@ class FulfillmentShippingServiceTest {
         org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, event.failedAt)
     }
 
+    // C-05: Fulfillment SCHEDULED, paymentCapturedAt null
+    @Test
+    fun recordPaymentCapturedTest() {
+        val capturedAt = java.time.Instant.parse("2026-10-01T11:13:05Z")
+
+        val fulfillment = fulfillmentShippingService.recordPaymentCaptured(RecordPaymentCapturedInput("ORD-005", capturedAt))
+
+        val saved = fulfillmentRepository.findAll().single { it.orderId == "ORD-005" }
+        org.junit.jupiter.api.Assertions.assertEquals(saved.id, fulfillment!!.id)
+        org.junit.jupiter.api.Assertions.assertEquals(capturedAt, saved.paymentCapturedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(FulfillmentStatus.SCHEDULED, saved.status)
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+    }
+
+    // C-24, C-06: paymentCapturedAt already set (redelivery): unchanged
+    @Test
+    fun recordPaymentCapturedRedeliveryTest() {
+        for (orderId in listOf("ORD-024", "ORD-006")) {
+            val before = fulfillmentRepository.findAll().single { it.orderId == orderId }.paymentCapturedAt
+            org.junit.jupiter.api.Assertions.assertNotNull(before)
+
+            fulfillmentShippingService.recordPaymentCaptured(
+                RecordPaymentCapturedInput(orderId, java.time.Instant.parse("2026-10-01T11:59:00Z"))
+            )
+
+            org.junit.jupiter.api.Assertions.assertEquals(
+                before,
+                fulfillmentRepository.findAll().single { it.orderId == orderId }.paymentCapturedAt,
+            )
+        }
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+    }
+
+    // no Fulfillment for the order: no-op
+    @Test
+    fun recordPaymentCapturedNoFulfillmentTest() {
+        val before = fulfillmentRepository.findAll().size
+
+        val fulfillment =
+            fulfillmentShippingService.recordPaymentCaptured(
+                RecordPaymentCapturedInput("ORD-999", java.time.Instant.parse("2026-10-01T11:59:00Z"))
+            )
+
+        org.junit.jupiter.api.Assertions.assertNull(fulfillment)
+        org.junit.jupiter.api.Assertions.assertEquals(before, fulfillmentRepository.findAll().size)
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+    }
+
+    // not SCHEDULED (C-10 FAILED): no-op
+    @Test
+    fun recordPaymentCapturedNotScheduledTest() {
+        fulfillmentShippingService.recordPaymentCaptured(
+            RecordPaymentCapturedInput("ORD-010", java.time.Instant.parse("2026-10-01T11:59:00Z"))
+        )
+
+        org.junit.jupiter.api.Assertions.assertNull(
+            fulfillmentRepository.findAll().single { it.orderId == "ORD-010" }.paymentCapturedAt
+        )
+    }
+
     @Test
     fun markReadyToShipTest() { // TODO: implement this test
     }
