@@ -51,7 +51,9 @@ What is not given and not in the overlay, look for in the conventional places; w
 not guess a location, and do not plan from a subset of the inputs: say which ones are missing and stop.
 
 If the overlay gives both a working copy and a packaged copy of the ZDLs, run its staleness check. Generated code
-reflects the packaged copy: a difference means "regenerate first", not tasks.
+reflects the packaged copy: a difference means "regenerate first" (`zenwave-regenerate`), not tasks. After a
+regeneration, each compile stub (`compile stub: implemented by a task of docs/tasks.md`) and each listener the
+regeneration left out (its report, or `.zenwave/handoff/<flow>/`) is a task.
 
 ## 2. The models hold
 

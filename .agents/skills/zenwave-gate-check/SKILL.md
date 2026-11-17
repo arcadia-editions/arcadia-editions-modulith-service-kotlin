@@ -28,7 +28,9 @@ wrong and how to fix it, or 👤 for what only the person can confirm.
 ### Generated code (when the project uses ZenWave SDK)
 
 6. **Up to date**: the overlay's staleness check (packaged ZDLs against the working copy) prints nothing, and the
-   last regeneration is committed (`git status` clean after it).
+   last regeneration is committed (`git status` clean after it). After a model change on existing code: the
+   curated diff (`.zenwave/handoff/<flow>/regen-reference-*.patch`, from `zenwave-regenerate` or by hand) is
+   committed, and each compile stub and each listener left out has a task on the board.
 7. **It builds**: the overlay's compile command passes.
 
 ### Test data

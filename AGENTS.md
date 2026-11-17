@@ -11,6 +11,7 @@ Where the models and the test data are, the shape of the project and its command
   session. In the AFK loop, never: write a proposal instead (`docs/proposals/`, skill `zenwave-model-gap`).
 - Generated structure is not hand-edited: when a regenerated file is wrong, the model is. Generated-once files
   (service implementations, listeners, mappers, tests) are ours to fill.
+- Regeneration is a HITL step, by the person on their own or assisted by `zenwave-regenerate`; never in the AFK loop.
 - `docs/tasks.md` is the board of the flow in progress. Once its baseline is tagged, only the orchestrator changes it.
 - AFK commits go to `afk/<flow>`, unsigned, with `AI-Agent`, `AI-Model` and `AI-Orchestrator` trailers. A person
   reviews and merges them with a signed merge.

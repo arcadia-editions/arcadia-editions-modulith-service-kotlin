@@ -12,7 +12,9 @@ generate the same shapes.
 | **Regenerated** on every run | DTOs, inputs, domain events, `*Transitions`, OpenAPI interfaces and models, AsyncAPI producers and consumer interfaces (`target/generated-sources`) | nobody: if one is wrong, the fix is in the ZDL or a generator template |
 | **Generated once**, then the developer's | `*ServiceImpl`, `*ServiceMapper`, `EventsMapper`, `*EventsListener` and `*EventsListenerMapper`, `*ConsumerService` adapters, controllers, tests, `ServicesInMemoryConfig`, in-memory repositories, `src/test/resources/data*`, `DockerComposeInitializer` | the AFK loop |
 
-A run with `--force` overwrites generated-once files too. After every regeneration, `git diff` shows what moved.
+A run with `--force` overwrites generated-once files too; a run without it skips the methods a model change adds
+to them. After a model change on existing code, regenerate in a scratch worktree and merge only what the change
+adds (`zenwave-regenerate`, or by hand). After every regeneration, `git diff` shows what moved.
 
 ## Deployment shape
 

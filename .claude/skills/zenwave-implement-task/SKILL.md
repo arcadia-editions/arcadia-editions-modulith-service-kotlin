@@ -14,6 +14,7 @@ changes in the working tree.
   (`src/test/resources/data*`). They are the baseline the person approved. Tests may build inputs inline; the
   fixtures they load are read-only.
 - Edit regenerated files (DTOs, events, `*Transitions`, anything under `target/`): the fix belongs in the model.
+- Regenerate. Regeneration is a HITL step (`zenwave-regenerate`); a compile stub it left is the task's to replace.
 - Work around a model gap in code, invent a business rule, or weaken or delete a test to pass.
 - Commit, push, or touch anything outside the working tree.
 

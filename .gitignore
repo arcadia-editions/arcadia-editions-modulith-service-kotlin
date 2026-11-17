@@ -35,3 +35,4 @@ build/
 !.zenwave/handoff/*/reports/
 !.zenwave/handoff/*/prompts/
 !.zenwave/handoff/*/docker-run-it.sh
+.zenwave/handoff/
