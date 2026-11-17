@@ -7,6 +7,7 @@ import com.arcadiaeditions.orders.checkout.core.inbound.*
 import com.arcadiaeditions.orders.checkout.core.inbound.dtos.*
 import com.arcadiaeditions.orders.checkout.core.outbound.events.*
 import com.arcadiaeditions.orders.checkout.core.outbound.jpa.*
+import com.arcadiaeditions.catalog.inventory.domain.ConfirmStockReservationOutcome
 import com.arcadiaeditions.catalog.inventory.domain.ReserveStockOutcome
 import com.arcadiaeditions.catalog.inventory.service.dtos.ConfirmStockReservationInput
 import com.arcadiaeditions.catalog.inventory.service.dtos.ReserveStockInput
@@ -90,13 +91,28 @@ open class OrdersCheckoutServiceImpl(
         if (order.status == OrderStatus.CONFIRMED) {
             return order
         }
+        // CANCELLED: rejected without calling inventory
+        if (order.status == OrderStatus.CANCELLED) {
+            return reject(order, "ORDER_CANCELLED")
+        }
         OrderTransitions.ensureCanConfirmOrder(order)
-        inventoryService.confirmStockReservation(ConfirmStockReservationInput(orderId = input.orderId))
+        val result = inventoryService.confirmStockReservation(ConfirmStockReservationInput(orderId = input.orderId))
+        if (result.outcome == ConfirmStockReservationOutcome.NOT_HELD) {
+            return reject(order, "STOCK_NOT_HELD")
+        }
         order.status = OrderStatus.CONFIRMED
         order.confirmedAt = Instant.now(clock)
         val saved = orderRepository.save(order)
         eventPublisher.onOrderConfirmed(eventsMapper.asOrderConfirmed(saved))
         return saved
+    }
+
+    private fun reject(order: Order, reason: String): Order {
+        val event = eventsMapper.asOrderConfirmationRejected(order)
+        event.reason = reason
+        event.rejectedAt = Instant.now(clock)
+        eventPublisher.onOrderConfirmationRejected(event)
+        return order
     }
 
     override fun cancelOrder(input: CancelOrderInput): Order {
