@@ -73,6 +73,17 @@ open class FulfillmentShippingServiceImpl(
             fulfillmentRepository.findByIdOrNull(id)
                 ?: throw NoSuchElementException("Fulfillment not found with id: $id")
         FulfillmentTransitions.ensureCanMarkReadyToShip(existingFulfillment)
+        // the warehouse ships only after capture: refused (no transition, no event) until paymentCapturedAt is set
+        if (existingFulfillment.paymentCapturedAt == null) {
+            throw FulfillmentTransitions.InvalidStateTransitionException(
+                entityType = "Fulfillment",
+                entityId = existingFulfillment.id,
+                naturalId = null,
+                operation = "markReadyToShip",
+                currentState = existingFulfillment.status,
+                allowedStates = listOf(FulfillmentStatus.SCHEDULED),
+            )
+        }
         existingFulfillment.status = FulfillmentStatus.READY_TO_SHIP
         val fulfillment = fulfillmentRepository.save(existingFulfillment)
         // emit events
