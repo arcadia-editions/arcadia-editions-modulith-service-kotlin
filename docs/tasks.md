@@ -234,7 +234,7 @@ review: [ ]
 
 ## S7 notificationFailed
 path: PaymentCaptured > sendOrderConfirmation[failed] > NotificationDeliveryFailed > end notificationFailed
-review: [ ]
+review: [x]
 
 - [x] T-73 bounded AFK Flow test notification failed: the e-mail provider refuses the order confirmation (fake: a refusal test hook), Notification FAILED, ends at NotificationDeliveryFailed with its type
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:202-213, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:336-345
