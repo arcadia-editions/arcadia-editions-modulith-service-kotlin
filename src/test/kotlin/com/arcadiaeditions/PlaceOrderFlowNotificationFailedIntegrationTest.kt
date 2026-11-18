@@ -1,6 +1,7 @@
 package com.arcadiaeditions
 
 import com.arcadiaeditions.catalog.inventory.domain.ReservationStatus
+import com.arcadiaeditions.catalog.inventory.repository.jpa.InventoryPositionRepository
 import com.arcadiaeditions.catalog.inventory.repository.jpa.StockReservationRepository
 import com.arcadiaeditions.config.DockerComposeInitializer
 import com.arcadiaeditions.config.ExternalizationConfiguration
@@ -64,6 +65,7 @@ class PlaceOrderFlowNotificationFailedIntegrationTest {
 
     @Autowired lateinit var ordersCheckoutService: OrdersCheckoutService
     @Autowired lateinit var orderRepository: OrderRepository
+    @Autowired lateinit var inventoryPositionRepository: InventoryPositionRepository
     @Autowired lateinit var stockReservationRepository: StockReservationRepository
     @Autowired lateinit var paymentRepository: PaymentRepository
     @Autowired lateinit var fulfillmentRepository: FulfillmentRepository
@@ -98,6 +100,11 @@ class PlaceOrderFlowNotificationFailedIntegrationTest {
 
     @Test
     fun refusedConfirmationEndsInNotificationDeliveryFailed(scenario: Scenario) {
+        // SKU-006 counters are checked relative to the position read before the checkout (T-43)
+        val before = inventoryPositionRepository.findBySku("SKU-006")!!
+        val (available, reserved, sold) =
+            listOf(before.availableQuantity, before.reservedQuantity, before.soldQuantity).map { it!!.toInt() }
+
         scenario
             .stimulate(Supplier { ordersCheckoutService.startOrderCheckout(startOrderCheckoutInput()) })
             .andWaitAtMost(timeout)
@@ -111,12 +118,12 @@ class PlaceOrderFlowNotificationFailedIntegrationTest {
                     assertThat(event.recipient).isEqualTo("customer29@example.com")
                     assertThat(event.reason).isEqualTo("smtp_rejected")
                     assertThat(event.failedAt).isEqualTo(TestClock.NOW)
-                    assertEndState(order.orderId!!)
+                    assertEndState(order.orderId!!, event.notificationId, available, reserved, sold)
                 }
             )
     }
 
-    private fun assertEndState(orderId: String) {
+    private fun assertEndState(orderId: String, eventNotificationId: String?, available: Int, reserved: Int, sold: Int) {
         val now = TestClock.NOW
         await().atMost(timeout).untilAsserted {
             assertThat(notificationRepository.findByOrderIdAndType(orderId, NotificationType.ORDER_CONFIRMATION))
@@ -131,6 +138,13 @@ class PlaceOrderFlowNotificationFailedIntegrationTest {
             .isEqualTo(ReservationStatus.CONFIRMED)
         assertThat(paymentRepository.findByOrderId(orderId)!!.status).isEqualTo(PaymentStatus.CAPTURED)
         assertThat(fulfillmentRepository.findByOrderId(orderId)!!.status).isEqualTo(FulfillmentStatus.SCHEDULED)
+        val position = inventoryPositionRepository.findBySku("SKU-006")!!
+        assertThat(listOf(position.availableQuantity, position.reservedQuantity, position.soldQuantity).map { it?.toInt() })
+            .containsExactly(available - 1, reserved, sold + 1)
+        // recordPaymentCaptured (zfl:215-221) runs apart from sendOrderConfirmation: wait for its commit
+        await().atMost(timeout).untilAsserted {
+            assertThat(fulfillmentRepository.findByOrderId(orderId)!!.paymentCapturedAt).isEqualTo(now)
+        }
 
         // notifications.consumer: sendOrderConfirmation refused -> FAILED, nothing sent
         val notification = notificationRepository.findByOrderIdAndType(orderId, NotificationType.ORDER_CONFIRMATION)!!
@@ -141,6 +155,6 @@ class PlaceOrderFlowNotificationFailedIntegrationTest {
         assertThat(notification.sentAt).isNull()
         assertThat(notification.failedAt).isEqualTo(now)
         assertThat(notification.failureReason).isEqualTo("smtp_rejected")
-        assertThat(emailSender.sent.filter { it.body.contains(orderId) }).isEmpty()
+        assertThat(eventNotificationId).isEqualTo(notification.notificationId)
     }
 }
