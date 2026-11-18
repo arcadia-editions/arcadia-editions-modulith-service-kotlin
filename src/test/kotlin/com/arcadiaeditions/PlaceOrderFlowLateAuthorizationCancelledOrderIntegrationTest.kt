@@ -61,6 +61,7 @@ import org.springframework.transaction.PlatformTransactionManager
  * - C-22 (`order-cancelled`): the order is already CANCELLED: confirmOrder rejects (ORDER_CANCELLED) without calling
  *   inventory, voidPayment voids the hold (AUTHORIZED -> VOIDED), releaseStock is a no-op on the RELEASED stock (no
  *   StockReleased), so cancelOrder never runs again: the order stays cancelled once, by the timer.
+ * (C-23 is in PlaceOrderFlowLateAuthorizationStockNotHeldIntegrationTest.)
  * - C-23 (`stock-not-held`): the order is still CREATED (the timer's StockReleased not handled yet): confirmStockReservation
  *   answers NOT_HELD, confirmOrder rejects (STOCK_NOT_HELD) and the order stays CREATED, the hold is voided, releaseStock
  *   is a no-op. The timer's pending StockReleased then cancels the order once (RESERVATION_EXPIRED, one e-mail); its
@@ -84,7 +85,7 @@ import org.springframework.transaction.PlatformTransactionManager
 // T-43: no resubmitIncompletePublications tick: its first run, right after startup, resubmits this test's in-flight
 // publications and the listener runs twice (seen: two STOCK_UNAVAILABLE notifications for one order)
 @MockitoBean(types = [ExternalizationConfiguration::class])
-class PlaceOrderFlowLateAuthorizationIntegrationTest {
+class PlaceOrderFlowLateAuthorizationCancelledOrderIntegrationTest {
 
     @Autowired lateinit var orderRepository: OrderRepository
     @Autowired lateinit var stockReservationRepository: StockReservationRepository
@@ -127,19 +128,6 @@ class PlaceOrderFlowLateAuthorizationIntegrationTest {
     /** C-22: PaymentAuthorized as authorizePayment emitted it, after the timer released the stock and cancelled the order. */
     private fun c22PaymentAuthorized() =
         PaymentAuthorized("ORD-022", "CUST-022", BigDecimal("49.99"), "EUR", "PSP-AUTH-022", Instant.parse("2026-10-01T09:52:00Z"))
-
-    /** C-23: PaymentAuthorized as authorizePayment emitted it, after the timer released the stock. */
-    private fun c23PaymentAuthorized() =
-        PaymentAuthorized("ORD-023", "CUST-023", BigDecimal("49.99"), "EUR", "PSP-AUTH-023", Instant.parse("2026-10-01T11:58:30Z"))
-
-    /** C-23: the StockReleased the timer emitted at 11:58:10 (RES-023), whose cancelOrder has not run yet. */
-    private fun c23TimerStockReleased() =
-        StockReleased(
-            "ORD-023",
-            StockReleaseReason.RESERVATION_EXPIRED,
-            Instant.parse("2026-10-01T11:58:10Z"),
-            mutableListOf(StockReleasedItem("RES-023", "SKU-001", 1 as Integer)),
-        )
 
     @Test
     fun lateAuthorizationForCancelledOrderIsRejectedAndVoidedAndTheOrderStaysCancelledOnce(scenario: Scenario) {
@@ -200,89 +188,6 @@ class PlaceOrderFlowLateAuthorizationIntegrationTest {
         assertThat(emailSender.sent.filter { it.body.contains(orderId) }).isEmpty()
     }
 
-    @Test
-    fun lateAuthorizationAfterStockReleasedIsRejectedAndVoidedAndTheOrderIsCancelledOnce(scenario: Scenario) {
-        val orderId = "ORD-023"
-        val now = TestClock.NOW
-        val order = orderRepository.findByOrderId(orderId)!!
-        assertThat(order.status).isEqualTo(OrderStatus.CREATED)
-        val reservation = stockReservationRepository.findByOrderId(orderId).single()
-        assertThat(reservation.status).isEqualTo(ReservationStatus.RELEASED)
-        assertThat(paymentRepository.findByOrderId(orderId)!!.status).isEqualTo(PaymentStatus.AUTHORIZED)
-        val position = inventoryPositionRepository.findBySku("SKU-001")!!
-        val mark = events.mark()
-
-        scenario
-            .publish(c23PaymentAuthorized())
-            .andWaitAtMost(timeout)
-            .andWaitForEventOfType(PaymentVoided::class.java)
-            .matching(Predicate { it.orderId == orderId })
-            .toArriveAndVerify(
-                Consumer { event: PaymentVoided ->
-                    assertThat(event.customerId).isEqualTo("CUST-023")
-                    assertThat(event.providerReference).isEqualTo("PSP-AUTH-023")
-                    assertThat(event.voidedAt).isEqualTo(now)
-                }
-            )
-        awaitCompleted(mark, PaymentVoided::class.java, Targets.RELEASE_ON_VOIDED) { it.orderId == orderId }
-
-        // orders.checkout: confirmStockReservation NOT_HELD -> exactly one OrderConfirmationRejected STOCK_NOT_HELD;
-        // the order stays CREATED, not confirmed
-        val rejected = events.since(mark, OrderConfirmationRejected::class.java, Targets.VOID_PAYMENT) { it.orderId == orderId }
-        assertThat(rejected).hasSize(1)
-        assertThat(rejected.single().reason).isEqualTo("STOCK_NOT_HELD")
-        assertThat(rejected.single().customerId).isEqualTo("CUST-023")
-        assertThat(rejected.single().rejectedAt).isEqualTo(now)
-        assertThat(events.since(mark, OrderConfirmed::class.java, RetryLoopTargets.ANY) { it.orderId == orderId }).isEmpty()
-        val rejectedOrder = orderRepository.findByOrderId(orderId)!!
-        assertThat(rejectedOrder.version).isEqualTo(order.version)
-        assertThat(rejectedOrder.status).isEqualTo(OrderStatus.CREATED)
-        assertThat(rejectedOrder.confirmedAt).isNull()
-        assertThat(rejectedOrder.cancelledAt).isNull()
-
-        // payments.processing: voidPayment from AUTHORIZED -> VOIDED, exactly one PaymentVoided
-        assertThat(events.since(mark, PaymentVoided::class.java, Targets.RELEASE_ON_VOIDED) { it.orderId == orderId }).hasSize(1)
-        assertVoided(orderId, "STOCK_NOT_HELD", Instant.parse("2026-10-01T11:58:30Z"))
-
-        // catalog.inventory: confirmStockReservation NOT_HELD and releaseStock change nothing: no StockReleased of their own
-        assertThat(events.since(mark, StockReleased::class.java, RetryLoopTargets.ANY) { it.orderId == orderId }).isEmpty()
-        assertThat(events.since(mark, OrderCancelled::class.java, RetryLoopTargets.ANY) { it.orderId == orderId }).isEmpty()
-        assertReservationUnchanged(orderId, reservation.version, Instant.parse("2026-10-01T11:58:10Z"))
-        assertPositionUnchanged(position.version, position.availableQuantity, position.reservedQuantity, position.soldQuantity)
-
-        // the timer's StockReleased is handled now: cancelOrder cancels the order (RESERVATION_EXPIRED), once
-        val timerReleased = events.mark()
-        scenario
-            .publish(c23TimerStockReleased())
-            .andWaitAtMost(timeout)
-            .andWaitForEventOfType(OrderCancelledNotificationSent::class.java)
-            .matching(Predicate { it.orderId == orderId })
-            .toArriveAndVerify(
-                Consumer { event: OrderCancelledNotificationSent ->
-                    assertThat(event.customerId).isEqualTo("CUST-023")
-                    assertThat(event.reason).isEqualTo("RESERVATION_EXPIRED")
-                    assertThat(event.channel).isEqualTo(NotificationChannel.EMAIL)
-                    assertThat(event.recipient).isEqualTo("customer23@example.com")
-                    assertThat(event.sentAt).isEqualTo(now)
-                }
-            )
-        val cancelled = events.since(timerReleased, OrderCancelled::class.java, RetryLoopTargets.ANY) { it.orderId == orderId }
-        assertThat(cancelled.distinct()).hasSize(1)
-        assertThat(cancelled.first().reason).isEqualTo("RESERVATION_EXPIRED")
-        val cancelledOrder = orderRepository.findByOrderId(orderId)!!
-        assertCancelledOnce(orderId, now)
-
-        // redelivery of the timer's StockReleased: cancelOrder is a no-op, no OrderCancelled, nothing changed
-        val redelivered = events.mark()
-        events.redeliver(c23TimerStockReleased(), timeout)
-        assertThat(events.since(redelivered, OrderCancelled::class.java, RetryLoopTargets.ANY) { it.orderId == orderId }).isEmpty()
-        assertThat(orderRepository.findByOrderId(orderId)!!.version).isEqualTo(cancelledOrder.version)
-        assertCancelledOnce(orderId, now)
-        assertReservationUnchanged(orderId, reservation.version, Instant.parse("2026-10-01T11:58:10Z"))
-        assertPositionUnchanged(position.version, position.availableQuantity, position.reservedQuantity, position.soldQuantity)
-        assertThat(paymentRepository.findByOrderId(orderId)!!.status).isEqualTo(PaymentStatus.VOIDED)
-    }
-
     /** Waits until the publication of [type] to the listener [target] (published after [mark]) is completed. */
     private fun <T : Any> awaitCompleted(mark: Set<UUID>, type: Class<T>, target: String, matching: (T) -> Boolean) {
         await().atMost(timeout).until {
@@ -328,27 +233,5 @@ class PlaceOrderFlowLateAuthorizationIntegrationTest {
         assertThat(position.version).isEqualTo(version)
         assertThat(listOf(position.availableQuantity, position.reservedQuantity, position.soldQuantity))
             .containsExactly(available, reserved, sold)
-    }
-
-    /** orders.checkout and notifications.consumer: CANCELLED by the timer's StockReleased, one notification, one e-mail. */
-    private fun assertCancelledOnce(orderId: String, now: Instant) {
-        await().atMost(timeout).untilAsserted {
-            assertThat(notificationRepository.findByOrderIdAndType(orderId, NotificationType.ORDER_CANCELLED)).isNotNull()
-        }
-        val order = orderRepository.findByOrderId(orderId)!!
-        assertThat(order.status).isEqualTo(OrderStatus.CANCELLED)
-        assertThat(order.customerId).isEqualTo("CUST-023")
-        assertThat(order.createdAt).isEqualTo(Instant.parse("2026-10-01T11:48:00Z"))
-        assertThat(order.cancelledAt).isEqualTo(now)
-        assertThat(order.cancellationReason).isEqualTo("RESERVATION_EXPIRED")
-        assertThat(order.confirmedAt).isNull()
-        assertThat(fulfillmentRepository.findByOrderId(orderId)).isNull()
-        val notification = notificationRepository.findByOrderIdAndType(orderId, NotificationType.ORDER_CANCELLED)!!
-        assertThat(notification.status).isEqualTo(NotificationStatus.SENT)
-        assertThat(notification.channel).isEqualTo(NotificationChannel.EMAIL)
-        assertThat(notification.recipient).isEqualTo("customer23@example.com")
-        assertThat(notification.sentAt).isEqualTo(now)
-        assertThat(notificationRepository.findByOrderIdAndType(orderId, NotificationType.ORDER_CONFIRMATION)).isNull()
-        assertThat(emailSender.sent.filter { it.body.contains(orderId) }).hasSize(1)
     }
 }
