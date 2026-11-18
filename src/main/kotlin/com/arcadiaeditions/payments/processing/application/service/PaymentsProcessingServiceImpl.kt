@@ -157,13 +157,15 @@ open class PaymentsProcessingServiceImpl(
         return saved
     }
 
-    override fun retryPayment(input: RetryPaymentInput): Payment {
+    override fun retryPayment(input: RetryPaymentInput): Payment? {
 
         log.debug("Request retryPayment: {}", input)
 
-        val payment =
-            paymentRepository.findByOrderId(input.orderId)
-                ?: throw NoSuchElementException("Payment not found for order: ${input.orderId}")
+        val payment = paymentRepository.findByOrderId(input.orderId)
+        if (payment == null) {
+            log.debug("retryPayment for order {} ignored: no Payment", input.orderId)
+            return null
+        }
         // redelivery or stale PaymentFailed (another attempt, or the Payment already moved on): no-op, no event
         val attempts = attemptsOf(payment)
         if (payment.status != PaymentStatus.FAILED || input.attemptCount.toInt() != attempts) {
@@ -267,15 +269,17 @@ open class PaymentsProcessingServiceImpl(
         return saved
     }
 
-    override fun reauthorizePayment(input: ReauthorizePaymentInput): Payment {
+    override fun reauthorizePayment(input: ReauthorizePaymentInput): Payment? {
 
         log.debug("Request reauthorizePayment: {}", input)
 
         // T-80: the caller's transaction never holds a copy of the Payment. It is read and claimed in transactions of
         // their own, so the outcome saved below merges the committed attempt, not a stale copy (optimistic lock)
-        val payment =
-            newTransaction.execute { paymentRepository.findByOrderId(input.orderId) }
-                ?: throw NoSuchElementException("Payment not found for order: ${input.orderId}")
+        val payment = newTransaction.execute { paymentRepository.findByOrderId(input.orderId) }
+        if (payment == null) {
+            log.debug("reauthorizePayment for order {} ignored: no Payment", input.orderId)
+            return null
+        }
         if (!isAttemptToRetry(payment, input)) return payment
 
         // backoff before the next attempt, while the Payment is still FAILED

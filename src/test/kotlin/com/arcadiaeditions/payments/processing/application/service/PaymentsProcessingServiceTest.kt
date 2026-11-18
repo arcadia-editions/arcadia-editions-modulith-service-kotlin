@@ -357,9 +357,10 @@ class PaymentsProcessingServiceTest {
 
     @Test
     fun retryPaymentNotFoundTest() {
-        org.junit.jupiter.api.Assertions.assertThrows(NoSuchElementException::class.java) {
+        // P-12 A: no Payment for the order is a no-op, as voidPayment
+        org.junit.jupiter.api.Assertions.assertNull(
             paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-MISSING", attemptCount = 1 as Integer))
-        }
+        )
         org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
     }
 
@@ -648,9 +649,7 @@ class PaymentsProcessingServiceTest {
 
     @Test
     fun reauthorizePaymentNotFoundTest() {
-        org.junit.jupiter.api.Assertions.assertThrows(NoSuchElementException::class.java) {
-            paymentsProcessingService.reauthorizePayment(reauthorizeInput("ORD-MISSING", 1))
-        }
+        org.junit.jupiter.api.Assertions.assertNull(paymentsProcessingService.reauthorizePayment(reauthorizeInput("ORD-MISSING", 1)))
         org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
     }
 
