@@ -687,7 +687,10 @@ class PaymentsProcessingServiceTest {
         org.junit.jupiter.api.Assertions.assertEquals(before.id, payment!!.id)
         val saved = savedPayment(orderId)
         org.junit.jupiter.api.Assertions.assertEquals(status, saved.status)
-        org.junit.jupiter.api.Assertions.assertEquals(before, saved)
+        // Payment.equals is by id: compare the fields a void would touch
+        org.junit.jupiter.api.Assertions.assertEquals(before.failureReason, saved.failureReason)
+        org.junit.jupiter.api.Assertions.assertEquals(before.voidedAt, saved.voidedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(before.voidFailedAt, saved.voidFailedAt)
         org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
     }
 
@@ -717,9 +720,12 @@ class PaymentsProcessingServiceTest {
         org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, saved.voidFailedAt)
         org.junit.jupiter.api.Assertions.assertNull(saved.voidedAt)
         org.junit.jupiter.api.Assertions.assertEquals("PSP-AUTH-016", saved.providerReference)
+        // the void input reason (C-27), not the processor's refusal reason
+        org.junit.jupiter.api.Assertions.assertEquals("fulfillment_failed", saved.failureReason)
 
         org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
         val event = events[0] as PaymentVoidFailed
+        org.junit.jupiter.api.Assertions.assertEquals("fulfillment_failed", event.reason)
         org.junit.jupiter.api.Assertions.assertEquals("ORD-016", event.orderId)
         org.junit.jupiter.api.Assertions.assertEquals("CUST-016", event.customerId)
         org.junit.jupiter.api.Assertions.assertEquals("PSP-AUTH-016", event.providerReference)

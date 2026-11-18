@@ -232,7 +232,7 @@ open class PaymentsProcessingServiceImpl(
 
         // no Payment, or nothing to void (not AUTHORIZED or CAPTURE_FAILED: redelivery, or no hold yet): no-op, no event
         val payment = paymentRepository.findByOrderId(input.orderId)
-        if (payment == null || (payment.status != PaymentStatus.AUTHORIZED && payment.status != PaymentStatus.CAPTURE_FAILED)) {
+        if (payment == null || (payment.status !in listOf(PaymentStatus.AUTHORIZED, PaymentStatus.CAPTURE_FAILED))) {
             log.debug("voidPayment for order {} ignored: status {}", input.orderId, payment?.status)
             return payment
         }
@@ -244,6 +244,7 @@ open class PaymentsProcessingServiceImpl(
         payment.failureReason = input.reason
         if (result.outcome != PaymentProcessorOutcome.APPROVED) {
             // void-failed: left to ops, only PaymentVoidFailed (releaseStock follows)
+            log.warn("void refused for order {}: {} ({})", input.orderId, result.reason, result.outcome)
             payment.status = PaymentStatus.VOID_FAILED
             payment.voidFailedAt = Instant.now(clock)
             val saved = paymentRepository.save(payment)
