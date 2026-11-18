@@ -42,7 +42,7 @@ review: [ ]
       tests: PlaceOrderFlowCompletedIntegrationTest
       blocked by: T-52, T-54
       done: claude-opus opus
-- [ ] T-75 bounded AFK Processor exception is a failure: callProcessor maps a processor exception (not only the timeout) to FAILED + PaymentFailed with failureReason processor_error (P-10 A), for authorizePayment and reauthorizePayment; unit test with a throwing processor; one A-06 constant shared with FakePaymentProcessor; shut the processor-call executor down (@PreDestroy); fix the stale FakePaymentProcessor KDoc (pm_card_processorNoAnswer now ends FAILED after the timeout)
+- [/] T-75 bounded AFK Processor exception is a failure: callProcessor maps a processor exception (not only the timeout) to FAILED + PaymentFailed with failureReason processor_error (P-10 A), for authorizePayment and reauthorizePayment; unit test with a throwing processor; one A-06 constant shared with FakePaymentProcessor; shut the processor-call executor down (@PreDestroy); fix the stale FakePaymentProcessor KDoc (pm_card_processorNoAnswer now ends FAILED after the timeout)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:107-122, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:119-136
       test data: data.sql C-01, data.sql C-12
       tests: PaymentsProcessingServiceTest
@@ -84,11 +84,17 @@ review: [ ]
       tests: PlaceOrderFlowRetryIntegrationTest, PlaceOrderFlowRetryDeclinedIntegrationTest, PlaceOrderFlowRetryExhaustedIntegrationTest
       blocked by: T-58
       done: claude-opus opus
-- [/] T-80 advanced AFK reauthorizePayment works on JPA: do not merge a detached Payment over the one loaded in the listener transaction (load and check inside the REQUIRES_NEW block, or re-read after it), so the outcome of attempts 2 and 3 is saved without an optimistic-lock failure; a test that fails on the bug with a versioned entity (in-memory repository with @Version semantics or a JPA slice test); retryPayment and reauthorizePayment are no-ops when no Payment exists (zdl:131, :139), as voidPayment; a named fun interface for the backoff instead of a raw (Duration) -> Unit bean; drop the stale A-01 comment in saveAuthorizationOutcome; one null handling of attemptCount
+- [x] T-80 advanced AFK reauthorizePayment works on JPA: do not merge a detached Payment over the one loaded in the listener transaction (load and check inside the REQUIRES_NEW block, or re-read after it), so the outcome of attempts 2 and 3 is saved without an optimistic-lock failure; a test that fails on the bug with a versioned entity (in-memory repository with @Version semantics or a JPA slice test); a named fun interface for the backoff instead of a raw (Duration) -> Unit bean; drop the stale A-01 comment in saveAuthorizationOutcome; one null handling of attemptCount
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:138-146, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:130-145
       test data: data.sql C-12, data.sql C-13, data.sql C-14
       tests: PaymentsProcessingServiceTest
-      fixes: .zenwave/handoff/place-order-flow/reports/review-S2.md (FIX FIRST T-57, T-59; SHOULD FIX no-op; NOTEs)
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S2.md (FIX FIRST T-57, T-59; NOTEs)
+      done: claude-opus opus
+- [!] T-81 mechanical AFK retryPayment and reauthorizePayment are no-ops when no Payment exists (return null, log, no event), as voidPayment; the NotFound tests assert it
+      model: ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:131-147
+      tests: PaymentsProcessingServiceTest
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S2.md (SHOULD FIX no-op without Payment)
+      blocked: P-12
 
 ## S3 orderCancelled (void refused)
 path: OrderConfirmed > scheduleFulfillment[FulfillmentFailed] > voidPayment[void-failed] > PaymentVoidFailed > releaseStock > StockReleased
@@ -122,11 +128,12 @@ review: [ ]
       tests: PaymentsProcessingServiceTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S3.md (SHOULD FIX T-60 x2, NOTEs)
       done: claude-sonnet sonnet
-- [/] T-79 mechanical AFK Cancellation e-mail on PAYMENT_VOID_FAILED says the hold may still show until we release it (ZFL: ops release the hold by hand), not "for a few days" (the person, 2026-11-18, review S3 NOTE)
+- [x] T-79 mechanical AFK Cancellation e-mail on PAYMENT_VOID_FAILED says the hold may still show until we release it (ZFL: ops release the hold by hand), not "for a few days" (the person, 2026-11-18, review S3 NOTE)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:322-326, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:96-98
       test data: data.sql C-28
       tests: NotificationsConsumerServiceTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S3.md (NOTE T-62 wording)
+      done: claude-sonnet sonnet
 
 ## S4 orderCancelled (capture failed, fulfillment cancelled)
 path: FulfillmentScheduled > capturePayment[PaymentCaptureFailed] > voidPayment[voided] > PaymentVoided > releaseStock > StockReleased
