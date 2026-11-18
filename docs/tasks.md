@@ -122,7 +122,7 @@ review: [ ]
       tests: PaymentsProcessingServiceTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S3.md (SHOULD FIX T-60 x2, NOTEs)
       done: claude-sonnet sonnet
-- [ ] T-79 mechanical AFK Cancellation e-mail on PAYMENT_VOID_FAILED says the hold may still show until we release it (ZFL: ops release the hold by hand), not "for a few days" (the person, 2026-11-18, review S3 NOTE)
+- [/] T-79 mechanical AFK Cancellation e-mail on PAYMENT_VOID_FAILED says the hold may still show until we release it (ZFL: ops release the hold by hand), not "for a few days" (the person, 2026-11-18, review S3 NOTE)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:322-326, ../arcadia-editions-modulith-api/notifications-consumer-domain-model.zdl:96-98
       test data: data.sql C-28
       tests: NotificationsConsumerServiceTest
@@ -161,11 +161,12 @@ review: [ ]
       tests: InventoryServiceTest
       blocked by: T-52, T-66
       done: claude-opus opus
-- [/] T-68 advanced AFK Flow test reservation expired: with no payment started the stock is released and the order cancelled; with a payment started (pm_card_processorNoAnswer) the timer releases nothing and payment ends the order (timeout, retries); the skipped race of baseline 1 is covered
+- [x] T-68 advanced AFK Flow test reservation expired: with no payment started the stock is released and the order cancelled; with a payment started (pm_card_processorNoAnswer) the timer releases nothing and payment ends the order (timeout, retries); the skipped race of baseline 1 is covered
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:42-69, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:268-309
       test data: data.sql C-11, data.sql C-30
       tests: PlaceOrderFlowReservationExpiredIntegrationTest
       blocked by: T-67
+      done: claude-opus opus
 
 ## S6 orderCancelled (late authorization rejected)
 path: PaymentAuthorized (after expiry) > confirmOrder > confirmStockReservation[StockReservationNotHeldResult] or order CANCELLED
@@ -189,11 +190,12 @@ review: [ ]
       tests: OrdersCheckoutEventsListenerMapperTest, PaymentsProcessingServiceTest
       blocked by: T-60
       done: claude-sonnet sonnet
-- [/] T-72 advanced AFK Flow test late authorization: the authorization arrives after the timer released the stock; confirmOrder rejects, the hold is voided, releaseStock and cancelOrder are no-ops, the order is cancelled once
+- [x] T-72 advanced AFK Flow test late authorization: the authorization arrives after the timer released the stock; confirmOrder rejects, the hold is voided, releaseStock and cancelOrder are no-ops, the order is cancelled once
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:148-176, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:236-266, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:299-309
       test data: data.sql C-22, data.sql C-23
       tests: PlaceOrderFlowLateAuthorizationIntegrationTest
       blocked by: T-67, T-70, T-71
+      done: claude-opus opus
 
 ## S7 notificationFailed
 path: PaymentCaptured > sendOrderConfirmation[failed] > NotificationDeliveryFailed > end notificationFailed
