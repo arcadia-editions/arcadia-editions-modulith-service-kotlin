@@ -189,10 +189,11 @@ review: [ ]
       tests: PlaceOrderFlowReservationExpiredIntegrationTest
       blocked by: T-67
       done: claude-opus opus
-- [/] T-86 mechanical AFK PlaceOrderFlowReservationExpiredIntegrationTest names its listener targets for what they are: TIMER_TARGET (CatalogInventoryEventsListener.onStockReleased, the cancelOrder listener) becomes CANCEL_ORDER, shared from RetryLoopTargets as the sibling tests do; the assertion message at :340 says the release came from payment
+- [x] T-86 mechanical AFK PlaceOrderFlowReservationExpiredIntegrationTest names its listener targets for what they are: TIMER_TARGET (CatalogInventoryEventsListener.onStockReleased, the cancelOrder listener) becomes CANCEL_ORDER, shared from RetryLoopTargets as the sibling tests do; the assertion message at :340 says the release came from payment
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:268-309
       tests: PlaceOrderFlowReservationExpiredIntegrationTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S5.md (SHOULD FIX TIMER_TARGET)
+      done: claude-sonnet sonnet
 
 
 ## S6 orderCancelled (late authorization rejected)
