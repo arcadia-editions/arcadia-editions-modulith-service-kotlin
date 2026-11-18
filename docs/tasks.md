@@ -96,11 +96,12 @@ review: [ ]
       tests: PaymentsProcessingServiceTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S2.md (SHOULD FIX no-op without Payment)
       blocked: P-12 (accepted A 2026-11-18; ZDL in a later round, T-81 goes to the next board)
-- [/] T-82 mechanical AFK One Scenario test per flow-test class in the retry loop: move c12PendingPaymentFailedIsRetried... (PlaceOrderFlowRetryIntegrationTest) and c13PendingPaymentFailedAtTheLimit... (PlaceOrderFlowRetryExhaustedIntegrationTest) into classes of their own (Spring Modulith 2.0 binds the Scenario listener to the first context of a class only; @DirtiesContext(AFTER_EACH_TEST_METHOD) gives the second test a context without it); drop the duplicate @Suppress in VersionedPaymentStore.save
+- [x] T-82 mechanical AFK One Scenario test per flow-test class in the retry loop: move c12PendingPaymentFailedIsRetried... (PlaceOrderFlowRetryIntegrationTest) and c13PendingPaymentFailedAtTheLimit... (PlaceOrderFlowRetryExhaustedIntegrationTest) into classes of their own (Spring Modulith 2.0 binds the Scenario listener to the first context of a class only; @DirtiesContext(AFTER_EACH_TEST_METHOD) gives the second test a context without it); drop the duplicate @Suppress in VersionedPaymentStore.save
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:124-146
       test data: data.sql C-12, data.sql C-13
       tests: PlaceOrderFlowRetryIntegrationTest, PlaceOrderFlowRetryExhaustedIntegrationTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S2-r2.md (FIX FIRST T-59, NOTE VersionedPaymentStore)
+      done: claude-sonnet sonnet
 
 
 ## S3 orderCancelled (void refused)
@@ -210,11 +211,12 @@ review: [ ]
       tests: PlaceOrderFlowLateAuthorizationIntegrationTest
       blocked by: T-67, T-70, T-71
       done: claude-opus opus
-- [/] T-83 mechanical AFK One Scenario test per class for the late authorization: move lateAuthorizationForCancelledOrder... out of PlaceOrderFlowLateAuthorizationIntegrationTest into a class of its own (same Scenario/@DirtiesContext defect as T-82)
+- [x] T-83 mechanical AFK One Scenario test per class for the late authorization: move lateAuthorizationForCancelledOrder... out of PlaceOrderFlowLateAuthorizationIntegrationTest into a class of its own (same Scenario/@DirtiesContext defect as T-82)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:148-176
       test data: data.sql C-22, data.sql C-23
       tests: PlaceOrderFlowLateAuthorizationIntegrationTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S2-r2.md (NOTE T-72)
+      done: claude-sonnet sonnet
 
 
 ## S7 notificationFailed
