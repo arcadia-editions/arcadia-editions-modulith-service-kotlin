@@ -96,6 +96,12 @@ review: [ ]
       tests: PaymentsProcessingServiceTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S2.md (SHOULD FIX no-op without Payment)
       blocked: P-12 (accepted A 2026-11-18; ZDL in a later round, T-81 goes to the next board)
+- [/] T-82 mechanical AFK One Scenario test per flow-test class in the retry loop: move c12PendingPaymentFailedIsRetried... (PlaceOrderFlowRetryIntegrationTest) and c13PendingPaymentFailedAtTheLimit... (PlaceOrderFlowRetryExhaustedIntegrationTest) into classes of their own (Spring Modulith 2.0 binds the Scenario listener to the first context of a class only; @DirtiesContext(AFTER_EACH_TEST_METHOD) gives the second test a context without it); drop the duplicate @Suppress in VersionedPaymentStore.save
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:124-146
+      test data: data.sql C-12, data.sql C-13
+      tests: PlaceOrderFlowRetryIntegrationTest, PlaceOrderFlowRetryExhaustedIntegrationTest
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S2-r2.md (FIX FIRST T-59, NOTE VersionedPaymentStore)
+
 
 ## S3 orderCancelled (void refused)
 path: OrderConfirmed > scheduleFulfillment[FulfillmentFailed] > voidPayment[void-failed] > PaymentVoidFailed > releaseStock > StockReleased
@@ -204,6 +210,12 @@ review: [ ]
       tests: PlaceOrderFlowLateAuthorizationIntegrationTest
       blocked by: T-67, T-70, T-71
       done: claude-opus opus
+- [/] T-83 mechanical AFK One Scenario test per class for the late authorization: move lateAuthorizationForCancelledOrder... out of PlaceOrderFlowLateAuthorizationIntegrationTest into a class of its own (same Scenario/@DirtiesContext defect as T-82)
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:148-176
+      test data: data.sql C-22, data.sql C-23
+      tests: PlaceOrderFlowLateAuthorizationIntegrationTest
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S2-r2.md (NOTE T-72)
+
 
 ## S7 notificationFailed
 path: PaymentCaptured > sendOrderConfirmation[failed] > NotificationDeliveryFailed > end notificationFailed
@@ -234,3 +246,6 @@ review: [ ]
 
 - [ ] T-33 bounded HITL Choose the real payment processor, warehouse and e-mail providers and their credentials (the fakes stay for tests)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:107-122, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:202-213
+- [ ] T-84 bounded HITL Decide whether the retry backoff (Thread.sleep 5 s / 15 s) and the processor call (up to 30 s) may hold a listener thread and its DB connections (8-thread async pool, Hikari default 10): accept, add a load check, or reschedule the retry instead of sleeping (review S1 and S2 SHOULD FIX, UNCONFIRMED under load)
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:42-69, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:119-147
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md, .zenwave/handoff/place-order-flow/reports/review-S2-r2.md
