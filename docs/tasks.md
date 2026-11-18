@@ -94,7 +94,7 @@ review: [ ]
       model: ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:131-147
       tests: PaymentsProcessingServiceTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S2.md (SHOULD FIX no-op without Payment)
-      blocked: P-12
+      blocked: P-12 (accepted A 2026-11-18; ZDL in a later round, T-81 goes to the next board)
 
 ## S3 orderCancelled (void refused)
 path: OrderConfirmed > scheduleFulfillment[FulfillmentFailed] > voidPayment[void-failed] > PaymentVoidFailed > releaseStock > StockReleased
