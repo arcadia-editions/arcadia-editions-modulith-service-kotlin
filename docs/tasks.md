@@ -146,7 +146,7 @@ review: [x]
 ## S4 orderCancelled (capture failed, fulfillment cancelled)
 path: FulfillmentScheduled > capturePayment[PaymentCaptureFailed] > voidPayment[voided] > PaymentVoided > releaseStock > StockReleased
       > cancelOrder > OrderCancelled > cancelFulfillment > FulfillmentCancelled, sendOrderCancelledNotification > end orderCancelled
-review: [ ]
+review: [x]
 
 - [x] T-64 bounded AFK cancelFulfillment: on OrderCancelled, SCHEDULED or READY_TO_SHIP becomes CANCELLED with cancelledAt and cancellationReason = OrderCancelled.reason (A-11), emits FulfillmentCancelled; no-op, no event, when there is no Fulfillment or it is CANCELLED or FAILED (replace the no-op compile stub)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:311-320, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:116-119, ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:151-157
