@@ -1,7 +1,7 @@
 # PlaceOrderFlow: tasks
 
 flow: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl
-baseline:
+baseline: baseline/place-order-flow-4
 branch: afk/place-order-flow
 
 <!-- Built on 2026-11-18: the delta from baseline/place-order-flow-3 (board archived in docs/tasks/place-order-flow-baseline-3.md,
