@@ -18,7 +18,7 @@ branch: afk/place-order-flow
 path: StartOrderCheckout > startOrderCheckout > reserveStock[StockReservedResult] > OrderCreated > authorizePayment[authorized]
       > PaymentAuthorized > confirmOrder[confirmed] > confirmStockReservation > OrderConfirmed > scheduleFulfillment[FulfillmentScheduled]
       > capturePayment[PaymentCaptured] > recordPaymentCaptured, sendOrderConfirmation[sent] > end completed
-review: [ ]
+review: [x]
 
 - [x] T-52 advanced AFK authorizePayment: commit AUTHORIZATION_REQUESTED (attemptCount 1) in its own transaction before calling the processor, so a call in flight counts as started for getPaymentStatus; a processor call longer than 30 s ends as FAILED with PaymentFailed (processor_timeout)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:42-69, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:107-122, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:119-128
@@ -60,7 +60,7 @@ review: [ ]
 path: OrderCreated > authorizePayment[failed] > PaymentFailed > retryPayment[retried] > PaymentRetried > reauthorizePayment[authorized|declined|failed]
       > ... > retryPayment[retry-exhausted] > PaymentRetryExhausted > releaseStock > StockReleased > cancelOrder > OrderCancelled
       > sendOrderCancelledNotification > end orderCancelled
-review: [ ]
+review: [x]
 
 - [x] T-56 bounded AFK retryPayment: no-op, no event, unless the Payment is FAILED and input.attemptCount == Payment.attemptCount (redelivery); never increments attemptCount; retried below 3 attempts, retry-exhausted at 3
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:124-136, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:138-145
@@ -264,10 +264,12 @@ review: [x]
       done: claude-sonnet sonnet
 
 ## S9 Integrations
-review: [ ]
+review: [x]
 
-- [ ] T-33 bounded HITL Choose the real payment processor, warehouse and e-mail providers and their credentials (the fakes stay for tests)
+- [x] T-33 bounded HITL Choose the real payment processor, warehouse and e-mail providers and their credentials (the fakes stay for tests)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:107-122, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:202-213
-- [ ] T-84 bounded HITL Decide whether the retry backoff (Thread.sleep 5 s / 15 s) and the processor call (up to 30 s) may hold a listener thread and its DB connections (8-thread async pool, Hikari default 10): accept, add a load check, or reschedule the retry instead of sleeping (review S1 and S2 SHOULD FIX, UNCONFIRMED under load)
+      closed: not needed, demo project (the person, 2026-11-18): fakes stay, scheduler and timers stay disabled in tests
+- [x] T-84 bounded HITL Decide whether the retry backoff (Thread.sleep 5 s / 15 s) and the processor call (up to 30 s) may hold a listener thread and its DB connections (8-thread async pool, Hikari default 10): accept, add a load check, or reschedule the retry instead of sleeping (review S1 and S2 SHOULD FIX, UNCONFIRMED under load)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:42-69, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:119-147
       fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md, .zenwave/handoff/place-order-flow/reports/review-S2-r2.md
+      closed: not needed, demo project (the person, 2026-11-18): fakes stay, scheduler and timers stay disabled in tests
