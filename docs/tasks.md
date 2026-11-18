@@ -159,6 +159,12 @@ review: [ ]
       tests: PlaceOrderFlowCaptureFailedIntegrationTest
       blocked by: T-60, T-64
       done: claude-sonnet sonnet
+- [/] T-85 mechanical AFK The capture-failed flow test proves the order is cancelled once: record OrderCancelled (as FulfillmentCancelled is) and assert exactly one for the orderId; sort the imports, import @Bean, keep lines under 120 columns in PlaceOrderFlowCaptureFailedIntegrationTest
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:296-320
+      test data: data.sql C-26
+      tests: PlaceOrderFlowCaptureFailedIntegrationTest
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S4.md (SHOULD FIX T-65, STANDARDS NOTEs)
+
 
 ## S5 orderCancelled (reservation expired, query timer)
 path: ReservationExpired (10 minutes after OrderCreated) > expireReservation > getPaymentStatus[NoPaymentResult] > StockReleased > cancelOrder
