@@ -7,6 +7,9 @@ import com.arcadiaeditions.catalog.inventory.repository.jpa.*
 import com.arcadiaeditions.catalog.inventory.service.*
 import com.arcadiaeditions.catalog.inventory.service.dtos.*
 import com.arcadiaeditions.catalog.inventory.service.impl.mappers.*
+import com.arcadiaeditions.payments.processing.application.port.driving.PaymentsProcessingService
+import com.arcadiaeditions.payments.processing.application.port.driving.dto.GetPaymentStatusInput
+import com.arcadiaeditions.payments.processing.domain.GetPaymentStatusOutcome
 import java.math.*
 import java.time.*
 import org.slf4j.Logger
@@ -24,6 +27,7 @@ open class InventoryServiceImpl(
     private val inventoryPositionRepository: InventoryPositionRepository,
     private val eventPublisher: EventPublisher,
     private val clock: java.time.Clock,
+    private val paymentsProcessingService: PaymentsProcessingService,
 ) : InventoryService {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass)
@@ -108,8 +112,20 @@ open class InventoryServiceImpl(
         if (toRelease.isEmpty()) {
             return all
         }
+        release(input.orderId, toRelease, input.reason, now) { StockReservationTransitions.ensureCanReleaseStock(it) }
+        return all
+    }
+
+    /** Releases [toRelease] (reserved, or sold when CONFIRMED, back to available) and emits one StockReleased for the order. */
+    private fun release(
+        orderId: String,
+        toRelease: List<StockReservation>,
+        reason: StockReleaseReason,
+        now: Instant,
+        ensureCanRelease: (StockReservation) -> Unit,
+    ) {
         toRelease.forEach { reservation ->
-            StockReservationTransitions.ensureCanReleaseStock(reservation)
+            ensureCanRelease(reservation)
             // A-02: reserved (or sold, when CONFIRMED) -> available
             val position = inventoryPositionRepository.findBySku(reservation.sku!!)!!
             val quantity = reservation.quantity!!.toInt()
@@ -123,17 +139,15 @@ open class InventoryServiceImpl(
             // A-08: confirmedAt is kept
             reservation.status = ReservationStatus.RELEASED
             reservation.releasedAt = now
-            reservation.releaseReason = input.reason
+            reservation.releaseReason = reason
         }
         val released = stockReservationRepository.saveAll(toRelease)
         // one event for the order, with every released line
-        val event = StockReleased(orderId = input.orderId, reason = input.reason, releasedAt = now)
+        val event = StockReleased(orderId = orderId, reason = reason, releasedAt = now)
         released.forEach { event.addItems(StockReleasedItem(it.reservationId, it.sku, it.quantity)) }
         eventPublisher.onStockReleased(event)
-        return all
     }
 
-    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md (NOT_HELD outcome)
     override fun confirmStockReservation(input: ConfirmStockReservationInput): ConfirmStockReservationResult {
 
         log.debug("Request confirmStockReservation: {}", input)
@@ -142,6 +156,14 @@ open class InventoryServiceImpl(
         // redelivery: only RESERVED reservations transition, CONFIRMED ones are left alone
         val toConfirm = all.filter { it.status == ReservationStatus.RESERVED }
         if (toConfirm.isEmpty()) {
+            // no RESERVED nor CONFIRMED reservation (released by the timer): nothing held
+            if (all.none { it.status == ReservationStatus.CONFIRMED }) {
+                return ConfirmStockReservationResult(
+                    outcome = ConfirmStockReservationOutcome.NOT_HELD,
+                    confirmed = null,
+                    notHeld = StockReservationNotHeldResult(orderId = input.orderId),
+                )
+            }
             return confirmedResult(input.orderId, all.firstNotNullOfOrNull { it.confirmedAt })
         }
         val now = clock.instant()
@@ -173,8 +195,25 @@ open class InventoryServiceImpl(
             notHeld = null,
         )
 
-    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md
     override fun expireReservation(input: ExpireReservationInput): List<StockReservation> {
-        TODO("expireReservation: " + input.orderId)
+
+        log.debug("Request expireReservation: {}", input)
+
+        val all = stockReservationRepository.findByOrderId(input.orderId)
+        val toRelease = all.filter { it.status == ReservationStatus.RESERVED }
+        // late fire (no line RESERVED): no-op, no event, payments not asked
+        if (toRelease.isEmpty()) {
+            return all
+        }
+        // @calls getPaymentStatus: released only on NO_PAYMENT; on STARTED payment owns the end
+        val paymentStatus = paymentsProcessingService.getPaymentStatus(GetPaymentStatusInput(orderId = input.orderId))
+        if (paymentStatus.outcome != GetPaymentStatusOutcome.NO_PAYMENT) {
+            log.debug("expireReservation for order {}: payment started, nothing released", input.orderId)
+            return all
+        }
+        release(input.orderId, toRelease, StockReleaseReason.RESERVATION_EXPIRED, clock.instant()) {
+            StockReservationTransitions.ensureCanExpireReservation(it)
+        }
+        return all
     }
 }

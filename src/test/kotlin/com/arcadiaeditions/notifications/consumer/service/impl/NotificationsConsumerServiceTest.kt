@@ -174,6 +174,32 @@ class NotificationsConsumerServiceTest {
         assertEquals("customer21@example.com", context.emailSender().sent.single().to)
     }
 
+    // C-28 cause: void refused, the e-mail warns the hold may still show
+    @Test
+    fun sendOrderCancelledNotificationVoidFailedWarnsOfHoldTest() {
+        val n =
+            notificationsConsumerService.sendOrderCancelledNotification(
+                SendOrderCancelledNotificationInput(
+                    orderId = "ORD-128",
+                    customerId = "CUST-128",
+                    reason = "PAYMENT_VOID_FAILED",
+                    customerEmail = "customer128@example.com",
+                )
+            )
+
+        assertEquals(NotificationStatus.SENT, n.status)
+        assertTrue(n.body!!.contains("PAYMENT_VOID_FAILED"))
+        assertTrue(n.body!!.contains("hold on your card may still show until we release it"))
+        assertEquals(n.body, context.emailSender().sent.single().body)
+        assertEquals("PAYMENT_VOID_FAILED", (events.single() as OrderCancelledNotificationSent).reason)
+    }
+
+    @Test
+    fun sendOrderCancelledNotificationOtherReasonNoHoldNoteTest() {
+        val n = notificationsConsumerService.sendOrderCancelledNotification(cancelledInput("ORD-021", "CUST-021", "customer21@example.com"))
+        assertTrue(!n.body!!.contains("hold"))
+    }
+
     // C-08: redelivery, already SENT
     @Test
     fun sendOrderCancelledNotificationRedeliveryTest() {

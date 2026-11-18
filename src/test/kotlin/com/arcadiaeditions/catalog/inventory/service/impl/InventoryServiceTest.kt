@@ -181,6 +181,38 @@ class InventoryServiceTest {
     }
 
     @Test
+    fun releaseStockVoidFailedFromConfirmedTest() {
+        // C-27: ORD-027 CONFIRMED x1 (SKU-006 x1), PaymentVoidFailed
+        inventoryService.releaseStock(ReleaseStockInput(orderId = "ORD-027", reason = StockReleaseReason.PAYMENT_VOID_FAILED))
+
+        val saved = stockReservationRepository.findAll().single { it.orderId == "ORD-027" }
+        org.junit.jupiter.api.Assertions.assertEquals(ReservationStatus.RELEASED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, saved.releasedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(StockReleaseReason.PAYMENT_VOID_FAILED, saved.releaseReason)
+        org.junit.jupiter.api.Assertions.assertEquals(Instant.parse("2026-10-01T11:21:00Z"), saved.confirmedAt)
+        // sold -> available
+        val sku6 = position("SKU-006")
+        org.junit.jupiter.api.Assertions.assertEquals(17, sku6.availableQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(1, sku6.reservedQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(2, sku6.soldQuantity!!.toInt())
+        val events = releasedEvents()
+        org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
+        org.junit.jupiter.api.Assertions.assertEquals(StockReleaseReason.PAYMENT_VOID_FAILED, events[0].reason)
+        org.junit.jupiter.api.Assertions.assertEquals("RES-027", events[0].items!!.single().reservationId)
+    }
+
+    @Test
+    fun releaseStockVoidFailedRedeliveryTest() {
+        // C-28: ORD-028 already RELEASED (PAYMENT_VOID_FAILED) -> no-op, no event
+        inventoryService.releaseStock(ReleaseStockInput(orderId = "ORD-028", reason = StockReleaseReason.PAYMENT_VOID_FAILED))
+
+        org.junit.jupiter.api.Assertions.assertEquals(0, releasedEvents().size)
+        val saved = stockReservationRepository.findAll().single { it.orderId == "ORD-028" }
+        org.junit.jupiter.api.Assertions.assertEquals(ReservationStatus.RELEASED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(Instant.parse("2026-10-01T09:26:10Z"), saved.releasedAt)
+    }
+
+    @Test
     fun releaseStockRedeliveryTest() {
         // C-08: ORD-008 already RELEASED -> nothing changes, no event
         val before = stockReservationRepository.findAll().single { it.orderId == "ORD-008" }.copy()
@@ -279,6 +311,24 @@ class InventoryServiceTest {
     }
 
     @Test
+    fun confirmStockReservationNotHeldTest() {
+        // C-23: ORD-023 RELEASED by the timer -> NOT_HELD, no change, no event
+        val before = stockReservationRepository.findAll().single { it.orderId == "ORD-023" }.copy()
+        val soldBefore = position("SKU-001").soldQuantity!!.toInt()
+        val reservedBefore = position("SKU-001").reservedQuantity!!.toInt()
+        val result = inventoryService.confirmStockReservation(ConfirmStockReservationInput(orderId = "ORD-023"))
+
+        org.junit.jupiter.api.Assertions.assertEquals(ConfirmStockReservationOutcome.NOT_HELD, result.outcome)
+        org.junit.jupiter.api.Assertions.assertEquals("ORD-023", result.notHeld!!.orderId)
+        org.junit.jupiter.api.Assertions.assertNull(result.confirmed)
+        org.junit.jupiter.api.Assertions.assertEquals(0, confirmedEvents().size)
+        val after = stockReservationRepository.findAll().single { it.orderId == "ORD-023" }
+        org.junit.jupiter.api.Assertions.assertEquals(before, after)
+        org.junit.jupiter.api.Assertions.assertEquals(soldBefore, position("SKU-001").soldQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(reservedBefore, position("SKU-001").reservedQuantity!!.toInt())
+    }
+
+    @Test
     fun confirmStockReservationTwiceTest() {
         inventoryService.confirmStockReservation(ConfirmStockReservationInput(orderId = "ORD-002"))
         inventoryService.confirmStockReservation(ConfirmStockReservationInput(orderId = "ORD-002"))
@@ -312,38 +362,137 @@ class InventoryServiceTest {
         org.junit.jupiter.api.Assertions.assertEquals(0, releasedEvents().size)
     }
 
+    /** getPaymentStatus calls, by orderId, through the payments module's public API. */
+    private val paymentStatusCalls = mutableListOf<String>()
+
+    private fun countingPayments(): com.arcadiaeditions.payments.processing.application.port.driving.PaymentsProcessingService {
+        val real: com.arcadiaeditions.payments.processing.application.port.driving.PaymentsProcessingService =
+            context.paymentsContext.paymentsProcessingService()
+        return object : com.arcadiaeditions.payments.processing.application.port.driving.PaymentsProcessingService by real {
+            override fun getPaymentStatus(
+                input: com.arcadiaeditions.payments.processing.application.port.driving.dto.GetPaymentStatusInput
+            ): com.arcadiaeditions.payments.processing.application.port.driving.dto.GetPaymentStatusResult {
+                paymentStatusCalls.add(input.orderId)
+                return real.getPaymentStatus(input)
+            }
+        }
+    }
+
+    private fun countingInventoryService(clock: Clock = context.clock) =
+        InventoryServiceImpl(stockReservationRepository, context.inventoryPositionRepository(), context.eventPublisher(), clock, countingPayments())
+
     private fun reservationExpiredJob(clock: Clock = context.clock) =
         com.arcadiaeditions.catalog.inventory.events.scheduler.ReservationExpiredJob(
             stockReservationRepository,
-            // the service re-checks the deadline with its own clock: same clock as the job
-            InventoryServiceImpl(stockReservationRepository, context.inventoryPositionRepository(), context.eventPublisher(), clock),
+            countingInventoryService(clock),
             clock,
         )
 
     @Test
+    fun expireReservationNoPaymentTest() {
+        // C-30: ORD-030 RESERVED x1 (SKU-006 x1), past its deadline, no Payment -> NO_PAYMENT -> released
+        val result = countingInventoryService().expireReservation(ExpireReservationInput(orderId = "ORD-030"))
+
+        org.junit.jupiter.api.Assertions.assertEquals(listOf("ORD-030"), paymentStatusCalls)
+        org.junit.jupiter.api.Assertions.assertEquals(1, result.size)
+        val saved = stockReservationRepository.findAll().single { it.orderId == "ORD-030" }
+        org.junit.jupiter.api.Assertions.assertEquals(ReservationStatus.RELEASED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(StockReleaseReason.RESERVATION_EXPIRED, saved.releaseReason)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, saved.releasedAt)
+        org.junit.jupiter.api.Assertions.assertNull(saved.confirmedAt)
+        // reserved -> available
+        val sku6 = position("SKU-006")
+        org.junit.jupiter.api.Assertions.assertEquals(17, sku6.availableQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(0, sku6.reservedQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(3, sku6.soldQuantity!!.toInt())
+        // exactly one event with the items
+        val events = releasedEvents()
+        org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
+        org.junit.jupiter.api.Assertions.assertEquals("ORD-030", events[0].orderId)
+        org.junit.jupiter.api.Assertions.assertEquals(StockReleaseReason.RESERVATION_EXPIRED, events[0].reason)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, events[0].releasedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(
+            listOf("RES-030:SKU-006:1"),
+            events[0].items!!.map { "${it.reservationId}:${it.sku}:${it.quantity}" },
+        )
+    }
+
+    @Test
+    fun expireReservationPaymentStartedTest() {
+        // C-14: ORD-014 RESERVED x1, past its deadline, Payment FAILED (attempt 2) -> STARTED -> payment owns the end
+        val before = stockReservationRepository.findAll().single { it.orderId == "ORD-014" }.copy()
+        countingInventoryService().expireReservation(ExpireReservationInput(orderId = "ORD-014"))
+
+        org.junit.jupiter.api.Assertions.assertEquals(listOf("ORD-014"), paymentStatusCalls)
+        org.junit.jupiter.api.Assertions.assertEquals(before, stockReservationRepository.findAll().single { it.orderId == "ORD-014" })
+        org.junit.jupiter.api.Assertions.assertEquals(0, releasedEvents().size)
+        org.junit.jupiter.api.Assertions.assertEquals(89, position("SKU-001").availableQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(6, position("SKU-001").reservedQuantity!!.toInt())
+    }
+
+    @Test
+    fun expireReservationPaymentInFlightTest() {
+        // C-01: ORD-001 RESERVED, Payment AUTHORIZATION_REQUESTED (first call in flight) -> STARTED -> nothing
+        countingInventoryService().expireReservation(ExpireReservationInput(orderId = "ORD-001"))
+
+        org.junit.jupiter.api.Assertions.assertEquals(listOf("ORD-001"), paymentStatusCalls)
+        org.junit.jupiter.api.Assertions.assertEquals(
+            ReservationStatus.RESERVED,
+            stockReservationRepository.findAll().single { it.orderId == "ORD-001" }.status,
+        )
+        org.junit.jupiter.api.Assertions.assertEquals(0, releasedEvents().size)
+    }
+
+    @Test
+    fun expireReservationNothingReservedTest() {
+        // C-11: ORD-011 already RELEASED (RESERVATION_EXPIRED) -> late fire: no-op, no event, payments not asked
+        val before = stockReservationRepository.findAll().single { it.orderId == "ORD-011" }.copy()
+        countingInventoryService().expireReservation(ExpireReservationInput(orderId = "ORD-011"))
+
+        org.junit.jupiter.api.Assertions.assertEquals(emptyList<String>(), paymentStatusCalls)
+        org.junit.jupiter.api.Assertions.assertEquals(before, stockReservationRepository.findAll().single { it.orderId == "ORD-011" })
+        org.junit.jupiter.api.Assertions.assertEquals(0, releasedEvents().size)
+    }
+
+    @Test
+    fun expireReservationTwiceTest() {
+        countingInventoryService().expireReservation(ExpireReservationInput(orderId = "ORD-030"))
+        countingInventoryService().expireReservation(ExpireReservationInput(orderId = "ORD-030"))
+
+        org.junit.jupiter.api.Assertions.assertEquals(1, releasedEvents().size)
+        org.junit.jupiter.api.Assertions.assertEquals(17, position("SKU-006").availableQuantity!!.toInt())
+    }
+
+    @Test
     fun reservationExpiredJobTest() {
-        // C-14: ORD-014 RESERVED x1 (SKU-001 x1), expiresAt 11:55 <= now 12:00 -> ReservationExpired due
+        // due at 12:00: C-30 ORD-030 (11:50, no Payment) and C-14 ORD-014 (11:55, payment started)
         // C-01: ORD-001 RESERVED, expiresAt 12:08 -> before its deadline, untouched
         // C-11: ORD-011 already RELEASED (RESERVATION_EXPIRED) -> untouched
         val c01 = stockReservationRepository.findAll().single { it.orderId == "ORD-001" }.copy()
         val c11 = stockReservationRepository.findAll().single { it.orderId == "ORD-011" }.copy()
+        val c14 = stockReservationRepository.findAll().single { it.orderId == "ORD-014" }.copy()
 
         reservationExpiredJob().releaseExpiredReservations()
 
-        val c14 = stockReservationRepository.findAll().single { it.orderId == "ORD-014" }
-        org.junit.jupiter.api.Assertions.assertEquals(ReservationStatus.RELEASED, c14.status)
-        org.junit.jupiter.api.Assertions.assertEquals(StockReleaseReason.RESERVATION_EXPIRED, c14.releaseReason)
-        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, c14.releasedAt)
-        // reserved -> available
-        val sku1 = position("SKU-001")
-        org.junit.jupiter.api.Assertions.assertEquals(90, sku1.availableQuantity!!.toInt())
-        org.junit.jupiter.api.Assertions.assertEquals(5, sku1.reservedQuantity!!.toInt())
-        // exactly one event, for ORD-014
+        // payments asked once per due order, only for the due ones
+        org.junit.jupiter.api.Assertions.assertEquals(listOf("ORD-014", "ORD-030"), paymentStatusCalls.sorted())
+        // C-30 released
+        val c30 = stockReservationRepository.findAll().single { it.orderId == "ORD-030" }
+        org.junit.jupiter.api.Assertions.assertEquals(ReservationStatus.RELEASED, c30.status)
+        org.junit.jupiter.api.Assertions.assertEquals(StockReleaseReason.RESERVATION_EXPIRED, c30.releaseReason)
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, c30.releasedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(17, position("SKU-006").availableQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(0, position("SKU-006").reservedQuantity!!.toInt())
+        // exactly one event, for ORD-030
         val events = releasedEvents()
         org.junit.jupiter.api.Assertions.assertEquals(1, events.size)
-        org.junit.jupiter.api.Assertions.assertEquals("ORD-014", events[0].orderId)
+        org.junit.jupiter.api.Assertions.assertEquals("ORD-030", events[0].orderId)
         org.junit.jupiter.api.Assertions.assertEquals(StockReleaseReason.RESERVATION_EXPIRED, events[0].reason)
-        org.junit.jupiter.api.Assertions.assertEquals("RES-014", events[0].items!!.single().reservationId)
+        org.junit.jupiter.api.Assertions.assertEquals("RES-030", events[0].items!!.single().reservationId)
+        // C-14 kept: payment started, payment owns the end
+        org.junit.jupiter.api.Assertions.assertEquals(c14, stockReservationRepository.findAll().single { it.orderId == "ORD-014" })
+        org.junit.jupiter.api.Assertions.assertEquals(89, position("SKU-001").availableQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(6, position("SKU-001").reservedQuantity!!.toInt())
         // before the deadline: untouched
         val c01After = stockReservationRepository.findAll().single { it.orderId == "ORD-001" }
         org.junit.jupiter.api.Assertions.assertEquals(ReservationStatus.RESERVED, c01After.status)
@@ -360,29 +509,30 @@ class InventoryServiceTest {
         reservationExpiredJob().releaseExpiredReservations()
         reservationExpiredJob().releaseExpiredReservations()
 
+        // ORD-030 released once; ORD-014 (payment started) still RESERVED and due: asked again, kept again
         org.junit.jupiter.api.Assertions.assertEquals(1, releasedEvents().size)
-        org.junit.jupiter.api.Assertions.assertEquals(90, position("SKU-001").availableQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(listOf("ORD-014", "ORD-014", "ORD-030"), paymentStatusCalls.sorted())
+        org.junit.jupiter.api.Assertions.assertEquals(17, position("SKU-006").availableQuantity!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(89, position("SKU-001").availableQuantity!!.toInt())
     }
 
     @Test
     fun reservationExpiredJobOncePerOrderTest() {
-        // at 12:07 the deadlines of ORD-014 (11:55), ORD-013 (12:06) and ORD-002 (12:07, two lines) are due
+        // at 12:07 the deadlines of ORD-030 (11:50), ORD-014 (11:55), ORD-013 (12:06) and ORD-002 (12:07, two lines) are due
         val at = Clock.fixed(Instant.parse("2026-10-01T12:07:00Z"), ZoneOffset.UTC)
         reservationExpiredJob(at).releaseExpiredReservations()
 
+        // one getPaymentStatus per due order (ORD-002 has two lines)
+        org.junit.jupiter.api.Assertions.assertEquals(listOf("ORD-002", "ORD-013", "ORD-014", "ORD-030"), paymentStatusCalls.sorted())
+        // only ORD-030 has no Payment: one event, for it
         val events = releasedEvents()
-        org.junit.jupiter.api.Assertions.assertEquals(listOf("ORD-002", "ORD-013", "ORD-014"), events.map { it.orderId!! }.sorted())
-        org.junit.jupiter.api.Assertions.assertTrue(events.all { it.reason == StockReleaseReason.RESERVATION_EXPIRED })
-        org.junit.jupiter.api.Assertions.assertEquals(
-            setOf("RES-002", "RES-003"),
-            events.single { it.orderId == "ORD-002" }.items!!.map { it.reservationId }.toSet(),
-        )
-        // ORD-001 (12:08), ORD-012 (12:09), ORD-015 (12:08) still before their deadline
-        listOf("ORD-001", "ORD-012", "ORD-015").forEach { orderId ->
-            org.junit.jupiter.api.Assertions.assertEquals(
-                ReservationStatus.RESERVED,
-                stockReservationRepository.findAll().single { it.orderId == orderId }.status,
-            )
+        org.junit.jupiter.api.Assertions.assertEquals(listOf("ORD-030"), events.map { it.orderId!! })
+        org.junit.jupiter.api.Assertions.assertEquals(StockReleaseReason.RESERVATION_EXPIRED, events[0].reason)
+        // payment started (ORD-002, ORD-013, ORD-014) or before the deadline (ORD-001, ORD-012, ORD-015): still RESERVED
+        listOf("ORD-002", "ORD-013", "ORD-014", "ORD-001", "ORD-012", "ORD-015").forEach { orderId ->
+            stockReservationRepository.findAll().filter { it.orderId == orderId }.forEach {
+                org.junit.jupiter.api.Assertions.assertEquals(ReservationStatus.RESERVED, it.status, orderId)
+            }
         }
     }
 }

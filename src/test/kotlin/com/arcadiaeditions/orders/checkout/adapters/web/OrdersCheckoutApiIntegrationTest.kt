@@ -4,6 +4,9 @@ import com.arcadiaeditions.orders.checkout.adapters.web.*
 import com.arcadiaeditions.orders.checkout.adapters.web.dtos.*
 import com.arcadiaeditions.common.BaseWebTestClientTest
 
+import com.arcadiaeditions.catalog.inventory.repository.jpa.StockReservationRepository
+import com.arcadiaeditions.orders.checkout.core.outbound.jpa.OrderRepository
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
@@ -17,6 +20,12 @@ import org.springframework.http.HttpMethod.*
  * Integration tests for the [OrdersCheckoutApi] REST controller.
  */
 open class OrdersCheckoutApiIntegrationTest : BaseWebTestClientTest() {
+
+        @Autowired
+        private lateinit var stockReservationRepository: StockReservationRepository
+
+        @Autowired
+        private lateinit var orderRepository: OrderRepository
 
 
 
@@ -152,6 +161,61 @@ open class OrdersCheckoutApiIntegrationTest : BaseWebTestClientTest() {
         .accept(MediaType.APPLICATION_JSON)
         .exchange()
         .expectStatus().isEqualTo(404)
+        }
+
+        /**
+        * Test: startOrderCheckout with quantity 0 answers 400 on items[0].quantity and reserves nothing (T-74).
+        */
+        @Test
+        fun testStartOrderCheckout_400_bounds_quantity() {
+        assertBoundsViolation(0, 10, "startOrderCheckoutInputDTO.items[0].quantity")
+        }
+
+        /**
+        * Test: startOrderCheckout with negative unitPrice answers 400 on items[0].unitPrice and reserves nothing (T-74).
+        */
+        @Test
+        fun testStartOrderCheckout_400_bounds_unitPrice() {
+        assertBoundsViolation(1, -1, "startOrderCheckoutInputDTO.items[0].unitPrice")
+        }
+
+        private fun assertBoundsViolation(quantity: Int, unitPrice: Int, field: String) {
+        val reservations = stockReservationRepository.count()
+        val orders = orderRepository.count()
+        val requestBody = """
+            {
+              "customerId" : "CUST-001",
+              "customerEmail" : "customer01@example.com",
+              "paymentMethodId" : "pm_card_visa",
+              "currency" : "EUR",
+              "items" : [ { "sku" : "SKU-001", "quantity" : $quantity, "unitPrice" : $unitPrice } ],
+              "shippingAddress" : {
+                "name" : "Alex Example", "line1" : "Calle Ficticia 1", "city" : "Madrid",
+                "postalCode" : "28001", "country" : "ES"
+              }
+            }
+        """
+        webTestClient.method(POST).uri("/api/orders/start-checkout")
+        .accept(MediaType.APPLICATION_JSON)
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(requestBody)
+        .exchange()
+        .expectStatus().isEqualTo(400)
+            .expectBody()
+            .jsonPath("$['$field']").isNotEmpty()
+        assertEquals(reservations, stockReservationRepository.count())
+        assertEquals(orders, orderRepository.count())
+        }
+
+        /**
+        * Test: getOrder for an invalid (non numeric) id answers 400.
+        */
+        @Test
+        fun testGetOrder_400() {
+        webTestClient.method(GET).uri("/api/orders/{id}", "not-a-number")
+        .accept(MediaType.APPLICATION_JSON)
+        .exchange()
+        .expectStatus().isEqualTo(400)
         }
 
 }

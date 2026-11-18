@@ -9,6 +9,8 @@ import com.arcadiaeditions.config.MutableClock
 import com.arcadiaeditions.config.TestClock
 import com.arcadiaeditions.config.TestClockConfiguration
 import com.arcadiaeditions.fulfillment.shipping.FulfillmentRepository
+import com.arcadiaeditions.fulfillment.shipping.FulfillmentShippingService
+import com.arcadiaeditions.fulfillment.shipping.domain.FulfillmentTransitions
 import com.arcadiaeditions.fulfillment.shipping.domain.FulfillmentStatus
 import com.arcadiaeditions.notifications.consumer.FakeEmailSender
 import com.arcadiaeditions.notifications.consumer.domain.NotificationChannel
@@ -23,10 +25,19 @@ import com.arcadiaeditions.orders.checkout.core.inbound.dtos.OrderItemInput
 import com.arcadiaeditions.orders.checkout.core.inbound.dtos.ShippingAddressInput
 import com.arcadiaeditions.orders.checkout.core.inbound.dtos.StartOrderCheckoutInput
 import com.arcadiaeditions.orders.checkout.core.outbound.jpa.OrderRepository
+import com.arcadiaeditions.payments.processing.adapter.driven.processor.FakePaymentProcessor
 import com.arcadiaeditions.payments.processing.application.port.driven.jpa.PaymentRepository
+import com.arcadiaeditions.payments.processing.application.port.driven.processor.AuthorizationRequest
+import com.arcadiaeditions.payments.processing.application.port.driven.processor.CaptureRequest
+import com.arcadiaeditions.payments.processing.application.port.driven.processor.PaymentProcessor
+import com.arcadiaeditions.payments.processing.application.port.driven.processor.PaymentProcessorResult
+import com.arcadiaeditions.payments.processing.application.port.driven.processor.VoidRequest
 import com.arcadiaeditions.payments.processing.domain.PaymentStatus
 import java.math.BigDecimal
 import java.time.Duration
+import java.time.Instant
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 import java.util.function.BiConsumer
 import java.util.function.Supplier
 import org.assertj.core.api.Assertions.assertThat
@@ -34,8 +45,12 @@ import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
+import org.springframework.context.annotation.Primary
 import org.springframework.modulith.test.EnableScenarios
 import org.springframework.modulith.test.Scenario
 import org.springframework.test.annotation.DirtiesContext
@@ -46,8 +61,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
  * place-order-flow, path `completed` (place-order-flow.zfl:73-192, end 262-266): from StartOrderCheckout across
  * orders.checkout, catalog.inventory, payments.processing, fulfillment.shipping and notifications.consumer to
  * OrderConfirmationSent. Input is the C-06 order (CUST-006, SKU-001 x1, pm_card_visa); the end state is the shape of
- * C-06 (fulfillment SCHEDULED: READY_TO_SHIP comes later, outside the flow). Not @Transactional: the module listeners
- * run after commit.
+ * C-06 (fulfillment SCHEDULED, paymentCapturedAt set by recordPaymentCaptured, place-order-flow.zfl:215-221).
+ * T-55: [ObservingPaymentProcessor] wraps FakePaymentProcessor to look at the committed state while a processor call is
+ * in flight: during authorize the Payment is AUTHORIZATION_REQUESTED (T-52); during capture the Fulfillment is SCHEDULED
+ * without paymentCapturedAt and markReadyToShip is refused (T-54). After the flow end, markReadyToShip succeeds (the
+ * warehouse action, outside the flow). Not @Transactional: the module listeners run after commit.
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.MOCK,
@@ -57,7 +75,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 @ActiveProfiles("test")
 @DockerComposeInitializer.EnableDockerCompose
 @EnableScenarios
-@Import(TestClockConfiguration::class)
+@Import(TestClockConfiguration::class, PlaceOrderFlowCompletedIntegrationTest.ObservingProcessorConfiguration::class)
 // T-43: a fresh context per flow class (schema + data.sql reloaded, new async threads). Scenario captures events through
 // an InheritableThreadLocal, which async listener threads already created in a reused context never see.
 @DirtiesContext
@@ -74,6 +92,8 @@ class PlaceOrderFlowCompletedIntegrationTest {
     @Autowired lateinit var fulfillmentRepository: FulfillmentRepository
     @Autowired lateinit var notificationRepository: NotificationRepository
     @Autowired lateinit var emailSender: FakeEmailSender
+    @Autowired lateinit var fulfillmentShippingService: FulfillmentShippingService
+    @Autowired lateinit var observingPaymentProcessor: ObservingPaymentProcessor
     @Autowired lateinit var clock: MutableClock
 
     private val timeout: Duration = Duration.ofSeconds(30)
@@ -81,6 +101,8 @@ class PlaceOrderFlowCompletedIntegrationTest {
     @BeforeEach
     fun resetClock() {
         clock.reset()
+        observingPaymentProcessor.duringAuthorize.clear()
+        observingPaymentProcessor.duringCapture.clear()
     }
 
     /** C-06 input: the checkout of CUST-006. */
@@ -115,6 +137,8 @@ class PlaceOrderFlowCompletedIntegrationTest {
                     assertThat(event.recipient).isEqualTo("customer06@example.com")
                     assertThat(event.sentAt).isEqualTo(TestClock.NOW)
                     assertEndState(order.orderId!!, available, reserved, sold)
+                    assertInFlightStates(order.orderId!!)
+                    assertMarkReadyToShipAfterCapture(order.orderId!!)
                 }
             )
     }
@@ -171,6 +195,11 @@ class PlaceOrderFlowCompletedIntegrationTest {
         assertThat(fulfillment.customerId).isEqualTo("CUST-006")
         assertThat(fulfillment.scheduledAt).isEqualTo(now)
         assertThat(fulfillment.items.map { "${it.sku} x${it.quantity}" }).containsExactly("SKU-001 x1")
+        // recordPaymentCaptured (zfl:215-221) runs apart from sendOrderConfirmation: wait for its commit
+        await().atMost(timeout).untilAsserted {
+            assertThat(fulfillmentRepository.findByOrderId(orderId)!!.paymentCapturedAt).isEqualTo(now)
+        }
+        assertThat(fulfillmentRepository.findByOrderId(orderId)!!.status).isEqualTo(FulfillmentStatus.SCHEDULED)
 
         // notifications.consumer: sendOrderConfirmation -> SENT (A-01), one e-mail to the customer
         val notification = notificationRepository.findByOrderIdAndType(orderId, NotificationType.ORDER_CONFIRMATION)!!
@@ -180,5 +209,109 @@ class PlaceOrderFlowCompletedIntegrationTest {
         assertThat(notification.createdAt).isEqualTo(now)
         assertThat(notification.sentAt).isEqualTo(now)
         assertThat(emailSender.sent.filter { it.body.contains(orderId) }).hasSize(1)
+    }
+
+    /** What the committed state looked like while the processor calls of this order were in flight. */
+    private fun assertInFlightStates(orderId: String) {
+        // T-52: AUTHORIZATION_REQUESTED (attempt 1) is committed before the processor is called, then AUTHORIZED
+        val authorizing = observingPaymentProcessor.duringAuthorize[orderId]
+        assertThat(authorizing).isNotNull()
+        assertThat(authorizing!!.status).isEqualTo(PaymentStatus.AUTHORIZATION_REQUESTED)
+        assertThat(authorizing.attemptCount).isEqualTo(1)
+        assertThat(authorizing.authorizedAt).isNull()
+
+        // T-54: while capture is in flight the Fulfillment is SCHEDULED, not yet captured, and markReadyToShip refused
+        val capturing = observingPaymentProcessor.duringCapture[orderId]
+        assertThat(capturing).isNotNull()
+        assertThat(capturing!!.paymentStatus).isEqualTo(PaymentStatus.AUTHORIZED)
+        assertThat(capturing.fulfillmentStatus).isEqualTo(FulfillmentStatus.SCHEDULED)
+        assertThat(capturing.paymentCapturedAt).isNull()
+        assertThat(capturing.markReadyToShipError)
+            .isInstanceOf(IllegalStateException::class.java)
+            .isNotInstanceOf(FulfillmentTransitions.InvalidStateTransitionException::class.java)
+            .hasMessageContaining("payment not captured yet")
+        assertThat(capturing.fulfillmentStatusAfterRefusal).isEqualTo(FulfillmentStatus.SCHEDULED)
+    }
+
+    /** T-54: once paymentCapturedAt is recorded, the warehouse action markReadyToShip succeeds. */
+    private fun assertMarkReadyToShipAfterCapture(orderId: String) {
+        val fulfillment = fulfillmentRepository.findByOrderId(orderId)!!
+        val ready = fulfillmentShippingService.markReadyToShip(fulfillment.id!!)
+        assertThat(ready.status).isEqualTo(FulfillmentStatus.READY_TO_SHIP)
+        val stored = fulfillmentRepository.findByOrderId(orderId)!!
+        assertThat(stored.status).isEqualTo(FulfillmentStatus.READY_TO_SHIP)
+        assertThat(stored.paymentCapturedAt).isEqualTo(TestClock.NOW)
+    }
+
+    data class AuthorizeSnapshot(val status: PaymentStatus?, val attemptCount: Int?, val authorizedAt: Instant?)
+
+    data class CaptureSnapshot(
+        val paymentStatus: PaymentStatus?,
+        val fulfillmentStatus: FulfillmentStatus?,
+        val paymentCapturedAt: Instant?,
+        val markReadyToShipError: Throwable?,
+        val fulfillmentStatusAfterRefusal: FulfillmentStatus?,
+    )
+
+    /**
+     * Delegates every call to FakePaymentProcessor. Before delegating, reads the committed state of the order on another
+     * thread (so no transaction of the caller is joined) and, during capture, tries markReadyToShip there.
+     */
+    class ObservingPaymentProcessor(
+        private val delegate: FakePaymentProcessor,
+        private val paymentRepository: ObjectProvider<PaymentRepository>,
+        private val fulfillmentRepository: ObjectProvider<FulfillmentRepository>,
+        private val fulfillmentShippingService: ObjectProvider<FulfillmentShippingService>,
+    ) : PaymentProcessor {
+
+        val duringAuthorize: MutableMap<String, AuthorizeSnapshot> = ConcurrentHashMap()
+        val duringCapture: MutableMap<String, CaptureSnapshot> = ConcurrentHashMap()
+
+        override fun authorize(request: AuthorizationRequest): PaymentProcessorResult {
+            val snapshot = apart {
+                val payment = paymentRepository.getObject().findByOrderId(request.orderId)
+                AuthorizeSnapshot(payment?.status, payment?.attemptCount?.toInt(), payment?.authorizedAt)
+            }
+            duringAuthorize.putIfAbsent(request.orderId, snapshot)
+            return delegate.authorize(request)
+        }
+
+        override fun capture(request: CaptureRequest): PaymentProcessorResult {
+            val snapshot = apart {
+                val payment = paymentRepository.getObject().findByOrderId(request.orderId)
+                val fulfillment = fulfillmentRepository.getObject().findByOrderId(request.orderId)
+                val error =
+                    fulfillment?.id?.let { id ->
+                        runCatching { fulfillmentShippingService.getObject().markReadyToShip(id) }.exceptionOrNull()
+                    }
+                CaptureSnapshot(
+                    paymentStatus = payment?.status,
+                    fulfillmentStatus = fulfillment?.status,
+                    paymentCapturedAt = fulfillment?.paymentCapturedAt,
+                    markReadyToShipError = error,
+                    fulfillmentStatusAfterRefusal =
+                        fulfillmentRepository.getObject().findByOrderId(request.orderId)?.status,
+                )
+            }
+            duringCapture.putIfAbsent(request.orderId, snapshot)
+            return delegate.capture(request)
+        }
+
+        override fun void(request: VoidRequest): PaymentProcessorResult = delegate.void(request)
+
+        private fun <T> apart(block: () -> T): T = CompletableFuture.supplyAsync { block() }.get()
+    }
+
+    /** The observer replaces FakePaymentProcessor as the PaymentProcessor the payments service is given. */
+    @TestConfiguration(proxyBeanMethods = false)
+    class ObservingProcessorConfiguration {
+        @Bean
+        @Primary
+        fun observingPaymentProcessor(
+            delegate: FakePaymentProcessor,
+            paymentRepository: ObjectProvider<PaymentRepository>,
+            fulfillmentRepository: ObjectProvider<FulfillmentRepository>,
+            fulfillmentShippingService: ObjectProvider<FulfillmentShippingService>,
+        ) = ObservingPaymentProcessor(delegate, paymentRepository, fulfillmentRepository, fulfillmentShippingService)
     }
 }

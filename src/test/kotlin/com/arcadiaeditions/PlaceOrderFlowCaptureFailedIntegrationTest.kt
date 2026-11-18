@@ -10,6 +10,7 @@ import com.arcadiaeditions.config.TestClock
 import com.arcadiaeditions.config.TestClockConfiguration
 import com.arcadiaeditions.fulfillment.shipping.FulfillmentRepository
 import com.arcadiaeditions.fulfillment.shipping.domain.FulfillmentStatus
+import com.arcadiaeditions.fulfillment.shipping.domain.events.FulfillmentCancelled
 import com.arcadiaeditions.notifications.consumer.FakeEmailSender
 import com.arcadiaeditions.notifications.consumer.domain.NotificationChannel
 import com.arcadiaeditions.notifications.consumer.domain.NotificationStatus
@@ -18,6 +19,7 @@ import com.arcadiaeditions.notifications.consumer.domain.events.OrderCancelledNo
 import com.arcadiaeditions.notifications.consumer.repository.jpa.NotificationRepository
 import com.arcadiaeditions.orders.checkout.core.domain.Order
 import com.arcadiaeditions.orders.checkout.core.domain.OrderStatus
+import com.arcadiaeditions.orders.checkout.core.domain.events.OrderCancelled
 import com.arcadiaeditions.orders.checkout.core.inbound.OrdersCheckoutService
 import com.arcadiaeditions.orders.checkout.core.inbound.dtos.OrderItemInput
 import com.arcadiaeditions.orders.checkout.core.inbound.dtos.ShippingAddressInput
@@ -29,6 +31,7 @@ import com.arcadiaeditions.payments.processing.application.port.driven.processor
 import com.arcadiaeditions.payments.processing.domain.PaymentStatus
 import java.math.BigDecimal
 import java.time.Duration
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.function.BiConsumer
 import java.util.function.Supplier
 import org.assertj.core.api.Assertions.assertThat
@@ -38,7 +41,10 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
+import org.springframework.context.event.EventListener
 import org.springframework.modulith.test.EnableScenarios
 import org.springframework.modulith.test.Scenario
 import org.springframework.test.annotation.DirtiesContext
@@ -62,8 +68,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 @DockerComposeInitializer.EnableDockerCompose
 @EnableScenarios
 @Import(TestClockConfiguration::class)
-// T-43: a fresh context per flow class (schema + data.sql reloaded, new async threads). Scenario captures events through
-// an InheritableThreadLocal, which async listener threads already created in a reused context never see.
+// T-43: a fresh context per flow class (schema + data.sql reloaded, new async threads). Scenario captures events
+// through an InheritableThreadLocal, which async listener threads already created in a reused context never see.
 @DirtiesContext
 // T-43: no resubmitIncompletePublications tick: its first run, right after startup, resubmits this test's in-flight
 // publications and the listener runs twice (seen: two STOCK_UNAVAILABLE notifications for one order)
@@ -82,6 +88,33 @@ class PlaceOrderFlowCaptureFailedIntegrationTest {
     @Autowired lateinit var clock: MutableClock
 
     private val timeout: Duration = Duration.ofSeconds(30)
+
+    /**
+     * Records FulfillmentCancelled and OrderCancelled as published (no module listens to the first: it is for the
+     * warehouse). Local to this class.
+     */
+    class CancelledRecorder {
+        val fulfillmentCancelled = CopyOnWriteArrayList<FulfillmentCancelled>()
+        val orderCancelled = CopyOnWriteArrayList<OrderCancelled>()
+
+        @EventListener
+        fun on(event: FulfillmentCancelled) {
+            fulfillmentCancelled.add(event)
+        }
+
+        @EventListener
+        fun on(event: OrderCancelled) {
+            orderCancelled.add(event)
+        }
+    }
+
+    @TestConfiguration
+    class RecorderConfiguration {
+        @Bean
+        fun cancelledRecorder() = CancelledRecorder()
+    }
+
+    @Autowired lateinit var cancelledRecorder: CancelledRecorder
 
     @BeforeEach
     fun prepare() {
@@ -145,6 +178,8 @@ class PlaceOrderFlowCaptureFailedIntegrationTest {
         assertThat(order.confirmedAt).isEqualTo(now)
         assertThat(order.cancelledAt).isEqualTo(now)
         assertThat(order.cancellationReason).isEqualTo("PAYMENT_VOIDED")
+        // the order is cancelled once: exactly one OrderCancelled (zfl:296-310: no event when already CANCELLED)
+        assertThat(cancelledRecorder.orderCancelled.filter { it.orderId == orderId }).hasSize(1)
 
         // catalog.inventory: reserveStock -> RESERVED, confirmStockReservation -> CONFIRMED, releaseStock -> RELEASED
         val reservation = stockReservationRepository.findByOrderId(orderId).single()
@@ -156,10 +191,12 @@ class PlaceOrderFlowCaptureFailedIntegrationTest {
         assertThat(reservation.releasedAt).isEqualTo(now)
         assertThat(reservation.releaseReason.toString()).isEqualTo("PAYMENT_VOIDED")
         val position = inventoryPositionRepository.findBySku("SKU-001")!!
-        assertThat(listOf(position.availableQuantity, position.reservedQuantity, position.soldQuantity).map { it?.toInt() })
-            .containsExactly(available, reserved, sold)
+        assertThat(
+            listOf(position.availableQuantity, position.reservedQuantity, position.soldQuantity).map { it?.toInt() },
+        ).containsExactly(available, reserved, sold)
 
-        // payments.processing: authorizePayment -> AUTHORIZED, capturePayment -> CAPTURE_FAILED, voidPayment -> VOIDED, never captured
+        // payments.processing: authorizePayment -> AUTHORIZED, capturePayment -> CAPTURE_FAILED, voidPayment -> VOIDED,
+        // never captured
         val payment = paymentRepository.findByOrderId(orderId)!!
         assertThat(payment.status).isEqualTo(PaymentStatus.VOIDED)
         assertThat(payment.attemptCount).isEqualTo(1)
@@ -170,12 +207,24 @@ class PlaceOrderFlowCaptureFailedIntegrationTest {
         assertThat(payment.failedAt).isEqualTo(now)
         assertThat(payment.failureReason).isEqualTo("capture_window_closed")
 
-        // fulfillment.shipping: scheduleFulfillment -> SCHEDULED (not undone by the capture failure)
+        // fulfillment.shipping: scheduleFulfillment -> SCHEDULED, then cancelFulfillment on OrderCancelled -> CANCELLED
+        // (A-11: reason of OrderCancelled)
+        await().atMost(timeout).untilAsserted {
+            assertThat(fulfillmentRepository.findByOrderId(orderId)!!.status).isEqualTo(FulfillmentStatus.CANCELLED)
+        }
         val fulfillment = fulfillmentRepository.findByOrderId(orderId)!!
-        assertThat(fulfillment.status).isEqualTo(FulfillmentStatus.SCHEDULED)
         assertThat(fulfillment.customerId).isEqualTo("CUST-010")
         assertThat(fulfillment.scheduledAt).isEqualTo(now)
+        assertThat(fulfillment.cancelledAt).isEqualTo(now)
+        assertThat(fulfillment.cancellationReason).isEqualTo(order.cancellationReason)
+        assertThat(fulfillment.cancellationReason).isEqualTo("PAYMENT_VOIDED")
         assertThat(fulfillment.failedAt).isNull()
+        // FulfillmentCancelled emitted once
+        val cancelled = cancelledRecorder.fulfillmentCancelled.filter { it.orderId == orderId }
+        assertThat(cancelled).hasSize(1)
+        assertThat(cancelled.single().fulfillmentId).isEqualTo(fulfillment.fulfillmentId)
+        assertThat(cancelled.single().reason).isEqualTo("PAYMENT_VOIDED")
+        assertThat(cancelled.single().cancelledAt).isEqualTo(now)
 
         // notifications.consumer: sendOrderCancelledNotification -> SENT, one e-mail, none for confirmation
         val notification = notificationRepository.findByOrderIdAndType(orderId, NotificationType.ORDER_CANCELLED)!!

@@ -1,5 +1,7 @@
 package com.arcadiaeditions
 
+import com.arcadiaeditions.RetryLoopRecorder.Authorize
+import com.arcadiaeditions.RetryLoopRecorder.Backoff
 import com.arcadiaeditions.catalog.inventory.domain.ReservationStatus
 import com.arcadiaeditions.catalog.inventory.repository.jpa.InventoryPositionRepository
 import com.arcadiaeditions.catalog.inventory.repository.jpa.StockReservationRepository
@@ -25,6 +27,9 @@ import com.arcadiaeditions.orders.checkout.core.inbound.dtos.StartOrderCheckoutI
 import com.arcadiaeditions.orders.checkout.core.outbound.jpa.OrderRepository
 import com.arcadiaeditions.payments.processing.application.port.driven.jpa.PaymentRepository
 import com.arcadiaeditions.payments.processing.domain.PaymentStatus
+import com.arcadiaeditions.payments.processing.domain.event.PaymentDeclined
+import com.arcadiaeditions.payments.processing.domain.event.PaymentFailed
+import com.arcadiaeditions.payments.processing.domain.event.PaymentRetried
 import java.math.BigDecimal
 import java.time.Duration
 import java.util.function.BiConsumer
@@ -43,11 +48,14 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 
 /**
- * place-order-flow, path `retry` then declined (place-order-flow.zfl:108-140, 223-260, end 262-266): the first
- * authorization fails (pm_card_processorErrorThenDecline), PaymentFailed -> retryPayment -> PaymentRetried ->
- * authorizePayment declines attempt 2, PaymentDeclined -> releaseStock -> cancelOrder, and the flow ends in
- * OrderCancelledNotificationSent with PAYMENT_DECLINED. Input is the C-06 order (CUST-006, SKU-001 x1); stock counters are
- * checked relative to the values read before (T-43). Not @Transactional: the module listeners run after commit.
+ * place-order-flow, path `retry` then declined (place-order-flow.zfl:114-146, 254-266): the first authorization fails
+ * (pm_card_processorErrorThenDecline), PaymentFailed -> retryPayment -> PaymentRetried -> reauthorizePayment declines
+ * attempt 2 after the 5 s backoff, PaymentDeclined -> releaseStock -> cancelOrder, and the flow ends in
+ * OrderCancelledNotificationSent with PAYMENT_DECLINED (shape of C-08 with attemptCount 2). T-59: attempts counted only by
+ * authorizePayment (1) and reauthorizePayment (2); a declined attempt is not retried; the backoff is recorded by
+ * [RetryLoopTestConfiguration], not slept; the PaymentFailed and PaymentRetried of attempt 1 delivered again change
+ * nothing. Input is the C-06 order (CUST-006, SKU-001 x1); stock counters are checked relative to the values read before
+ * (T-43). Not @Transactional: the module listeners run after commit.
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.MOCK,
@@ -57,7 +65,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 @ActiveProfiles("test")
 @DockerComposeInitializer.EnableDockerCompose
 @EnableScenarios
-@Import(TestClockConfiguration::class)
+@Import(TestClockConfiguration::class, RetryLoopTestConfiguration::class)
 // T-43: a fresh context per flow class (schema + data.sql reloaded, new async threads). Scenario captures events through
 // an InheritableThreadLocal, which async listener threads already created in a reused context never see.
 @DirtiesContext
@@ -74,13 +82,16 @@ class PlaceOrderFlowRetryDeclinedIntegrationTest {
     @Autowired lateinit var fulfillmentRepository: FulfillmentRepository
     @Autowired lateinit var notificationRepository: NotificationRepository
     @Autowired lateinit var emailSender: FakeEmailSender
+    @Autowired lateinit var recorder: RetryLoopRecorder
+    @Autowired lateinit var events: RetryLoopEvents
     @Autowired lateinit var clock: MutableClock
 
     private val timeout: Duration = Duration.ofSeconds(30)
 
     @BeforeEach
-    fun resetClock() {
+    fun reset() {
         clock.reset()
+        recorder.reset()
     }
 
     private fun startOrderCheckoutInput() =
@@ -100,6 +111,8 @@ class PlaceOrderFlowRetryDeclinedIntegrationTest {
         val available = before.availableQuantity!!.toInt()
         val reserved = before.reservedQuantity!!.toInt()
         val sold = before.soldQuantity!!.toInt()
+        val mark = events.mark()
+        var orderId: String? = null
 
         scenario
             .stimulate(Supplier { ordersCheckoutService.startOrderCheckout(startOrderCheckoutInput()) })
@@ -107,6 +120,7 @@ class PlaceOrderFlowRetryDeclinedIntegrationTest {
             .andWaitForEventOfType(OrderCancelledNotificationSent::class.java)
             .toArriveAndVerify(
                 BiConsumer { event: OrderCancelledNotificationSent, order: Order ->
+                    orderId = order.orderId
                     assertThat(event.orderId).isEqualTo(order.orderId)
                     assertThat(event.customerId).isEqualTo("CUST-006")
                     assertThat(event.reason).isEqualTo("PAYMENT_DECLINED")
@@ -116,6 +130,67 @@ class PlaceOrderFlowRetryDeclinedIntegrationTest {
                     assertEndState(order.orderId!!, available, reserved, sold)
                 }
             )
+
+        val id = orderId!!
+        assertRetryLoop(id, mark)
+        assertStaleRedeliveriesChangeNothing(id, mark, available, reserved, sold)
+    }
+
+    /** attempt 1 by authorizePayment, the 5 s backoff while FAILED (attempt 1), attempt 2 by reauthorizePayment declined. */
+    private fun assertRetryLoop(orderId: String, mark: Set<java.util.UUID>) {
+        assertThat(recorder.steps)
+            .containsExactly(
+                Authorize(1, PaymentStatus.AUTHORIZATION_REQUESTED, 1),
+                Backoff(Duration.ofSeconds(5), PaymentStatus.FAILED, 1),
+                Authorize(2, PaymentStatus.AUTHORIZATION_REQUESTED, 2),
+            )
+        assertThat(events.since(mark, PaymentFailed::class.java, RetryLoopTargets.RETRY_PAYMENT) { it.orderId == orderId })
+            .extracting<Int> { it.attemptCount!!.toInt() }
+            .containsExactly(1)
+        assertThat(
+                events.since(mark, PaymentRetried::class.java, RetryLoopTargets.REAUTHORIZE_PAYMENT) { it.orderId == orderId }
+            )
+            .extracting<Int> { it.attemptCount!!.toInt() }
+            .containsExactly(1)
+        assertThat(
+                events.since(mark, PaymentDeclined::class.java, RetryLoopTargets.RELEASE_ON_DECLINED) { it.orderId == orderId }
+            )
+            .hasSize(1)
+    }
+
+    /** The PaymentFailed and PaymentRetried of attempt 1 delivered again after the decline: no-ops, no event. */
+    private fun assertStaleRedeliveriesChangeNothing(
+        orderId: String,
+        mark: Set<java.util.UUID>,
+        available: Int,
+        reserved: Int,
+        sold: Int,
+    ) {
+        val failed = events.since(mark, PaymentFailed::class.java, RetryLoopTargets.RETRY_PAYMENT) { it.orderId == orderId }.single()
+        val retried =
+            events.since(mark, PaymentRetried::class.java, RetryLoopTargets.REAUTHORIZE_PAYMENT) { it.orderId == orderId }.single()
+        val payment = paymentRepository.findByOrderId(orderId)!!.snapshot()
+        val steps = recorder.steps.toList()
+        val redelivered = events.mark()
+
+        events.redeliver(failed, timeout)
+        events.redeliver(retried, timeout)
+
+        assertThat(paymentRepository.findByOrderId(orderId)!!.snapshot()).isEqualTo(payment)
+        assertThat(paymentRepository.findByOrderId(orderId)!!.status).isEqualTo(PaymentStatus.DECLINED)
+        assertThat(recorder.steps).isEqualTo(steps)
+        // only the two redelivered publications: no PaymentRetried, PaymentFailed or PaymentDeclined of their own
+        assertThat(events.since(redelivered, PaymentFailed::class.java, RetryLoopTargets.RETRY_PAYMENT) { it.orderId == orderId })
+            .containsExactly(failed)
+        assertThat(events.since(redelivered, PaymentRetried::class.java, RetryLoopTargets.REAUTHORIZE_PAYMENT) { it.orderId == orderId })
+            .containsExactly(retried)
+        assertThat(events.since(redelivered, PaymentDeclined::class.java, RetryLoopTargets.ANY) { it.orderId == orderId }).isEmpty()
+        // the order stays cancelled once, the stock released once
+        assertThat(orderRepository.findByOrderId(orderId)!!.status).isEqualTo(OrderStatus.CANCELLED)
+        val position = inventoryPositionRepository.findBySku("SKU-001")!!
+        assertThat(listOf(position.availableQuantity, position.reservedQuantity, position.soldQuantity).map { it?.toInt() })
+            .containsExactly(available, reserved, sold)
+        assertThat(emailSender.sent.filter { it.body.contains(orderId) }).hasSize(1)
     }
 
     private fun assertEndState(orderId: String, available: Int, reserved: Int, sold: Int) {
@@ -147,7 +222,7 @@ class PlaceOrderFlowRetryDeclinedIntegrationTest {
         assertThat(listOf(position.availableQuantity, position.reservedQuantity, position.soldQuantity).map { it?.toInt() })
             .containsExactly(available, reserved, sold)
 
-        // payments.processing: authorizePayment -> DECLINED (A-01, A-06), attempt 1 fails, retryPayment, attempt 2 declines
+        // payments.processing: authorizePayment fails (attempt 1), retryPayment, reauthorizePayment -> DECLINED (attempt 2, A-01, A-06)
         val payment = paymentRepository.findByOrderId(orderId)!!
         assertThat(payment.status).isEqualTo(PaymentStatus.DECLINED)
         assertThat(payment.attemptCount).isEqualTo(2)

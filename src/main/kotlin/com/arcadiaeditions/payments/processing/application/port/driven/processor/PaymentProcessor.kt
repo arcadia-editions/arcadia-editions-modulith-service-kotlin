@@ -63,6 +63,11 @@ data class PaymentProcessorResult(
     val reason: String? = null,
 ) {
     companion object {
+        /** A-06: failureReason of a processor call that did not answer within the timeout. */
+        const val PROCESSOR_TIMEOUT = "processor_timeout"
+        /** A-06 (P-10 A): failureReason of a processor call that threw. */
+        const val PROCESSOR_ERROR = "processor_error"
+
         fun approved(providerReference: String) = PaymentProcessorResult(PaymentProcessorOutcome.APPROVED, providerReference)
 
         fun declined(reason: String) = PaymentProcessorResult(PaymentProcessorOutcome.DECLINED, reason = reason)

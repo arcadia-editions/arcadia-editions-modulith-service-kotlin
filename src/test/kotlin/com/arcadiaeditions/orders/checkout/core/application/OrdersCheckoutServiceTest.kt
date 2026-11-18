@@ -9,6 +9,7 @@ import com.arcadiaeditions.orders.checkout.core.outbound.jpa.*
 import com.arcadiaeditions.orders.checkout.infrastructure.jpa.inmemory.*
 import com.arcadiaeditions.config.TestClock
 import com.arcadiaeditions.orders.checkout.core.domain.events.OrderCancelled
+import com.arcadiaeditions.orders.checkout.core.domain.events.OrderConfirmationRejected
 import com.arcadiaeditions.orders.checkout.core.domain.events.OrderConfirmed
 import com.arcadiaeditions.orders.checkout.core.domain.events.OrderCreated
 import com.arcadiaeditions.orders.checkout.core.domain.events.StockUnavailable
@@ -181,6 +182,41 @@ class OrdersCheckoutServiceTest {
         assertEquals(OrderStatus.CONFIRMED, order.status)
         assertEquals(before, order.confirmedAt)
         assertTrue((context.eventPublisher() as InMemoryEventPublisher).getEvents().isEmpty())
+    }
+
+    @Test
+    fun confirmOrderCancelledIsRejectedWithoutCallingInventoryTest() {
+        // C-22: Order CANCELLED, reservation RELEASED
+        val order = ordersCheckoutService.confirmOrder(ConfirmOrderInput("ORD-022"))
+
+        assertEquals(OrderStatus.CANCELLED, order.status)
+        assertEquals(OrderStatus.CANCELLED, orderRepository.findAll().first { it.orderId == "ORD-022" }.status)
+        val reservations =
+            context.inventoryContext.stockReservationRepository().findAll().filter { it.orderId == "ORD-022" }
+        assertTrue(reservations.all { it.status == com.arcadiaeditions.catalog.inventory.domain.ReservationStatus.RELEASED })
+        val events = (context.eventPublisher() as InMemoryEventPublisher).getEvents()
+        assertEquals(1, events.size)
+        val rejected = events[0] as OrderConfirmationRejected
+        assertEquals("ORD-022", rejected.orderId)
+        assertEquals("CUST-022", rejected.customerId)
+        assertEquals("ORDER_CANCELLED", rejected.reason)
+        assertEquals(TestClock.NOW, rejected.rejectedAt)
+    }
+
+    @Test
+    fun confirmOrderStockNotHeldIsRejectedTest() {
+        // C-23: Order CREATED, reservation RELEASED
+        val order = ordersCheckoutService.confirmOrder(ConfirmOrderInput("ORD-023"))
+
+        assertEquals(OrderStatus.CREATED, order.status)
+        assertEquals(OrderStatus.CREATED, orderRepository.findAll().first { it.orderId == "ORD-023" }.status)
+        val events = (context.eventPublisher() as InMemoryEventPublisher).getEvents()
+        assertEquals(1, events.size)
+        val rejected = events[0] as OrderConfirmationRejected
+        assertEquals("ORD-023", rejected.orderId)
+        assertEquals("CUST-023", rejected.customerId)
+        assertEquals("STOCK_NOT_HELD", rejected.reason)
+        assertEquals(TestClock.NOW, rejected.rejectedAt)
     }
 
     @Test

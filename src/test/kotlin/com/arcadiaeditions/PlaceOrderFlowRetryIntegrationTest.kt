@@ -1,5 +1,7 @@
 package com.arcadiaeditions
 
+import com.arcadiaeditions.RetryLoopRecorder.Authorize
+import com.arcadiaeditions.RetryLoopRecorder.Backoff
 import com.arcadiaeditions.catalog.inventory.domain.ReservationStatus
 import com.arcadiaeditions.catalog.inventory.repository.jpa.InventoryPositionRepository
 import com.arcadiaeditions.catalog.inventory.repository.jpa.StockReservationRepository
@@ -25,9 +27,15 @@ import com.arcadiaeditions.orders.checkout.core.inbound.dtos.StartOrderCheckoutI
 import com.arcadiaeditions.orders.checkout.core.outbound.jpa.OrderRepository
 import com.arcadiaeditions.payments.processing.application.port.driven.jpa.PaymentRepository
 import com.arcadiaeditions.payments.processing.domain.PaymentStatus
+import com.arcadiaeditions.payments.processing.domain.event.PaymentAuthorized
+import com.arcadiaeditions.payments.processing.domain.event.PaymentFailed
+import com.arcadiaeditions.payments.processing.domain.event.PaymentRetried
 import java.math.BigDecimal
 import java.time.Duration
+import java.time.Instant
 import java.util.function.BiConsumer
+import java.util.function.Consumer
+import java.util.function.Predicate
 import java.util.function.Supplier
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
@@ -43,13 +51,14 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 
 /**
- * place-order-flow, path `retry` (place-order-flow.zfl:108-140, end 262-266): the first authorization fails
- * (pm_card_processorErrorOnce, shape of C-12), PaymentFailed -> retryPayment -> PaymentRetried -> authorizePayment
- * approves attempt 2, and the flow ends in OrderConfirmationSent. From StartOrderCheckout across
- * orders.checkout, catalog.inventory, payments.processing, fulfillment.shipping and notifications.consumer to
- * OrderConfirmationSent. Input is the C-06 order (CUST-006, SKU-001 x1) with the retry payment method; the end state is the shape of
- * C-06 with payment attemptCount 2 (fulfillment SCHEDULED: READY_TO_SHIP comes later, outside the flow). Not @Transactional: the module listeners
- * run after commit.
+ * place-order-flow, path `retry` (place-order-flow.zfl:114-146, end 262-266): the first authorization fails
+ * (pm_card_processorErrorOnce, shape of C-12), PaymentFailed -> retryPayment -> PaymentRetried -> reauthorizePayment
+ * approves attempt 2 after the 5 s backoff, and the flow ends in OrderConfirmationSent (shape of C-06, payment attemptCount
+ * 2). T-59: attempts are counted only by authorizePayment (1) and reauthorizePayment (2), never by retryPayment; the
+ * backoff is asked before attempt 2 while the Payment is still FAILED ([RetryLoopTestConfiguration] records it instead of
+ * sleeping); a redelivered PaymentFailed or PaymentRetried with a stale attemptCount changes nothing. The C-12 fixture has its own class (T-82).
+ * Not @Transactional: the module
+ * listeners run after commit.
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.MOCK,
@@ -59,10 +68,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 @ActiveProfiles("test")
 @DockerComposeInitializer.EnableDockerCompose
 @EnableScenarios
-@Import(TestClockConfiguration::class)
-// T-43: a fresh context per flow class (schema + data.sql reloaded, new async threads). Scenario captures events through
+@Import(TestClockConfiguration::class, RetryLoopTestConfiguration::class)
+// T-43: a fresh context per flow test (schema + data.sql reloaded, new async threads). Scenario captures events through
 // an InheritableThreadLocal, which async listener threads already created in a reused context never see.
-@DirtiesContext
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 // T-43: no resubmitIncompletePublications tick: its first run, right after startup, resubmits this test's in-flight
 // publications and the listener runs twice (seen: two STOCK_UNAVAILABLE notifications for one order)
 @MockitoBean(types = [ExternalizationConfiguration::class])
@@ -76,16 +85,19 @@ class PlaceOrderFlowRetryIntegrationTest {
     @Autowired lateinit var fulfillmentRepository: FulfillmentRepository
     @Autowired lateinit var notificationRepository: NotificationRepository
     @Autowired lateinit var emailSender: FakeEmailSender
+    @Autowired lateinit var recorder: RetryLoopRecorder
+    @Autowired lateinit var events: RetryLoopEvents
     @Autowired lateinit var clock: MutableClock
 
     private val timeout: Duration = Duration.ofSeconds(30)
 
     @BeforeEach
-    fun resetClock() {
+    fun reset() {
         clock.reset()
+        recorder.reset()
     }
 
-    /** C-06 input: the checkout of CUST-006. */
+    /** C-06 input: the checkout of CUST-006, with the payment method that fails attempt 1 only. */
     private fun startOrderCheckoutInput() =
         StartOrderCheckoutInput(
             customerId = "CUST-006",
@@ -104,6 +116,8 @@ class PlaceOrderFlowRetryIntegrationTest {
         val before = inventoryPositionRepository.findBySku("SKU-001")!!
         val (available, reserved, sold) =
             listOf(before.availableQuantity, before.reservedQuantity, before.soldQuantity).map { it!!.toInt() }
+        val mark = events.mark()
+        var orderId: String? = null
 
         scenario
             .stimulate(Supplier { ordersCheckoutService.startOrderCheckout(startOrderCheckoutInput()) })
@@ -111,6 +125,7 @@ class PlaceOrderFlowRetryIntegrationTest {
             .andWaitForEventOfType(OrderConfirmationSent::class.java)
             .toArriveAndVerify(
                 BiConsumer { event: OrderConfirmationSent, order: Order ->
+                    orderId = order.orderId
                     assertThat(event.orderId).isEqualTo(order.orderId)
                     assertThat(event.customerId).isEqualTo("CUST-006")
                     assertThat(event.channel).isEqualTo(NotificationChannel.EMAIL)
@@ -119,6 +134,54 @@ class PlaceOrderFlowRetryIntegrationTest {
                     assertEndState(order.orderId!!, available, reserved, sold)
                 }
             )
+
+        val id = orderId!!
+        assertRetryLoop(id, mark)
+        assertStaleRedeliveriesChangeNothing(id, mark)
+    }
+
+    /** attempt 1 by authorizePayment, the 5 s backoff while FAILED (attempt 1), attempt 2 by reauthorizePayment. */
+    private fun assertRetryLoop(orderId: String, mark: Set<java.util.UUID>) {
+        assertThat(recorder.steps)
+            .containsExactly(
+                Authorize(1, PaymentStatus.AUTHORIZATION_REQUESTED, 1),
+                Backoff(Duration.ofSeconds(5), PaymentStatus.FAILED, 1),
+                Authorize(2, PaymentStatus.AUTHORIZATION_REQUESTED, 2),
+            )
+        // retryPayment never increments: PaymentRetried carries the attemptCount of the PaymentFailed it answers
+        assertThat(events.since(mark, PaymentFailed::class.java, RetryLoopTargets.RETRY_PAYMENT) { it.orderId == orderId })
+            .extracting<Int> { it.attemptCount!!.toInt() }
+            .containsExactly(1)
+        assertThat(
+                events.since(mark, PaymentRetried::class.java, RetryLoopTargets.REAUTHORIZE_PAYMENT) { it.orderId == orderId }
+            )
+            .extracting<Int> { it.attemptCount!!.toInt() }
+            .containsExactly(1)
+    }
+
+    /** The PaymentFailed and PaymentRetried of attempt 1 delivered again once the Payment moved on: no-ops, no event. */
+    private fun assertStaleRedeliveriesChangeNothing(orderId: String, mark: Set<java.util.UUID>) {
+        val failed = events.since(mark, PaymentFailed::class.java, RetryLoopTargets.RETRY_PAYMENT) { it.orderId == orderId }.single()
+        val retried =
+            events.since(mark, PaymentRetried::class.java, RetryLoopTargets.REAUTHORIZE_PAYMENT) { it.orderId == orderId }.single()
+        val payment = paymentRepository.findByOrderId(orderId)!!.snapshot()
+        val steps = recorder.steps.toList()
+        val redelivered = events.mark()
+
+        events.redeliver(failed, timeout)
+        events.redeliver(retried, timeout)
+
+        assertThat(paymentRepository.findByOrderId(orderId)!!.snapshot()).isEqualTo(payment)
+        assertThat(paymentRepository.findByOrderId(orderId)!!.status).isEqualTo(PaymentStatus.CAPTURED)
+        assertThat(recorder.steps).isEqualTo(steps)
+        // only the two redelivered publications: no PaymentRetried, PaymentFailed or PaymentAuthorized of their own
+        assertThat(events.since(redelivered, PaymentFailed::class.java, RetryLoopTargets.RETRY_PAYMENT) { it.orderId == orderId })
+            .containsExactly(failed)
+        assertThat(events.since(redelivered, PaymentRetried::class.java, RetryLoopTargets.REAUTHORIZE_PAYMENT) { it.orderId == orderId })
+            .containsExactly(retried)
+        assertThat(events.since(redelivered, PaymentAuthorized::class.java, RetryLoopTargets.ANY) { it.orderId == orderId }).isEmpty()
+        assertThat(orderRepository.findByOrderId(orderId)!!.status).isEqualTo(OrderStatus.CONFIRMED)
+        assertThat(emailSender.sent.filter { it.body.contains(orderId) }).hasSize(1)
     }
 
     private fun assertEndState(orderId: String, available: Int, reserved: Int, sold: Int) {
@@ -154,7 +217,8 @@ class PlaceOrderFlowRetryIntegrationTest {
         assertThat(listOf(position.availableQuantity, position.reservedQuantity, position.soldQuantity).map { it?.toInt() })
             .containsExactly(available - 1, reserved, sold + 1)
 
-        // payments.processing: authorizePayment fails (attempt 1), retryPayment, authorizePayment -> AUTHORIZED (attempt 2), capturePayment -> CAPTURED (A-01)
+        // payments.processing: authorizePayment fails (attempt 1), retryPayment, reauthorizePayment -> AUTHORIZED
+        // (attempt 2), capturePayment -> CAPTURED (A-01); the failure of attempt 1 is cleared
         val payment = paymentRepository.findByOrderId(orderId)!!
         assertThat(payment.status).isEqualTo(PaymentStatus.CAPTURED)
         assertThat(payment.attemptCount).isEqualTo(2)
@@ -165,6 +229,7 @@ class PlaceOrderFlowRetryIntegrationTest {
         assertThat(payment.capturedAt).isEqualTo(now)
         assertThat(payment.declinedAt).isNull()
         assertThat(payment.failedAt).isNull()
+        assertThat(payment.failureReason).isNull()
         assertThat(payment.voidedAt).isNull()
 
         // fulfillment.shipping: scheduleFulfillment -> SCHEDULED

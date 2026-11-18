@@ -102,7 +102,7 @@
 -- A-03 | payment retry limit = 3 attempts (attemptCount = limit -> retryPayment emits PaymentRetryExhausted) | now in the payments ZDL javadoc (N = 3, P-05)
 -- A-04 | reservation window = 10 minutes: expiresAt = reservedAt + 10m (ZFL @time) | place-order-flow.zfl @time
 -- A-05 | StockUnavailable creates no Order, StockReservation or Payment row (ZFL: "no order record was created") | ZDL startOrderCheckout returns Order @transition(to: CREATED)
--- A-06 | Payment.failureReason / Fulfillment.failureReason codes: card_declined, processor_timeout, capture_window_closed, fulfillment_failed, warehouse_damage | none in the models
+-- A-06 | Payment.failureReason / Fulfillment.failureReason codes: card_declined, processor_timeout, processor_error, capture_window_closed, fulfillment_failed, warehouse_damage | none in the models
 -- A-07 | cancellationReason = StockReleased.reason (StockReleaseReason name) | orders-checkout CancelOrderInput.reason doc
 -- A-08 | a released reservation keeps confirmedAt when it was CONFIRMED before (voided after fulfillment) | none
 -- A-09 | a Payment can appear after the timer released the stock (late OrderCreated delivery): C-11 (AUTHORIZATION_REQUESTED), C-22/C-23 (AUTHORIZED) | P-06 B (query timer)

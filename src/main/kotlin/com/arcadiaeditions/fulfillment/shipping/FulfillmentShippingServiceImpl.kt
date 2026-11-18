@@ -73,6 +73,12 @@ open class FulfillmentShippingServiceImpl(
             fulfillmentRepository.findByIdOrNull(id)
                 ?: throw NoSuchElementException("Fulfillment not found with id: $id")
         FulfillmentTransitions.ensureCanMarkReadyToShip(existingFulfillment)
+        // the warehouse ships only after capture: refused (no transition, no event) until paymentCapturedAt is set
+        if (existingFulfillment.paymentCapturedAt == null) {
+            throw IllegalStateException(
+                "markReadyToShip refused for Fulfillment id=$id: payment not captured yet (paymentCapturedAt is null)"
+            )
+        }
         existingFulfillment.status = FulfillmentStatus.READY_TO_SHIP
         val fulfillment = fulfillmentRepository.save(existingFulfillment)
         // emit events
@@ -80,9 +86,41 @@ open class FulfillmentShippingServiceImpl(
         return fulfillment
     }
 
-    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md (no-op until then)
-    override fun recordPaymentCaptured(input: RecordPaymentCapturedInput): Fulfillment? = null
+    override fun recordPaymentCaptured(input: RecordPaymentCapturedInput): Fulfillment? {
 
-    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md (no-op until then)
-    override fun cancelFulfillment(input: CancelFulfillmentInput): Fulfillment? = null
+        log.debug("Request recordPaymentCaptured: {}", input)
+
+        // no Fulfillment: no-op
+        val existingFulfillment = fulfillmentRepository.findByOrderId(input.orderId) ?: return null
+        // not SCHEDULED, or already recorded (redelivery): no-op, no event
+        if (existingFulfillment.status != FulfillmentStatus.SCHEDULED || existingFulfillment.paymentCapturedAt != null) {
+            return existingFulfillment
+        }
+        existingFulfillment.paymentCapturedAt = input.capturedAt
+        return fulfillmentRepository.save(existingFulfillment)
+    }
+
+    override fun cancelFulfillment(input: CancelFulfillmentInput): Fulfillment? {
+
+        log.debug("Request cancelFulfillment: {}", input)
+
+        // no Fulfillment: no-op
+        val existingFulfillment = fulfillmentRepository.findByOrderId(input.orderId) ?: return null
+        // CANCELLED (redelivery) or FAILED: no-op, no event
+        if (
+            existingFulfillment.status != FulfillmentStatus.SCHEDULED &&
+                existingFulfillment.status != FulfillmentStatus.READY_TO_SHIP
+        ) {
+            return existingFulfillment
+        }
+        FulfillmentTransitions.ensureCanCancelFulfillment(existingFulfillment)
+        existingFulfillment.status = FulfillmentStatus.CANCELLED
+        existingFulfillment.cancelledAt = Instant.now(clock)
+        // A-11: the reason of OrderCancelled
+        existingFulfillment.cancellationReason = input.reason
+        val fulfillment = fulfillmentRepository.save(existingFulfillment)
+        // emit events
+        eventPublisher.onFulfillmentCancelled(eventsMapper.asFulfillmentCancelled(fulfillment))
+        return fulfillment
+    }
 }

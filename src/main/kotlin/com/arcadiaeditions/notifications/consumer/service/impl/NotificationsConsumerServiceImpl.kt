@@ -110,7 +110,14 @@ open class NotificationsConsumerServiceImpl(
         notification.channel = NotificationChannel.EMAIL
         notification.recipient = input.customerEmail
         notification.subject = "Your Arcadia Editions order was cancelled"
-        notification.body = "Your Arcadia Editions order was cancelled: ${input.orderId} (${input.reason})"
+        // void refused: no payment was captured, but the authorization hold may linger
+        val holdNote =
+            if (input.reason == "PAYMENT_VOID_FAILED") {
+                " No payment was taken, but the hold on your card may still show until we release it."
+            } else {
+                ""
+            }
+        notification.body = "Your Arcadia Editions order was cancelled: ${input.orderId} (${input.reason})$holdNote"
         notification.createdAt = now
 
         val result = emailSender.send(EmailMessage(input.customerEmail, notification.subject!!, notification.body!!))

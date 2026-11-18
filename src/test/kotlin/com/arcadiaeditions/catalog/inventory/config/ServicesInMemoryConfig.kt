@@ -17,7 +17,16 @@ open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
 
     val clock: java.time.Clock = com.arcadiaeditions.config.TestClock.FIXED
     private val eventPublisher = InMemoryEventPublisher()
-    protected val inventoryService = InventoryServiceImpl(stockReservationRepository(), inventoryPositionRepository(), eventPublisher, clock)
+    /** payments module, for the @calls of expireReservation (getPaymentStatus) */
+    val paymentsContext = com.arcadiaeditions.payments.processing.config.ServicesInMemoryConfig()
+    protected val inventoryService =
+        InventoryServiceImpl(
+            stockReservationRepository(),
+            inventoryPositionRepository(),
+            eventPublisher,
+            clock,
+            paymentsContext.paymentsProcessingService(),
+        )
     protected val inventoryBackofficeService =
         InventoryBackofficeServiceImpl(inventoryPositionRepository(), eventPublisher)
 
@@ -48,6 +57,7 @@ open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
         inventoryPositionRepository().deleteAll()
         inventoryPositionRepository().saveAll(inventoryPositions)
         eventPublisher.getEvents().clear()
+        paymentsContext.reloadTestData()
     }
 
     @Bean
