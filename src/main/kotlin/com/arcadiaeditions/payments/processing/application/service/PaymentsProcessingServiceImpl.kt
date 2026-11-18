@@ -53,8 +53,6 @@ open class PaymentsProcessingServiceImpl(
     companion object {
         /** A-03: payment retry limit; at this attemptCount retryPayment emits PaymentRetryExhausted. */
         const val MAX_PAYMENT_ATTEMPTS = 3
-        /** A-06: failureReason of a processor call that did not answer within the timeout. */
-        const val PROCESSOR_TIMEOUT = "processor_timeout"
         /** ZFL header: backoff before attempt 2 and before attempt 3. */
         val RETRY_BACKOFF: List<Duration> = listOf(Duration.ofSeconds(5), Duration.ofSeconds(15))
 
@@ -62,7 +60,16 @@ open class PaymentsProcessingServiceImpl(
         fun backoffBefore(attempt: Int): Duration = RETRY_BACKOFF[(attempt - 2).coerceIn(0, RETRY_BACKOFF.size - 1)]
     }
 
-    /** One processor call, abandoned after [processorTimeout]: it then answers FAILED (processor_timeout). */
+    /** Stops the processor-call threads with the application. */
+    @jakarta.annotation.PreDestroy
+    fun shutdownProcessorCalls() {
+        processorCalls.shutdownNow()
+    }
+
+    /**
+     * One processor call, abandoned after [processorTimeout]: it then answers FAILED (processor_timeout);
+     * a call that throws answers FAILED (processor_error).
+     */
     private fun callProcessor(call: () -> PaymentProcessorResult): PaymentProcessorResult {
         val future = processorCalls.submit<PaymentProcessorResult> { call() }
         try {
@@ -70,9 +77,11 @@ open class PaymentsProcessingServiceImpl(
         } catch (e: java.util.concurrent.TimeoutException) {
             future.cancel(true)
             log.warn("payment processor did not answer within {}", processorTimeout)
-            return PaymentProcessorResult.failed(PROCESSOR_TIMEOUT)
+            return PaymentProcessorResult.failed(PaymentProcessorResult.PROCESSOR_TIMEOUT)
         } catch (e: java.util.concurrent.ExecutionException) {
-            throw e.cause ?: e
+            // a processor that throws is a technical failure too (P-10 A): FAILED + PaymentFailed, not a rollback
+            log.warn("payment processor call failed", e.cause ?: e)
+            return PaymentProcessorResult.failed(PaymentProcessorResult.PROCESSOR_ERROR)
         } catch (e: InterruptedException) {
             future.cancel(true)
             Thread.currentThread().interrupt()

@@ -483,6 +483,56 @@ class PaymentsProcessingServiceTest {
         org.junit.jupiter.api.Assertions.assertEquals(2, event.attemptCount!!.toInt())
     }
 
+    /** A processor whose every call throws (technical error on our side or the processor's, P-10 A). */
+    private class ThrowingProcessor(private val delegate: FakePaymentProcessor) :
+        com.arcadiaeditions.payments.processing.application.port.driven.processor.PaymentProcessor by delegate {
+        override fun authorize(
+            request: com.arcadiaeditions.payments.processing.application.port.driven.processor.AuthorizationRequest
+        ): PaymentProcessorResult = throw IllegalStateException("processor exploded")
+    }
+
+    @Test
+    fun authorizePaymentProcessorExceptionTest() {
+        serviceWith(ThrowingProcessor(context.paymentProcessor()))
+            .authorizePayment(authorizeInput("ORD-NEW", "pm_card_visa"))
+
+        val saved = savedPayment("ORD-NEW")
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.FAILED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(1, saved.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, saved.failedAt)
+        org.junit.jupiter.api.Assertions.assertEquals("processor_error", saved.failureReason)
+        val event = events.single() as PaymentFailed
+        org.junit.jupiter.api.Assertions.assertEquals("ORD-NEW", event.orderId)
+        org.junit.jupiter.api.Assertions.assertEquals(1, event.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals("processor_error", event.reason)
+    }
+
+    @Test
+    fun reauthorizePaymentProcessorExceptionTest() {
+        // C-12 with a throwing processor, on JPA semantics
+        val store = versionedStore()
+        val service =
+            PaymentsProcessingServiceImpl(
+                store.repository,
+                context.eventPublisher(),
+                ThrowingProcessor(context.paymentProcessor()),
+                context.clock,
+                store.transactionManager,
+                Duration.ofSeconds(30),
+                context.backoffSleeper,
+            )
+
+        inListenerTransaction(store) { service.reauthorizePayment(reauthorizeInput("ORD-012", 1)) }
+
+        val saved = store.committed("ORD-012")!!
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.FAILED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(2, saved.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals("processor_error", saved.failureReason)
+        val event = events.single() as PaymentFailed
+        org.junit.jupiter.api.Assertions.assertEquals(2, event.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals("processor_error", event.reason)
+    }
+
     @Test
     fun reauthorizePaymentOtherStateIsNoOpTest() {
         // C-04: ORD-004 Payment AUTHORIZED: no wait, no change, no event
