@@ -22,7 +22,7 @@ open class ServicesInMemoryConfig : RepositoriesInMemoryConfig() {
     private val transactionManager = InMemoryTransactionManager()
     /** Backoff waits the service asked for (reauthorizePayment), recorded instead of slept. */
     val backoffWaits: MutableList<java.time.Duration> = java.util.Collections.synchronizedList(mutableListOf())
-    val backoffSleeper: (java.time.Duration) -> Unit = { backoffWaits.add(it) }
+    val backoffSleeper = BackoffSleeper { backoffWaits.add(it) }
     protected val paymentsProcessingService =
         PaymentsProcessingServiceImpl(
             paymentRepository(),

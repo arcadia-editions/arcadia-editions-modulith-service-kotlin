@@ -378,12 +378,12 @@ class PaymentsProcessingServiceTest {
         val payment = serviceWith(processor).reauthorizePayment(reauthorizeInput("ORD-012", 1))
 
         org.junit.jupiter.api.Assertions.assertEquals(listOf(Duration.ofSeconds(5)), backoffWaits)
-        // attemptCount incremented and AUTHORIZATION_REQUESTED committed before the processor call
+        // read in its own transaction (T-80), then attemptCount incremented and AUTHORIZATION_REQUESTED committed before the call
         org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.AUTHORIZATION_REQUESTED, processor.statusAtCall)
         org.junit.jupiter.api.Assertions.assertEquals(2, processor.attemptCountAtCall)
-        org.junit.jupiter.api.Assertions.assertEquals(1, processor.commitsAtCall)
+        org.junit.jupiter.api.Assertions.assertEquals(2, processor.commitsAtCall)
         org.junit.jupiter.api.Assertions.assertEquals(
-            listOf(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW),
+            List(2) { org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW },
             context.transactionManager().begun,
         )
 
@@ -522,6 +522,78 @@ class PaymentsProcessingServiceTest {
         org.junit.jupiter.api.Assertions.assertEquals(2, saved.attemptCount!!.toInt())
         org.junit.jupiter.api.Assertions.assertTrue(backoffWaits.isEmpty())
         org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+    }
+
+    /** T-80: the fixtures in a store with JPA semantics (@Version, one persistence context per transaction). */
+    private fun versionedStore() = VersionedPaymentStore().apply { load(paymentRepository.findAll()) }
+
+    private fun versionedService(store: VersionedPaymentStore): PaymentsProcessingService =
+        PaymentsProcessingServiceImpl(
+            store.repository,
+            context.eventPublisher(),
+            context.paymentProcessor(),
+            context.clock,
+            store.transactionManager,
+            Duration.ofSeconds(30),
+            context.backoffSleeper,
+        )
+
+    /** Runs [block] as the @ApplicationModuleListener does: inside its own transaction. */
+    private fun <T> inListenerTransaction(store: VersionedPaymentStore, block: () -> T): T =
+        org.springframework.transaction.support.TransactionTemplate(store.transactionManager).execute { block() }!!
+
+    @Test
+    fun reauthorizePaymentSavesTheOutcomeOnVersionedPaymentTest() {
+        // C-12 on JPA semantics: attempt 2 committed in its own transaction, then its outcome saved without a stale merge
+        val store = versionedStore()
+        val service = versionedService(store)
+
+        inListenerTransaction(store) { service.reauthorizePayment(reauthorizeInput("ORD-012", 1)) }
+
+        val saved = store.committed("ORD-012")!!
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.AUTHORIZED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(2, saved.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, saved.authorizedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(2, saved.version)
+        org.junit.jupiter.api.Assertions.assertEquals(listOf(Duration.ofSeconds(5)), backoffWaits)
+        org.junit.jupiter.api.Assertions.assertTrue(events.single() is PaymentAuthorized)
+    }
+
+    @Test
+    fun reauthorizePaymentFailedAgainOnVersionedPaymentTest() {
+        // C-14 on JPA semantics: attempt 3 fails again, FAILED with attemptCount 3 saved, only PaymentFailed
+        context.paymentProcessor().authorizeRefusal = PaymentProcessorResult.failed("processor_timeout")
+        val store = versionedStore()
+        val service = versionedService(store)
+
+        inListenerTransaction(store) { service.reauthorizePayment(reauthorizeInput("ORD-014", 2)) }
+
+        val saved = store.committed("ORD-014")!!
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.FAILED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(3, saved.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(com.arcadiaeditions.config.TestClock.NOW, saved.failedAt)
+        org.junit.jupiter.api.Assertions.assertEquals(3, (events.single() as PaymentFailed).attemptCount!!.toInt())
+
+        // the PaymentRetried (attempt 2) redelivered: stale, nothing changes
+        events.clear()
+        inListenerTransaction(store) { service.reauthorizePayment(reauthorizeInput("ORD-014", 2)) }
+        org.junit.jupiter.api.Assertions.assertEquals(saved.version, store.committed("ORD-014")!!.version)
+        org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+    }
+
+    @Test
+    fun authorizePaymentSavesTheOutcomeOnVersionedPaymentTest() {
+        // authorizePayment on JPA semantics: created in its own transaction, outcome saved in the listener's
+        val store = versionedStore()
+        val service = versionedService(store)
+
+        inListenerTransaction(store) { service.authorizePayment(authorizeInput("ORD-NEW", "pm_card_chargeDeclined")) }
+
+        val saved = store.committed("ORD-NEW")!!
+        org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.DECLINED, saved.status)
+        org.junit.jupiter.api.Assertions.assertEquals(1, saved.attemptCount!!.toInt())
+        org.junit.jupiter.api.Assertions.assertEquals(1, saved.version)
+        org.junit.jupiter.api.Assertions.assertTrue(events.single() is PaymentDeclined)
     }
 
     @Test

@@ -7,6 +7,7 @@ import com.arcadiaeditions.payments.processing.application.port.driven.processor
 import com.arcadiaeditions.payments.processing.application.port.driven.processor.PaymentProcessor
 import com.arcadiaeditions.payments.processing.application.port.driven.processor.PaymentProcessorResult
 import com.arcadiaeditions.payments.processing.application.port.driven.processor.VoidRequest
+import com.arcadiaeditions.payments.processing.application.service.BackoffSleeper
 import com.arcadiaeditions.payments.processing.domain.PaymentStatus
 import java.time.Duration
 import java.util.UUID
@@ -84,8 +85,8 @@ class RecordingPaymentProcessor(private val delegate: FakePaymentProcessor, priv
  * The backoffSleeper of PaymentsProcessingServiceImpl (T-57): records the wait instead of sleeping, so a test does not
  * wait 5 s + 15 s.
  */
-class RecordingBackoffSleeper(private val recorder: RetryLoopRecorder) : (Duration) -> Unit {
-    override fun invoke(wait: Duration) = recorder.backoff(wait)
+class RecordingBackoffSleeper(private val recorder: RetryLoopRecorder) : BackoffSleeper {
+    override fun sleep(wait: Duration) = recorder.backoff(wait)
 }
 
 /** Recorder, recording processor (replaces FakePaymentProcessor as the PaymentProcessor) and recording backoff. */
@@ -99,7 +100,7 @@ class RetryLoopTestConfiguration {
     fun recordingPaymentProcessor(delegate: FakePaymentProcessor, recorder: RetryLoopRecorder) =
         RecordingPaymentProcessor(delegate, recorder)
 
-    /** Injected into the optional `backoffSleeper: (Duration) -> Unit` constructor parameter of the payments service. */
+    /** Injected into the optional `backoffSleeper: BackoffSleeper` constructor parameter of the payments service. */
     @Bean fun recordingBackoffSleeper(recorder: RetryLoopRecorder) = RecordingBackoffSleeper(recorder)
 
     @Bean

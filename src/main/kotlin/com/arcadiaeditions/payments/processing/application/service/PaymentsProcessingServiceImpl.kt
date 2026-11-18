@@ -30,7 +30,7 @@ open class PaymentsProcessingServiceImpl(
     @org.springframework.beans.factory.annotation.Value("\${arcadia.payments.processor-timeout:30s}")
     private val processorTimeout: Duration,
     /** Waits the backoff before a reauthorization (ZFL header: 5 s before attempt 2, 15 s before attempt 3); tests record it instead. */
-    private val backoffSleeper: (Duration) -> Unit = { Thread.sleep(it) },
+    private val backoffSleeper: BackoffSleeper = BackoffSleeper.THREAD_SLEEP,
 ) : PaymentsProcessingService {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass)
@@ -108,7 +108,7 @@ open class PaymentsProcessingServiceImpl(
                 paymentMethodId = requested.paymentMethodId!!,
                 amount = requested.amount!!,
                 currency = requested.currency!!,
-                attemptCount = requested.attemptCount?.toInt() ?: 1,
+                attemptCount = attemptsOf(requested),
             )
         val result = callProcessor { paymentProcessor.authorize(request) }
         return saveAuthorizationOutcome(requested, result)
@@ -116,7 +116,6 @@ open class PaymentsProcessingServiceImpl(
 
     /** Saves the processor's answer on [requested] (AUTHORIZED, DECLINED or FAILED) and emits only its event. */
     private fun saveAuthorizationOutcome(requested: Payment, result: PaymentProcessorResult): Payment {
-        // A-01 (P-02): the outcome state is set here, though the ZDL transition only names AUTHORIZATION_REQUESTED
         val now = Instant.now(clock)
         // a retried authorization starts without the failure of the previous attempt
         requested.failedAt = null
@@ -157,8 +156,8 @@ open class PaymentsProcessingServiceImpl(
             paymentRepository.findByOrderId(input.orderId)
                 ?: throw NoSuchElementException("Payment not found for order: ${input.orderId}")
         // redelivery or stale PaymentFailed (another attempt, or the Payment already moved on): no-op, no event
-        val attempts = payment.attemptCount?.toInt() ?: 0
-        if (payment.status != PaymentStatus.FAILED || input.attemptCount?.toInt() != attempts) {
+        val attempts = attemptsOf(payment)
+        if (payment.status != PaymentStatus.FAILED || input.attemptCount.toInt() != attempts) {
             log.debug("retryPayment for order {} ignored: status {}, attemptCount {} vs {}", input.orderId, payment.status, attempts, input.attemptCount)
             return payment
         }
@@ -263,14 +262,16 @@ open class PaymentsProcessingServiceImpl(
 
         log.debug("Request reauthorizePayment: {}", input)
 
+        // T-80: the caller's transaction never holds a copy of the Payment. It is read and claimed in transactions of
+        // their own, so the outcome saved below merges the committed attempt, not a stale copy (optimistic lock)
         val payment =
-            paymentRepository.findByOrderId(input.orderId)
+            newTransaction.execute { paymentRepository.findByOrderId(input.orderId) }
                 ?: throw NoSuchElementException("Payment not found for order: ${input.orderId}")
         if (!isAttemptToRetry(payment, input)) return payment
 
         // backoff before the next attempt, while the Payment is still FAILED
-        val attempt = (payment.attemptCount?.toInt() ?: 0) + 1
-        backoffSleeper(backoffBefore(attempt))
+        val attempt = attemptsOf(payment) + 1
+        backoffSleeper.sleep(backoffBefore(attempt))
 
         // as T-52: the attempt is counted and AUTHORIZATION_REQUESTED committed in its own transaction before the call
         var noOp = false
@@ -302,11 +303,14 @@ open class PaymentsProcessingServiceImpl(
 
     /** reauthorizePayment runs only from FAILED for the attempt that failed; anything else is a redelivery or stale. */
     private fun isAttemptToRetry(payment: Payment, input: ReauthorizePaymentInput): Boolean {
-        val attempts = payment.attemptCount?.toInt() ?: 0
+        val attempts = attemptsOf(payment)
         if (payment.status == PaymentStatus.FAILED && input.attemptCount.toInt() == attempts) return true
         log.debug("reauthorizePayment for order {} ignored: status {}, attemptCount {} vs {}", input.orderId, payment.status, attempts, input.attemptCount)
         return false
     }
+
+    /** attemptCount is NOT NULL in the table; a Payment not yet saved has made no attempt. */
+    private fun attemptsOf(payment: Payment): Int = payment.attemptCount?.toInt() ?: 0
 
     /** Read only, for the reservation timer: STARTED for any existing Payment, NO_PAYMENT otherwise. */
     @Transactional(readOnly = true)
