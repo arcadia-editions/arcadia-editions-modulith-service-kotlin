@@ -57,9 +57,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
  * SKU-002). T-59: attempts counted only by authorizePayment (1) and reauthorizePayment (2, 3); the backoff is 5 s before
  * attempt 2 and 15 s before attempt 3, each asked while the Payment is FAILED ([RetryLoopTestConfiguration] records it,
  * no sleep); at attempt 3 retryPayment emits PaymentRetryExhausted; every PaymentFailed and PaymentRetried of the loop
- * delivered again changes nothing. Second test: the C-13 fixture (ORD-013, Payment FAILED at attempt 3) ignores a stale
- * PaymentFailed (attempt 2) and is exhausted by its pending one (attempt 3). Not @Transactional: the module listeners run
- * after commit.
+ * delivered again changes nothing. The C-13 fixture has its own class (T-82).
+ * Not @Transactional: the module listeners run after commit.
  */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.MOCK,
@@ -204,77 +203,6 @@ class PlaceOrderFlowRetryExhaustedIntegrationTest {
         val position = inventoryPositionRepository.findBySku("SKU-001")!!
         assertThat(listOf(position.availableQuantity, position.reservedQuantity, position.soldQuantity).map { it?.toInt() })
             .containsExactly(available, reserved, sold)
-        assertThat(emailSender.sent.filter { it.body.contains(orderId) }).hasSize(1)
-    }
-
-    /**
-     * C-13: ORD-013 is CREATED, RES-013 RESERVED, Payment FAILED at attempt 3 (the limit) with PaymentFailed pending. A
-     * stale PaymentFailed (attempt 2) is a no-op; the pending one (attempt 3) is retry-exhausted with no backoff and no
-     * processor call, and the flow ends in OrderCancelledNotificationSent (PAYMENT_RETRY_EXHAUSTED) for ORD-013.
-     */
-    @Test
-    fun c13PendingPaymentFailedAtTheLimitEndsInOrderCancelledNotificationSent(scenario: Scenario) {
-        val orderId = "ORD-013"
-        recorder.orderId = orderId
-        val fixture = paymentRepository.findByOrderId(orderId)!!
-        assertThat(fixture.status).isEqualTo(PaymentStatus.FAILED)
-        assertThat(fixture.attemptCount!!.toInt()).isEqualTo(3)
-        val before = inventoryPositionRepository.findBySku("SKU-001")!!
-        val (available, reserved, sold) =
-            listOf(before.availableQuantity, before.reservedQuantity, before.soldQuantity).map { it!!.toInt() }
-        val mark = events.mark()
-
-        // stale: attempt 2 already failed and was retried
-        events.redeliver(
-            PaymentFailed(orderId, "CUST-013", 2 as Integer, "processor_timeout", Instant.parse("2026-10-01T11:57:15Z")),
-            timeout,
-        )
-        assertThat(paymentRepository.findByOrderId(orderId)!!.snapshot()).isEqualTo(fixture.snapshot())
-        assertThat(events.since(mark, PaymentRetried::class.java, RetryLoopTargets.ANY) { it.orderId == orderId }).isEmpty()
-        assertThat(events.since(mark, PaymentRetryExhausted::class.java, RetryLoopTargets.ANY) { it.orderId == orderId })
-            .isEmpty()
-
-        scenario
-            .publish(PaymentFailed(orderId, "CUST-013", 3 as Integer, "processor_timeout", Instant.parse("2026-10-01T11:57:30Z")))
-            .andWaitAtMost(timeout)
-            .andWaitForEventOfType(OrderCancelledNotificationSent::class.java)
-            .matching(Predicate { it.orderId == orderId })
-            .toArriveAndVerify(
-                Consumer { event: OrderCancelledNotificationSent ->
-                    assertThat(event.customerId).isEqualTo("CUST-013")
-                    assertThat(event.reason).isEqualTo("PAYMENT_RETRY_EXHAUSTED")
-                    assertThat(event.recipient).isEqualTo("customer13@example.com")
-                    assertThat(event.sentAt).isEqualTo(TestClock.NOW)
-                }
-            )
-
-        // no backoff, no processor call: the limit is reached
-        assertThat(recorder.steps).isEmpty()
-        assertThat(events.since(mark, PaymentRetried::class.java, RetryLoopTargets.ANY) { it.orderId == orderId }).isEmpty()
-        assertThat(
-                events.since(mark, PaymentRetryExhausted::class.java, RetryLoopTargets.RELEASE_ON_RETRY_EXHAUSTED) {
-                    it.orderId == orderId
-                }
-            )
-            .extracting<Int> { it.attemptCount!!.toInt() }
-            .containsExactly(3)
-        await().atMost(timeout).untilAsserted {
-            assertThat(notificationRepository.findByOrderIdAndType(orderId, NotificationType.ORDER_CANCELLED)).isNotNull()
-        }
-        val payment = paymentRepository.findByOrderId(orderId)!!
-        assertThat(payment.status).isEqualTo(PaymentStatus.RETRY_EXHAUSTED)
-        assertThat(payment.attemptCount!!.toInt()).isEqualTo(3)
-        assertThat(payment.failedAt).isEqualTo(fixture.failedAt)
-        assertThat(payment.failureReason).isEqualTo("processor_timeout")
-        val order = orderRepository.findByOrderId(orderId)!!
-        assertThat(order.status).isEqualTo(OrderStatus.CANCELLED)
-        assertThat(order.cancellationReason).isEqualTo("PAYMENT_RETRY_EXHAUSTED")
-        val reservation = stockReservationRepository.findByOrderId(orderId).single()
-        assertThat(reservation.status).isEqualTo(ReservationStatus.RELEASED)
-        assertThat(reservation.releaseReason.toString()).isEqualTo("PAYMENT_RETRY_EXHAUSTED")
-        val position = inventoryPositionRepository.findBySku("SKU-001")!!
-        assertThat(listOf(position.availableQuantity, position.reservedQuantity, position.soldQuantity).map { it?.toInt() })
-            .containsExactly(available + 1, reserved - 1, sold)
         assertThat(emailSender.sent.filter { it.body.contains(orderId) }).hasSize(1)
     }
 
