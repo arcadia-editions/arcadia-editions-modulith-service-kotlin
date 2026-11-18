@@ -101,7 +101,6 @@ class PlaceOrderFlowReservationExpiredIntegrationTest {
     companion object {
         /** Long enough for the timer to run inside the first call, short enough for 3 attempts in a test. */
         const val PROCESSOR_TIMEOUT = "5s"
-        const val TIMER_TARGET = "CatalogInventoryEventsListener.onStockReleased"
     }
 
     @Autowired lateinit var ordersCheckoutService: OrdersCheckoutService
@@ -199,7 +198,7 @@ class PlaceOrderFlowReservationExpiredIntegrationTest {
         val position = inventoryPositionRepository.findBySku("SKU-006")!!
         assertThat(listOf(position.availableQuantity, position.reservedQuantity, position.soldQuantity).map { it?.toInt() })
             .containsExactly(available + 1, reserved - 1, sold)
-        assertThat(events.since(mark, StockReleased::class.java, TIMER_TARGET) { it.orderId == orderId })
+        assertThat(events.since(mark, StockReleased::class.java, RetryLoopTargets.CANCEL_ORDER) { it.orderId == orderId })
             .extracting<StockReleaseReason?> { it.reason }
             .containsExactly(StockReleaseReason.RESERVATION_EXPIRED)
         // payments.processing: getPaymentStatus is read only, no Payment created
@@ -331,13 +330,13 @@ class PlaceOrderFlowReservationExpiredIntegrationTest {
             .extracting<Int> { it.attemptCount!!.toInt() }
             .containsExactly(3)
 
-        // catalog.inventory: released once, by payment (PAYMENT_RETRY_EXHAUSTED), never by the timer
+        // catalog.inventory: released once, by payment (PAYMENT_RETRY_EXHAUSTED), never by the timer; the cancelOrder listener sees only that release
         val reservation = stockReservationRepository.findByOrderId(orderId).single()
         assertThat(reservation.status).isEqualTo(ReservationStatus.RELEASED)
         assertThat(reservation.reservedAt).isEqualTo(createdAt)
         assertThat(reservation.releasedAt).isEqualTo(expiredAt)
         assertThat(reservation.releaseReason).isEqualTo(StockReleaseReason.PAYMENT_RETRY_EXHAUSTED)
-        assertThat(events.since(mark, StockReleased::class.java, TIMER_TARGET) { it.orderId == orderId })
+        assertThat(events.since(mark, StockReleased::class.java, RetryLoopTargets.CANCEL_ORDER) { it.orderId == orderId })
             .extracting<StockReleaseReason?> { it.reason }
             .containsExactly(StockReleaseReason.PAYMENT_RETRY_EXHAUSTED)
         val position = inventoryPositionRepository.findBySku("SKU-001")!!

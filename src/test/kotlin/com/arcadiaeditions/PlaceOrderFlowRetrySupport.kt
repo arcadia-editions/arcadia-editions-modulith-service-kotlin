@@ -154,6 +154,8 @@ object RetryLoopTargets {
     const val REAUTHORIZE_PAYMENT = "PaymentsProcessingServiceEventsListener.reauthorizePayment"
     const val RELEASE_ON_DECLINED = "PaymentsProcessingEventsListener.onPaymentDeclined"
     const val RELEASE_ON_RETRY_EXHAUSTED = "PaymentsProcessingEventsListener.onPaymentRetryExhausted"
+    /** The cancelOrder listener, on StockReleased. */
+    const val CANCEL_ORDER = "CatalogInventoryEventsListener.onStockReleased"
     /** Any listener. */
     const val ANY = ""
 }
