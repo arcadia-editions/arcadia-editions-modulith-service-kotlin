@@ -10,7 +10,8 @@ import org.springframework.stereotype.Component
  * Deterministic stand-in for the payment processor, driven by the processor's test payment method ids:
  * `pm_card_chargeDeclined` declines, `pm_card_processorError` fails, `pm_card_processorErrorOnce` fails on attempt 1 only, `pm_card_processorErrorThenDecline` fails on attempt 1 and declines the retries, any other (e.g. `pm_card_visa`) is approved.
  * `pm_card_processorNoAnswer` never answers: the call waits until a test calls [releaseStalledAuthorizations] (or
- * [STALL_MAX_SECONDS] pass) and then throws, so the authorization rolls back and payment never resolves.
+ * [STALL_MAX_SECONDS] pass) and then throws. The service gives up after the processor timeout (FAILED, processor_timeout);
+ * a call released before that ends FAILED with processor_error (P-10 A).
  * Captures always succeed, keeping the authorization reference, unless a test sets [captureRefusal]; a test may also set [authorizeRefusal] to force every authorization's answer.
  * Voids always succeed, keeping the authorization reference, unless a test sets [voidRefusal].
  * A real processor adapter is a separate task.
@@ -32,7 +33,7 @@ class FakePaymentProcessor : PaymentProcessor {
         /** Upper bound of a stalled authorization call, so a test that forgets to release does not hold a thread. */
         const val STALL_MAX_SECONDS = 120L
         const val CARD_DECLINED = "card_declined"
-        const val PROCESSOR_TIMEOUT = "processor_timeout"
+        const val PROCESSOR_TIMEOUT = PaymentProcessorResult.PROCESSOR_TIMEOUT
     }
 
     /** Test hook: when set, every capture answers this refusal instead of capturing. */
