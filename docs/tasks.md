@@ -17,8 +17,9 @@ branch: afk/place-order-flow
 path: PaymentFailed or PaymentRetried for an order with no Payment > retryPayment or reauthorizePayment > no-op, no event
 review: [ ]
 
-- [ ] T-88 mechanical AFK retryPayment and reauthorizePayment return null, log and emit no event when no Payment exists for orderId, as voidPayment (carries T-81 of baseline 3, unblocked by P-12 A); retryPaymentNotFoundTest and reauthorizePaymentNotFoundTest assert null and no event instead of NoSuchElementException. Do not guard reauthorizePayment with PaymentTransitions.ensureCanReauthorizePayment (see header)
+- [x] T-88 mechanical AFK retryPayment and reauthorizePayment return null, log and emit no event when no Payment exists for orderId, as voidPayment (carries T-81 of baseline 3, unblocked by P-12 A); retryPaymentNotFoundTest and reauthorizePaymentNotFoundTest assert null and no event instead of NoSuchElementException. Do not guard reauthorizePayment with PaymentTransitions.ensureCanReauthorizePayment (see header)
       model: ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:129-148
       test data: none (orderId ORD-MISSING has no row on purpose)
       tests: PaymentsProcessingServiceTest
       fixes: .zenwave/handoff/place-order-flow-baseline-3/reports/review-S2.md (SHOULD FIX no-op without Payment)
+      done: claude-sonnet sonnet
