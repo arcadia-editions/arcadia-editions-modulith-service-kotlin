@@ -242,6 +242,12 @@ review: [ ]
       tests: PlaceOrderFlowNotificationFailedIntegrationTest
       blocked by: T-55
       done: claude-sonnet sonnet
+- [/] T-87 mechanical AFK The notification-failed flow test proves the business outcome is untouched: await Fulfillment.paymentCapturedAt = now (as the completed flow test does), assert the SKU-006 counters relative to the position read before the checkout (available -1, sold +1, as the other flow tests), compare NotificationDeliveryFailed.notificationId with the stored Notification; drop the e-mail-list assertion that only proves the fake
+      model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:202-221, ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:336-345
+      test data: data.sql C-29
+      tests: PlaceOrderFlowNotificationFailedIntegrationTest
+      fixes: .zenwave/handoff/place-order-flow/reports/review-S7.md (SHOULD FIX x2, NOTEs)
+
 
 ## S8 Polish
 review: [x]
