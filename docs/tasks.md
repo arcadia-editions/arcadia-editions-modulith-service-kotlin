@@ -42,12 +42,13 @@ review: [ ]
       tests: PlaceOrderFlowCompletedIntegrationTest
       blocked by: T-52, T-54
       done: claude-opus opus
-- [/] T-75 bounded AFK Processor exception is a failure: callProcessor maps a processor exception (not only the timeout) to FAILED + PaymentFailed with failureReason processor_error (P-10 A), for authorizePayment and reauthorizePayment; unit test with a throwing processor; one A-06 constant shared with FakePaymentProcessor; shut the processor-call executor down (@PreDestroy); fix the stale FakePaymentProcessor KDoc (pm_card_processorNoAnswer now ends FAILED after the timeout)
+- [x] T-75 bounded AFK Processor exception is a failure: callProcessor maps a processor exception (not only the timeout) to FAILED + PaymentFailed with failureReason processor_error (P-10 A), for authorizePayment and reauthorizePayment; unit test with a throwing processor; one A-06 constant shared with FakePaymentProcessor; shut the processor-call executor down (@PreDestroy); fix the stale FakePaymentProcessor KDoc (pm_card_processorNoAnswer now ends FAILED after the timeout)
       model: ../arcadia-editions-architecture/business-flows/place-order-flow.zfl:107-122, ../arcadia-editions-modulith-api/payments-processing-domain-model.zdl:119-136
       test data: data.sql C-01, data.sql C-12
       tests: PaymentsProcessingServiceTest
       fixes: .zenwave/handoff/place-order-flow/reports/review-S1.md (FIX FIRST T-52, NOTEs)
       blocked by: T-80
+      done: claude-sonnet sonnet
 - [x] T-76 mechanical AFK markReadyToShip refusal names its cause: not InvalidStateTransitionException with allowedStates [SCHEDULED] from SCHEDULED, but an exception (or message) that says the payment is not captured yet (paymentCapturedAt null); FulfillmentTransitions is generated, do not edit it; adjust the refusal assertions (FulfillmentShippingServiceTest, PlaceOrderFlowCompletedIntegrationTest)
       model: ../arcadia-editions-modulith-api/fulfillment-shipping-domain-model.zdl:112-114
       test data: data.sql C-04, data.sql C-24
