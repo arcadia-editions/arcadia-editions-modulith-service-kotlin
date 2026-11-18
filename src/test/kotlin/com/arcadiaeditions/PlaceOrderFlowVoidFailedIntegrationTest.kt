@@ -194,9 +194,9 @@ class PlaceOrderFlowVoidFailedIntegrationTest {
         assertThat(notification.createdAt).isEqualTo(now)
         assertThat(notification.sentAt).isEqualTo(now)
         assertThat(notificationRepository.findByOrderIdAndType(orderId, NotificationType.ORDER_CONFIRMATION)).isNull()
-        assertThat(notification.body).contains("PAYMENT_VOID_FAILED").contains("hold on your card")
+        assertThat(notification.body).contains("PAYMENT_VOID_FAILED").contains("hold on your card may still show until we release it")
         val emails = emailSender.sent.filter { it.body.contains(orderId) }
         assertThat(emails).hasSize(1)
-        assertThat(emails.single().body).contains("hold on your card")
+        assertThat(emails.single().body).contains("hold on your card may still show until we release it")
     }
 }

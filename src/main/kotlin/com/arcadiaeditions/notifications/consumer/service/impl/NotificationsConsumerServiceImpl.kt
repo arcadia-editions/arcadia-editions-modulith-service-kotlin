@@ -113,7 +113,7 @@ open class NotificationsConsumerServiceImpl(
         // void refused: no payment was captured, but the authorization hold may linger
         val holdNote =
             if (input.reason == "PAYMENT_VOID_FAILED") {
-                " No payment was taken, but the hold on your card may still show for a few days."
+                " No payment was taken, but the hold on your card may still show until we release it."
             } else {
                 ""
             }
