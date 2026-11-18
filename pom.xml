@@ -26,7 +26,7 @@
 
 		<jmolecules-bom.version>2025.0.2</jmolecules-bom.version>
 
-		<arcadia-models.version>0.10.1</arcadia-models.version>
+		<arcadia-models.version>0.10.3</arcadia-models.version>
 		<openapi-generator-maven-plugin.version>7.17.0</openapi-generator-maven-plugin.version>
 
 		<jakarta.validation-api.version>3.1.1</jakarta.validation-api.version>

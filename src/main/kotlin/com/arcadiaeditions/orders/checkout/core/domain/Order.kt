@@ -23,7 +23,7 @@ data class Order(
     @NotNull @Column(name = "order_id", nullable = false, unique = true) var orderId: String? = null,
     @NotNull
     @Column(name = "status", nullable = false)
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = OrderStatus.OrderStatusConverter::class)
     var status: OrderStatus = OrderStatus.CREATED,
 
     /** Customer snapshot taken at checkout (there is no customers bounded context yet). */

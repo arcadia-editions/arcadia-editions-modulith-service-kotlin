@@ -25,14 +25,17 @@ data class Notification(
     @NotNull @Column(name = "customer_id", nullable = false) var customerId: String? = null,
     @Column(name = "order_id") var orderId: String? = null,
     @Column(name = "skus") var skus: MutableList<String> = mutableListOf(),
-    @NotNull @Column(name = "type", nullable = false) @Enumerated(EnumType.STRING) var type: NotificationType? = null,
+    @NotNull
+    @Column(name = "type", nullable = false)
+    @Convert(converter = NotificationType.NotificationTypeConverter::class)
+    var type: NotificationType? = null,
     @NotNull
     @Column(name = "channel", nullable = false)
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = NotificationChannel.NotificationChannelConverter::class)
     var channel: NotificationChannel? = null,
     @NotNull
     @Column(name = "status", nullable = false)
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = NotificationStatus.NotificationStatusConverter::class)
     var status: NotificationStatus = NotificationStatus.PENDING,
     @NotNull @Column(name = "subject", nullable = false) var subject: String? = null,
     @NotNull @Column(name = "body", nullable = false) var body: String? = null,

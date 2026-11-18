@@ -25,7 +25,7 @@ data class Fulfillment(
     @NotNull @Column(name = "customer_id", nullable = false) var customerId: String? = null,
     @NotNull
     @Column(name = "status", nullable = false)
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = FulfillmentStatus.FulfillmentStatusConverter::class)
     var status: FulfillmentStatus = FulfillmentStatus.SCHEDULED,
     @NotNull
     @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)

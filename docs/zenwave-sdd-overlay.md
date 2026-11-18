@@ -74,7 +74,7 @@ mkdir -p target && mvn -q -DskipTests clean compile 2>&1 | tee target/compile.lo
 # focused tests of a task (the implementer runs only these)
 mvn -q test -Dtest='TestClass'   # the task's tests:
 # full suite with integration tests and containers (once per slice review)
-# about 4 to 6 minutes (3:34 and 5:25 on 2026-11-17); needs Docker (Testcontainers starts docker-compose: postgres, kafka). Add -Dmaven.test.failure.ignore=true
+# about 4 to 6 minutes (3:34 and 5:25 on 2026-11-17, 4:53 on 2026-11-18); needs Docker (Testcontainers starts docker-compose: postgres, kafka). Add -Dmaven.test.failure.ignore=true
 # to reach the failsafe ITs while unit tests still fail (baseline 2026-11-12)
 mvn -q verify
 # lint the models
@@ -91,9 +91,6 @@ The orchestrator gives the workers the focused command (with the task's `tests:`
 - Decisions already taken that the models don't show: `../arcadia-editions-architecture/docs/case-study-decisions.md`, `docs/proposals/` (P-01 superseded by reauthorizePayment; P-02, P-05..P-08 accepted 2026-11-17)
 - Known lint warnings: none (2026-11-17)
 
-## Known failing tests at the baseline (2026-11-17, models 0.10.0)
+## Known failing tests at the baseline (2026-11-18, models 0.10.3)
 
-| Test | Cause | Fixed by |
-|---|---|---|
-| `PaymentsProcessingServiceTest.voidPaymentFromFailedTest`, `.voidPaymentFromAuthorizationRequestedTest` | assert the old void from `FAILED` / `AUTHORIZATION_REQUESTED`; 0.10.0 narrows `voidPayment` to `[AUTHORIZED, CAPTURE_FAILED]`, anything else a no-op (P-06, P-08) | the voidPayment task of the board |
-| `InventoryServiceTest.reservationExpiredJobTest`, `.reservationExpiredJobTwiceTest`, `.reservationExpiredJobOncePerOrderTest` | assert the old timer (every due reservation released, ORD-014 included, exactly the due set before C-30); 0.10.0 runs `expireReservation`, which releases only on `NO_PAYMENT` (C-30) and leaves ORD-014 (payment started, C-14) | the expireReservation task of the board |
+None: 153 unit and 59 integration tests pass (baseline 3's known failures were fixed in its AFK round).

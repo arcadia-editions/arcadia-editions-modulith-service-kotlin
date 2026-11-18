@@ -30,7 +30,7 @@ data class Payment(
     @NotNull @Column(name = "currency", nullable = false) var currency: String? = null,
     @NotNull
     @Column(name = "status", nullable = false)
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = PaymentStatus.PaymentStatusConverter::class)
     var status: PaymentStatus = PaymentStatus.AUTHORIZATION_REQUESTED,
     @Column(name = "provider_reference") var providerReference: String? = null,
     @NotNull @Column(name = "attempt_count", nullable = false) var attemptCount: Integer? = null,

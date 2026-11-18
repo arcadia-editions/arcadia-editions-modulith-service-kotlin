@@ -28,12 +28,12 @@ data class Product(
     @NotNull @Column(name = "edition_size", nullable = false) var editionSize: Integer? = null,
     @NotNull
     @Column(name = "tracking_mode", nullable = false)
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = InventoryTrackingMode.InventoryTrackingModeConverter::class)
     var trackingMode: InventoryTrackingMode? = null,
     @Column(name = "launch_at") var launchAt: Instant? = null,
     @NotNull
     @Column(name = "status", nullable = false)
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = ProductStatus.ProductStatusConverter::class)
     var status: ProductStatus = ProductStatus.DRAFT,
 ) : Serializable {
 

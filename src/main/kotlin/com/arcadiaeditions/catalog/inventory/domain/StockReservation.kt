@@ -29,13 +29,15 @@ data class StockReservation(
     @NotNull @Column(name = "quantity", nullable = false) var quantity: Integer? = null,
     @NotNull
     @Column(name = "status", nullable = false)
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = ReservationStatus.ReservationStatusConverter::class)
     var status: ReservationStatus = ReservationStatus.RESERVED,
     @NotNull @Column(name = "reserved_at", nullable = false) var reservedAt: Instant? = null,
     @NotNull @Column(name = "expires_at", nullable = false) var expiresAt: Instant? = null,
     @Column(name = "confirmed_at") var confirmedAt: Instant? = null,
     @Column(name = "released_at") var releasedAt: Instant? = null,
-    @Column(name = "release_reason") @Enumerated(EnumType.STRING) var releaseReason: StockReleaseReason? = null,
+    @Column(name = "release_reason")
+    @Convert(converter = StockReleaseReason.StockReleaseReasonConverter::class)
+    var releaseReason: StockReleaseReason? = null,
 ) : Serializable {
 
     companion object {

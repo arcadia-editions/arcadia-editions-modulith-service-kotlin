@@ -286,7 +286,7 @@ class PaymentsProcessingServiceTest {
         // C-12: ORD-012 Payment FAILED (attempt 1 of 3), PaymentFailed emitted
         val before = paymentRepository.findAll().size
 
-        val payment = paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-012", attemptCount = 1 as Integer))
+        val payment = paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-012", attemptCount = 1 as Integer))!!
 
         org.junit.jupiter.api.Assertions.assertEquals(before, paymentRepository.findAll().size)
         val saved = savedPayment("ORD-012")
@@ -307,7 +307,7 @@ class PaymentsProcessingServiceTest {
     @Test
     fun retryPaymentExhaustedTest() {
         // C-13: ORD-013 Payment FAILED at the retry limit (attempt 3, A-03)
-        val payment = paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-013", attemptCount = 3 as Integer))
+        val payment = paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-013", attemptCount = 3 as Integer))!!
 
         val saved = savedPayment("ORD-013")
         org.junit.jupiter.api.Assertions.assertEquals(saved.id, payment.id)
@@ -327,7 +327,7 @@ class PaymentsProcessingServiceTest {
     @Test
     fun retryPaymentOtherStateIsNoOpTest() {
         // C-04: ORD-004 Payment AUTHORIZED: redelivery, no-op, no event
-        val payment = paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-004", attemptCount = 1 as Integer))
+        val payment = paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-004", attemptCount = 1 as Integer))!!
         org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.AUTHORIZED, payment.status)
         org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.AUTHORIZED, savedPayment("ORD-004").status)
         org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
@@ -375,7 +375,7 @@ class PaymentsProcessingServiceTest {
         val processor = ObservingProcessor(context.paymentProcessor())
         val before = paymentRepository.findAll().size
 
-        val payment = serviceWith(processor).reauthorizePayment(reauthorizeInput("ORD-012", 1))
+        val payment = serviceWith(processor).reauthorizePayment(reauthorizeInput("ORD-012", 1))!!
 
         org.junit.jupiter.api.Assertions.assertEquals(listOf(Duration.ofSeconds(5)), backoffWaits)
         // read in its own transaction (T-80), then attemptCount incremented and AUTHORIZATION_REQUESTED committed before the call
@@ -406,7 +406,7 @@ class PaymentsProcessingServiceTest {
     @Test
     fun reauthorizePaymentThirdAttemptTest() {
         // C-14: ORD-014 Payment FAILED (attempt 2), PaymentRetried attempt 2: waits 15 s, attempt 3 authorized
-        val payment = paymentsProcessingService.reauthorizePayment(reauthorizeInput("ORD-014", 2))
+        val payment = paymentsProcessingService.reauthorizePayment(reauthorizeInput("ORD-014", 2))!!
 
         org.junit.jupiter.api.Assertions.assertEquals(listOf(Duration.ofSeconds(15)), backoffWaits)
         val saved = savedPayment("ORD-014")
@@ -536,7 +536,7 @@ class PaymentsProcessingServiceTest {
     @Test
     fun reauthorizePaymentOtherStateIsNoOpTest() {
         // C-04: ORD-004 Payment AUTHORIZED: no wait, no change, no event
-        val payment = paymentsProcessingService.reauthorizePayment(reauthorizeInput("ORD-004", 1))
+        val payment = paymentsProcessingService.reauthorizePayment(reauthorizeInput("ORD-004", 1))!!
 
         org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.AUTHORIZED, payment.status)
         org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.AUTHORIZED, savedPayment("ORD-004").status)

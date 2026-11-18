@@ -1,6 +1,14 @@
 package com.arcadiaeditions.payments.processing.domain
 object PaymentTransitions {
 
+    fun ensureCanAuthorizePayment(entity: Payment) {
+        require("authorizePayment", entity, PaymentStatus.AUTHORIZATION_REQUESTED)
+    }
+
+    fun ensureCanReauthorizePayment(entity: Payment) {
+        require("reauthorizePayment", entity, PaymentStatus.AUTHORIZATION_REQUESTED)
+    }
+
     fun ensureCanRetryPayment(entity: Payment) {
         require("retryPayment", entity, PaymentStatus.FAILED)
     }
@@ -40,12 +48,4 @@ object PaymentTransitions {
             "Invalid state transition for $entityType (${naturalId ?: "id=$entityId"}): " +
                 "operation '$operation' not allowed from state $currentState, allowed states: $allowedStates"
         )
-
-    fun ensureCanAuthorizePayment(entity: Payment) {
-        require("authorizePayment", entity, PaymentStatus.AUTHORIZATION_REQUESTED)
-    }
-
-    fun ensureCanReauthorizePayment(entity: Payment) {
-        require("reauthorizePayment", entity, PaymentStatus.FAILED)
-    }
 }
