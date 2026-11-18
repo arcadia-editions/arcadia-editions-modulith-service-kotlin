@@ -56,8 +56,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
  * approves attempt 2 after the 5 s backoff, and the flow ends in OrderConfirmationSent (shape of C-06, payment attemptCount
  * 2). T-59: attempts are counted only by authorizePayment (1) and reauthorizePayment (2), never by retryPayment; the
  * backoff is asked before attempt 2 while the Payment is still FAILED ([RetryLoopTestConfiguration] records it instead of
- * sleeping); a redelivered PaymentFailed or PaymentRetried with a stale attemptCount changes nothing. Second test: the C-12
- * fixture (ORD-012, Payment FAILED attempt 1) resumes from its pending PaymentFailed. Not @Transactional: the module
+ * sleeping); a redelivered PaymentFailed or PaymentRetried with a stale attemptCount changes nothing. The C-12 fixture has its own class (T-82).
+ * Not @Transactional: the module
  * listeners run after commit.
  */
 @SpringBootTest(
@@ -182,71 +182,6 @@ class PlaceOrderFlowRetryIntegrationTest {
         assertThat(events.since(redelivered, PaymentAuthorized::class.java, RetryLoopTargets.ANY) { it.orderId == orderId }).isEmpty()
         assertThat(orderRepository.findByOrderId(orderId)!!.status).isEqualTo(OrderStatus.CONFIRMED)
         assertThat(emailSender.sent.filter { it.body.contains(orderId) }).hasSize(1)
-    }
-
-    /**
-     * C-12: ORD-012 is CREATED, RES-012 RESERVED, Payment FAILED at attempt 1 with PaymentFailed pending. A PaymentRetried
-     * whose attemptCount is not the Payment's (2, out of order) is a no-op; the pending PaymentFailed (attempt 1) runs the
-     * loop: retryPayment retried, the 5 s backoff, reauthorizePayment attempt 2 (pm_card_visa approves), and the flow ends
-     * in OrderConfirmationSent for ORD-012.
-     */
-    @Test
-    fun c12PendingPaymentFailedIsRetriedAndEndsInOrderConfirmationSent(scenario: Scenario) {
-        val orderId = "ORD-012"
-        recorder.orderId = orderId
-        val fixture = paymentRepository.findByOrderId(orderId)!!
-        assertThat(fixture.status).isEqualTo(PaymentStatus.FAILED)
-        assertThat(fixture.attemptCount!!.toInt()).isEqualTo(1)
-        val before = inventoryPositionRepository.findBySku("SKU-001")!!
-        val (available, reserved, sold) =
-            listOf(before.availableQuantity, before.reservedQuantity, before.soldQuantity).map { it!!.toInt() }
-        val mark = events.mark()
-
-        // out of order: attemptCount 2 is not the attempt that failed
-        events.redeliver(
-            PaymentRetried(orderId, "CUST-012", 2 as Integer, Instant.parse("2026-10-01T11:59:30Z")),
-            timeout,
-        )
-        assertThat(paymentRepository.findByOrderId(orderId)!!.snapshot()).isEqualTo(fixture.snapshot())
-        assertThat(recorder.steps).isEmpty()
-
-        scenario
-            .publish(PaymentFailed(orderId, "CUST-012", 1 as Integer, "processor_timeout", Instant.parse("2026-10-01T11:59:30Z")))
-            .andWaitAtMost(timeout)
-            .andWaitForEventOfType(OrderConfirmationSent::class.java)
-            .matching(Predicate { it.orderId == orderId })
-            .toArriveAndVerify(
-                Consumer { event: OrderConfirmationSent ->
-                    assertThat(event.customerId).isEqualTo("CUST-012")
-                    assertThat(event.recipient).isEqualTo("customer12@example.com")
-                    assertThat(event.sentAt).isEqualTo(TestClock.NOW)
-                }
-            )
-
-        assertThat(recorder.steps)
-            .containsExactly(
-                Backoff(Duration.ofSeconds(5), PaymentStatus.FAILED, 1),
-                Authorize(2, PaymentStatus.AUTHORIZATION_REQUESTED, 2),
-            )
-        assertThat(
-                events.since(mark, PaymentRetried::class.java, RetryLoopTargets.REAUTHORIZE_PAYMENT) { it.orderId == orderId }
-            )
-            .extracting<Int> { it.attemptCount!!.toInt() }
-            .containsExactlyInAnyOrder(2, 1)
-        await().atMost(timeout).untilAsserted {
-            assertThat(paymentRepository.findByOrderId(orderId)!!.status).isEqualTo(PaymentStatus.CAPTURED)
-            assertThat(notificationRepository.findByOrderIdAndType(orderId, NotificationType.ORDER_CONFIRMATION)).isNotNull()
-        }
-        val payment = paymentRepository.findByOrderId(orderId)!!
-        assertThat(payment.attemptCount!!.toInt()).isEqualTo(2)
-        assertThat(payment.authorizedAt).isEqualTo(TestClock.NOW)
-        assertThat(payment.failedAt).isNull()
-        assertThat(payment.failureReason).isNull()
-        assertThat(orderRepository.findByOrderId(orderId)!!.status).isEqualTo(OrderStatus.CONFIRMED)
-        assertThat(stockReservationRepository.findByOrderId(orderId).single().status).isEqualTo(ReservationStatus.CONFIRMED)
-        val position = inventoryPositionRepository.findBySku("SKU-001")!!
-        assertThat(listOf(position.availableQuantity, position.reservedQuantity, position.soldQuantity).map { it?.toInt() })
-            .containsExactly(available, reserved - 1, sold + 1)
     }
 
     private fun assertEndState(orderId: String, available: Int, reserved: Int, sold: Int) {

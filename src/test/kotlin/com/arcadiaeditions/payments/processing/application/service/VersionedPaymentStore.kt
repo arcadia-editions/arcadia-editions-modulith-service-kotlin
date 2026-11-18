@@ -96,7 +96,6 @@ class VersionedPaymentStore {
         override fun <S : Payment> save(entity: S): S {
             val ctx = context()
             val id = entity.id
-            @Suppress("UNCHECKED_CAST")
             if (id == null || entity.version == null) {
                 // persist: the instance becomes managed, version 0, inserted at flush
                 entity.id = id ?: nextId++
