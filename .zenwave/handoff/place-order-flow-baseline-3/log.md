@@ -1,0 +1,77 @@
+# place-order-flow log (baseline/place-order-flow-3)
+
+- 2026-11-17 setup: integration worktree afk/place-order-flow at baseline/place-order-flow-3 (85de5b1)
+- 2026-11-17 S1 base 85de5b1; S3 base 85de5b1
+- 2026-11-17 T-52 -> claude-opus (advanced); T-53 -> claude-sonnet (bounded); T-61 -> claude-sonnet (mechanical)
+- 2026-11-17 T-61 merged (claude-sonnet; tests only, behavior already in place; 3 known T-67 failures)
+- 2026-11-17 T-53 merged (claude-sonnet; no-op when not SCHEDULED, per ZDL)
+- 2026-11-17 T-54 -> claude-sonnet (bounded); T-62 -> claude-sonnet (bounded)
+- 2026-11-17 T-52 merged (claude-opus; REQUIRES_NEW commit + virtual-thread timeout; open question: processor exception leaves AUTHORIZATION_REQUESTED stuck; note: PlaceOrderFlowReservationExpiredIntegrationTest expected to fail until T-67/T-68)
+- 2026-11-17 T-54 merged (claude-sonnet). S2 base: 3c12441's successor (merge T-54)
+- 2026-11-17 T-55 -> claude-opus (advanced, flow test, compile only); T-56 -> claude-sonnet (bounded)
+- 2026-11-17 T-62 merged (claude-sonnet; note wording is the worker's choice). S4 base: merge T-62
+- 2026-11-17 T-64 -> claude-sonnet (bounded)
+- 2026-11-17 T-56 held until T-55 merged (alone it breaks the retry loop until T-58: authorizePayment P-01 D reuse + no increment)
+- 2026-11-17 T-55 merged 7499242 (claude-opus; S1 complete); T-64 merged (claude-sonnet); T-56 merged 3e2c0ec (claude-sonnet). S2 base 3e2c0ec^1 = 04f786c
+- 2026-11-17 review S1 -> claude-opus at 7499242 (range 85de5b1..7499242); no worker free of S1 (opus and sonnet both implemented), so an implementer reviews
+- 2026-11-17 T-57 -> claude-opus (advanced); T-69 -> claude-sonnet (bounded); T-74 -> claude-sonnet (mechanical)
+- 2026-11-17 T-69 merged (claude-sonnet; no reservations at all also NOT_HELD). S6 base 85de5b1. T-70 waits for T-74 (orders)
+- 2026-11-17 T-74 merged 118f015 (claude-sonnet; tests only, generated validation already 400). S8 complete: base 750ee44
+- 2026-11-17 review S8 -> claude-opus at 118f015 (opus implemented none of S8); T-70 -> claude-sonnet (bounded)
+- 2026-11-17 review S1: FIX (claude-opus, suite 5:51, only known failures). Accepted: FIX FIRST T-52 processor exception -> T-75 (blocked P-10, reason code; P-10 written); SHOULD FIX T-54 refusal message -> T-76; NOTEs (dup A-06 constant, executor shutdown, stale KDoc) folded into T-75. Rejected as a task: connection held during the processor call (UNCONFIRMED; the ZDL asks commit-then-call; raised to the person as a design question). Merge commits now carry AI- trailers (review NOTE).
+- 2026-11-17 T-57 merged bceed21 (claude-opus; injectable backoffSleeper; same AUTHORIZATION_REQUESTED gap as A-01)
+- 2026-11-17 T-70 merged (claude-sonnet)
+- 2026-11-17 T-58 -> claude-sonnet (mechanical); T-76 -> claude-sonnet (mechanical)
+- 2026-11-17 review S8: PASS (claude-opus). Accepted SHOULD FIX (400 test proves nothing reserved) + NOTEs -> T-77 (S8, review reopened, light). Known failure added: PlaceOrderFlowCaptureFailedIntegrationTest:175 (T-64 merged before T-65; fixed by T-65). Board: T-74 model lines corrected to zdl:69-70, :96-100.
+- 2026-11-17 T-77 -> claude-sonnet (mechanical)
+- 2026-11-17 T-76 merged eeb286c (claude-sonnet; IllegalStateException naming paymentCapturedAt)
+- 2026-11-17 T-58 merged (claude-sonnet; retry loop whole again)
+- 2026-11-17 T-59 -> claude-opus (advanced, flow tests, compile only); T-60 -> claude-sonnet (bounded). Run together: T-59 is test-only.
+- 2026-11-17 T-77 merged 2a03289 (claude-sonnet). review S8 r2 -> claude-opus at 2a03289
+- 2026-11-17 T-60 merged (claude-sonnet; 41/41, baseline voidPayment failures fixed). Known failures now: InventoryServiceTest.reservationExpiredJob* (T-67), ReservationExpired IT (T-67/68), CaptureFailed IT (T-65), Retry* ITs (T-59)
+- 2026-11-17 T-63 -> claude-opus (advanced flow test, compile only); T-66 -> claude-sonnet (bounded)
+- 2026-11-18 review S8 r2: PASS (claude-opus). S8 review [x].
+- 2026-11-18 T-66 merged (claude-sonnet); T-63 merged e303d49 (claude-opus; S3 complete). S5 base 85de5b1.
+- 2026-11-18 review S3 -> claude-opus at e303d49 (no worker free of S3); T-67 -> claude-opus (advanced); T-71 -> claude-sonnet (mechanical)
+- 2026-11-18 T-71 first start had a wrong prompt path: stopped at once, restarted (clone clean)
+- 2026-11-18 T-59 merged 035e289 (claude-opus; S2 complete). review S2 -> claude-opus at 035e289 (range 04f786c..035e289; no worker free of S2). T-65 -> claude-sonnet (flow test, compile only)
+- 2026-11-18 T-71 merged (claude-sonnet; test only). T-73 -> claude-sonnet (bounded flow test)
+- 2026-11-18 review S3: PASS (claude-opus). Accepted SHOULD FIX x2 (weak T-60 tests) + NOTEs (log refusal reason, inline voidable set) -> T-78, S3 review reopened. Rejected: commit type of T-61 (cosmetic, history stays). For the person: T-62 wording "for a few days" vs ZFL "until ops release it"; C-28 fixture body lacks the hold note.
+- 2026-11-18 T-65 merged 8148f39 (claude-sonnet; S4 complete); T-67 merged (claude-opus; inventory -> PaymentsProcessingService); T-73 merged 3a3066d (claude-sonnet; S7 complete)
+- 2026-11-18 T-68 -> claude-opus; T-72 -> claude-opus; T-78 -> claude-sonnet; review S4 -> claude-opus at 8148f39 (opus implemented none of S4); review S7 -> claude-opus at 3a3066d (opus implemented none of S7)
+- 2026-11-18 rate limit (all Claude workers, reset 03:40 Madrid): T-68, T-72, T-78, reviews S2/S4/S7 stopped; resumed 07:39 in place (suite runs of the reviews died, lock free)
+- 2026-11-18 the person: P-10 A (processor_error; person edits the A-06 line of data.sql), T-62 wording "until we release it" -> T-79 (S3). T-75 unblocked, now after T-80.
+- 2026-11-18 T-78 merged 6bf571f (claude-sonnet; S3 complete again: fix-round review after T-79)
+- 2026-11-18 review S2: FIX (claude-opus). Accepted: FIX FIRST T-57 stale merge on JPA (every reauthorization fails) -> T-80; FIX FIRST T-59 (4 of 5 from it; 1 flaky, likely the per-clone lock: shared DB); SHOULD FIX no-op without Payment -> T-80; NOTEs (fun interface, stale A-01 comment, attemptCount null handling) -> T-80; NOTE AUTHORIZATION_REQUESTED on reauthorize -> P-11 (open, option A recommended). Not a task: SHOULD FIX (UNCONFIRMED) backoff Thread.sleep on the listener pool -> design question for the person, with the S1 connection-hold one. NOTE: T-58 listener rename changes the publication target id (only matters for an already deployed DB).
+- 2026-11-18 docker-run-it.sh: lock made absolute (next to the script); before, each clone locked on its own path, so concurrent review suites shared the test DB (S2 rerun duplicate key; S4/S7 reviews ran in parallel under the old lock: weigh their IT failures with that).
+- 2026-11-18 T-80 -> claude-opus (advanced)
+- 2026-11-18 T-68 merged 77ed6e4 (claude-opus; S5 complete: review waits for T-80, its payment-started case retries); T-72 merged b324b50 (claude-opus; S6 complete). review S6 -> claude-opus at b324b50 (no worker free of S6). T-79 -> claude-sonnet.
+- 2026-11-18 the person: P-11 A, ZDL change in a later HITL/AFK round; nothing to do in this flow
+- 2026-11-18 T-79 merged d531fc7 (claude-sonnet; S3 complete). T-80 merged 824015c (claude-opus; read and claim in own transactions, VersionedPaymentStore test double, BackoffSleeper fun interface). T-80 part "no-op without Payment" -> T-81 [!] blocked P-12 (ZDL returns non-null Payment; open, option A recommended).
+- 2026-11-18 T-75 -> claude-sonnet (bounded). Reviews: S2 r2 at 824015c, S3 r2 at d531fc7, S5 at 824015c -> claude-opus
+- 2026-11-18 the person: P-12 A, ZDL in a later round; T-81 stays [!] and moves to the next board
+- 2026-11-18 T-75 merged f6bd957 (claude-sonnet; 49/49). S1 complete again. review S1 r2 -> claude-opus at f6bd957
+- 2026-11-18 review S4 agent flagged by the harness (Interfere With Workloads): checked Docker (test compose up, healthy; java sibling containers untouched), locks normal; to verify against its report
+- 2026-11-18 review S2 r2: FIX (claude-opus). T-80 resolved the stale merge (retries complete on Postgres). Accepted: FIX FIRST T-59 (Scenario listener bound to the first context of a class only; 2nd test sees no events) -> T-82 (S2); same defect in T-72 -> T-83 (S6); NOTE duplicate @Suppress -> T-82. Rejected: read-only template for the pre-backoff read (cosmetic). SHOULD FIX backoff on listener thread: put on the board as HITL decision T-84 (S9). A third S2 review is the person's call.
+- 2026-11-18 T-82 -> claude-sonnet; T-83 -> claude-sonnet (test-only, different classes)
+- 2026-11-18 T-82, T-83 merged (claude-sonnet; test-only moves). S2 third review waits for the person; S6 fix round after its first review
+- 2026-11-18 review S4: FIX (claude-opus) by rule only: suite failures were the S2 stale merge (fixed by T-80 after 8148f39); S4 code has no FIX FIRST; T-65 IT passes. Accepted SHOULD FIX (cancelled once not proven) + STANDARDS NOTEs -> T-85. Harness warning explained by the reviewer: nested docker-run-it.sh calls deadlocked on the new absolute lock; it killed only its own processes (34300, 22320) and removed only its own lock (~08:20); consistent with what I checked (containers healthy, other runs unaffected). Rule for reviewers from now: never nest docker-run-it.sh.
+- 2026-11-18 T-85 -> claude-sonnet
+- 2026-11-18 rate limit 2 (reset 12:30 Madrid): T-85 and reviews S1 r2/S3 r2/S5/S6/S7 stopped; resumed 13:10 (lock from 11:38 stale, auto-broken after 40 min; no java running)
+- 2026-11-18 T-85 merged ef86b04 (claude-sonnet). review S4 r2 -> claude-opus at ef86b04
+- 2026-11-18 review S5: FIX (claude-opus) by the suite only: the 3 order-dependent Scenario failures (already fixed by T-82/T-83, merged after its head 824015c); S5 code no FIX FIRST; ReservationExpired IT 2/2 green. Accepted SHOULD FIX TIMER_TARGET name -> T-86. NOTE (for the person, no proposal): the timer re-asks getPaymentStatus every 30 s for a due order whose payment started (harmless, STARTED never releases; one-shot would need a fired mark the ZDL lacks). The reviewer hit a docker-run-it.sh syntax error once, while I was editing it; bash -n is clean now.
+- 2026-11-18 T-86 -> claude-sonnet
+- 2026-11-18 T-86 merged 8148e7e (claude-sonnet). review S5 r2 -> claude-opus at 8148e7e
+- 2026-11-18 review S3 r2: PASS (claude-opus). S3 review [x]. NOTEs not taken: C-27 no-op reason equals fixture (other cases cover it), assertTrue(!..) style, commit types (history). Suite failures at d531fc7 all known (T-80 after).
+- 2026-11-18 review S5 r2: PASS (claude-opus). Full suite GREEN at 8148e7e: surefire 151/151, failsafe 59/59. S5 review [x]. NOTE for S6: duplicate CANCEL_ORDER constant in the LateAuthorization classes.
+- 2026-11-18 review S7: FIX (claude-opus) by the suite only (the 5 retry errors are S2 FIX FIRST, fixed by T-80 after 3a3066d); T-73 IT passes. Accepted SHOULD FIX x2 (paymentCapturedAt, inventory counters) + NOTEs (notificationId, fake-only assertion) -> T-87. Reviewer note: subagents share the scratchpad; prompts now ask for task-named logs. Suites that overlapped 07:40-07:46 (old lock, script edits) are suspect; every review since ran under the fixed lock.
+- 2026-11-18 T-87 -> claude-sonnet
+- 2026-11-18 T-87 merged 5b77ad9 (claude-sonnet). review S7 r2 -> claude-opus at 5b77ad9
+- 2026-11-18 review S4 r2: PASS (claude-opus). Suite green at ef86b04 (151/151, 59/59). S4 review [x]. NOTEs not taken: count OrderCancelled later (optional), publish-time recorder (false fail only).
+- 2026-11-18 review S7 r2: PASS (claude-opus). Suite green at 5b77ad9 (151/151, 59/59). S7 review [x].
+- 2026-11-18 review S6: PASS (claude-opus) at b324b50. T-83 (its fix, after b324b50) verified by the green full suites at ef86b04 (S4 r2) and 5b77ad9 (S7 r2): LateAuthorization{CancelledOrder,StockNotHeld} pass; no separate S6 round. S6 review [x]. NOTEs left for the next board: dead Targets constants and duplicate CANCEL_ORDER in the LateAuthorization classes, RetryLoop* helper name now flow-wide, T-70 'without calling inventory' proven only by reading, T-69 empty-order NOT_HELD unreachable.
+- 2026-11-18 review S1 r2: FIX by suite only (3 Scenario-order failures, fixed by T-82/T-83 after f6bd957); S1 code fine, T-75/T-76 confirmed. The person: close the flow; S1 and S2 closed on the green full suites at ef86b04 and 5b77ad9 (all S1/S2 code included) instead of third reviews; T-33 and T-84 closed as not needed (demo: fakes, scheduler/timers disabled in tests). S9 review n/a.
+- Next-board notes: stale stall comments (FakePaymentProcessor:53, ReservationExpired IT :73-75, :138); dead Targets constants / duplicate CANCEL_ORDER in LateAuthorization classes; RetryLoop* helper name; T-70 "without calling inventory" proven only by reading; possible model gap: no recovery for a processor call in flight on interrupt/crash (Payment stays AUTHORIZATION_REQUESTED); one-shot ReservationExpired (timer re-asks while STARTED).
+- 2026-11-18 check mode: nothing missing for baseline 3 (no compile stubs / TODO in main, left-out listeners wired, every task [x] but T-81 deferred to the next board with P-12, ZDL lint OK). The ZDLs in arcadia-editions-modulith-api differ from the packaged 0.10.1: the person's post-baseline model changes (P-11 ...), input for the next HITL round and regeneration.
+- 2026-11-18 board archived as docs/tasks/place-order-flow-baseline-3.md. Flow done: the person reviews and merges afk/place-order-flow (git merge --no-ff -S).
+- 2026-11-18 data.sql A-06 header: processor_error added, at the person's explicit request in session (P-10 A). Round closed.

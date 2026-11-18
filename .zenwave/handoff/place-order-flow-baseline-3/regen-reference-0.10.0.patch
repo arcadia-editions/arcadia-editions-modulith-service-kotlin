@@ -1,0 +1,1161 @@
+diff --git a/src/main/kotlin/com/arcadiaeditions/catalog/inventory/domain/ConfirmStockReservationOutcome.kt b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/domain/ConfirmStockReservationOutcome.kt
+new file mode 100644
+index 0000000..4748ccd
+--- /dev/null
++++ b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/domain/ConfirmStockReservationOutcome.kt
+@@ -0,0 +1,8 @@
++package com.arcadiaeditions.catalog.inventory.domain
++
++/** Enum for ConfirmStockReservationOutcome. */
++enum class ConfirmStockReservationOutcome {
++
++    CONFIRMED,
++    NOT_HELD,
++}
+diff --git a/src/main/kotlin/com/arcadiaeditions/catalog/inventory/domain/StockReleaseReason.kt b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/domain/StockReleaseReason.kt
+index fbe2b9d..7910876 100644
+--- a/src/main/kotlin/com/arcadiaeditions/catalog/inventory/domain/StockReleaseReason.kt
++++ b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/domain/StockReleaseReason.kt
+@@ -6,5 +6,6 @@ enum class StockReleaseReason {
+     PAYMENT_DECLINED,
+     PAYMENT_RETRY_EXHAUSTED,
+     PAYMENT_VOIDED,
++    PAYMENT_VOID_FAILED,
+     RESERVATION_EXPIRED,
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/catalog/inventory/domain/StockReservationTransitions.kt b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/domain/StockReservationTransitions.kt
+index 07f93c3..62cf9c8 100644
+--- a/src/main/kotlin/com/arcadiaeditions/catalog/inventory/domain/StockReservationTransitions.kt
++++ b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/domain/StockReservationTransitions.kt
+@@ -36,4 +36,8 @@ object StockReservationTransitions {
+             "Invalid state transition for $entityType (${naturalId ?: "id=$entityId"}): " +
+                 "operation '$operation' not allowed from state $currentState, allowed states: $allowedStates"
+         )
++
++    fun ensureCanExpireReservation(entity: StockReservation) {
++        require("expireReservation", entity, ReservationStatus.RESERVED)
++    }
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/catalog/inventory/events/processing/PaymentsProcessingEventsListener.kt b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/events/processing/PaymentsProcessingEventsListener.kt
+index c9d2f13..6acd711 100644
+--- a/src/main/kotlin/com/arcadiaeditions/catalog/inventory/events/processing/PaymentsProcessingEventsListener.kt
++++ b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/events/processing/PaymentsProcessingEventsListener.kt
+@@ -31,4 +31,9 @@ class PaymentsProcessingEventsListener(private val inventoryService: InventorySe
+     fun onPaymentVoided(event: com.arcadiaeditions.payments.processing.domain.event.PaymentVoided) {
+         inventoryService.releaseStock(mapper.asReleaseStockInput(event))
+     }
++
++    @ApplicationModuleListener
++    fun onPaymentVoidFailed(event: com.arcadiaeditions.payments.processing.domain.event.PaymentVoidFailed) {
++        inventoryService.releaseStock(mapper.asReleaseStockInput(event))
++    }
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/catalog/inventory/events/processing/mappers/PaymentsProcessingEventsListenerMapper.kt b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/events/processing/mappers/PaymentsProcessingEventsListenerMapper.kt
+index 6f26d32..b84a822 100644
+--- a/src/main/kotlin/com/arcadiaeditions/catalog/inventory/events/processing/mappers/PaymentsProcessingEventsListenerMapper.kt
++++ b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/events/processing/mappers/PaymentsProcessingEventsListenerMapper.kt
+@@ -31,4 +31,10 @@ interface PaymentsProcessingEventsListenerMapper {
+     fun asReleaseStockInput(
+         event: com.arcadiaeditions.payments.processing.domain.event.PaymentVoided
+     ): com.arcadiaeditions.catalog.inventory.service.dtos.ReleaseStockInput
++
++    /** The event type fixes the release reason; the event's own `reason` is the void failure text. */
++    @Mapping(target = "reason", constant = "PAYMENT_VOID_FAILED")
++    fun asReleaseStockInput(
++        event: com.arcadiaeditions.payments.processing.domain.event.PaymentVoidFailed
++    ): com.arcadiaeditions.catalog.inventory.service.dtos.ReleaseStockInput
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/InventoryService.kt b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/InventoryService.kt
+index 4d5d2c7..2a905d3 100644
+--- a/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/InventoryService.kt
++++ b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/InventoryService.kt
+@@ -14,9 +14,22 @@ interface InventoryService {
+     /**  */
+     fun reserveStock(input: ReserveStockInput): ReserveStockResult
+ 
+-    /** With Events: [StockReleased]. */
++    /**
++     * The type of the triggering event sets the reason. No-op, no event, when already RELEASED.
++     *
++     * With Events: [StockReleased].
++     */
+     fun releaseStock(input: ReleaseStockInput): List<StockReservation>
+ 
++    /**
++     * Reservation timer, 10 minutes after OrderCreated. No-op, no event, when no line of the order is RESERVED.
++     * Releases them (RESERVATION_EXPIRED) only when payments answers NO_PAYMENT; on STARTED, payment owns the end and
++     * nothing happens.
++     *
++     * With Events: [StockReleased].
++     */
++    fun expireReservation(input: ExpireReservationInput): List<StockReservation>
++
+     /** With Events: [StockReservationConfirmed]. */
+-    fun confirmStockReservation(input: ConfirmStockReservationInput): List<StockReservation>
++    fun confirmStockReservation(input: ConfirmStockReservationInput): ConfirmStockReservationResult
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/dtos/ConfirmStockReservationResult.kt b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/dtos/ConfirmStockReservationResult.kt
+new file mode 100644
+index 0000000..86985a9
+--- /dev/null
++++ b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/dtos/ConfirmStockReservationResult.kt
+@@ -0,0 +1,15 @@
++package com.arcadiaeditions.catalog.inventory.service.dtos
++
++import com.arcadiaeditions.catalog.inventory.domain.*
++import jakarta.validation.constraints.*
++import java.io.Serializable
++import java.math.*
++import java.time.*
++
++/** ConfirmStockReservationResult. */
++@org.jmolecules.ddd.annotation.ValueObject
++data class ConfirmStockReservationResult(
++    @NotNull val outcome: ConfirmStockReservationOutcome,
++    val confirmed: StockReservationConfirmedResult?,
++    val notHeld: StockReservationNotHeldResult?,
++) : Serializable {}
+diff --git a/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/dtos/ExpireReservationInput.kt b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/dtos/ExpireReservationInput.kt
+new file mode 100644
+index 0000000..59fab2b
+--- /dev/null
++++ b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/dtos/ExpireReservationInput.kt
+@@ -0,0 +1,11 @@
++package com.arcadiaeditions.catalog.inventory.service.dtos
++
++import com.arcadiaeditions.catalog.inventory.domain.*
++import jakarta.validation.constraints.*
++import java.io.Serializable
++import java.math.*
++import java.time.*
++
++/** ExpireReservationInput. */
++@org.jmolecules.ddd.annotation.ValueObject
++data class ExpireReservationInput(@NotNull val orderId: String) : Serializable {}
+diff --git a/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/dtos/StockReservationConfirmedResult.kt b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/dtos/StockReservationConfirmedResult.kt
+new file mode 100644
+index 0000000..95a1e7c
+--- /dev/null
++++ b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/dtos/StockReservationConfirmedResult.kt
+@@ -0,0 +1,11 @@
++package com.arcadiaeditions.catalog.inventory.service.dtos
++
++import com.arcadiaeditions.catalog.inventory.domain.*
++import jakarta.validation.constraints.*
++import java.io.Serializable
++import java.math.*
++import java.time.*
++
++/** StockReservationConfirmedResult. */
++@org.jmolecules.ddd.annotation.ValueObject
++data class StockReservationConfirmedResult(val orderId: String?, val confirmedAt: Instant?) : Serializable {}
+diff --git a/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/dtos/StockReservationNotHeldResult.kt b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/dtos/StockReservationNotHeldResult.kt
+new file mode 100644
+index 0000000..8f73a1b
+--- /dev/null
++++ b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/dtos/StockReservationNotHeldResult.kt
+@@ -0,0 +1,11 @@
++package com.arcadiaeditions.catalog.inventory.service.dtos
++
++import com.arcadiaeditions.catalog.inventory.domain.*
++import jakarta.validation.constraints.*
++import java.io.Serializable
++import java.math.*
++import java.time.*
++
++/** StockReservationNotHeldResult. */
++@org.jmolecules.ddd.annotation.ValueObject
++data class StockReservationNotHeldResult(val orderId: String?) : Serializable {}
+diff --git a/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/impl/InventoryServiceImpl.kt b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/impl/InventoryServiceImpl.kt
+index b280775..6b05faf 100644
+--- a/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/impl/InventoryServiceImpl.kt
++++ b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/impl/InventoryServiceImpl.kt
+@@ -133,7 +133,8 @@ open class InventoryServiceImpl(
+         return all
+     }
+ 
+-    override fun confirmStockReservation(input: ConfirmStockReservationInput): List<StockReservation> {
++    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md (NOT_HELD outcome)
++    override fun confirmStockReservation(input: ConfirmStockReservationInput): ConfirmStockReservationResult {
+ 
+         log.debug("Request confirmStockReservation: {}", input)
+ 
+@@ -141,7 +142,7 @@ open class InventoryServiceImpl(
+         // redelivery: only RESERVED reservations transition, CONFIRMED ones are left alone
+         val toConfirm = all.filter { it.status == ReservationStatus.RESERVED }
+         if (toConfirm.isEmpty()) {
+-            return all
++            return confirmedResult(input.orderId, all.firstNotNullOfOrNull { it.confirmedAt })
+         }
+         val now = clock.instant()
+         toConfirm.forEach { reservation ->
+@@ -162,6 +163,18 @@ open class InventoryServiceImpl(
+             event.addItems(StockReservationConfirmedItem(it.reservationId, it.sku, it.quantity))
+         }
+         eventPublisher.onStockReservationConfirmed(event)
+-        return all
++        return confirmedResult(input.orderId, now)
++    }
++
++    private fun confirmedResult(orderId: String, confirmedAt: Instant?) =
++        ConfirmStockReservationResult(
++            outcome = ConfirmStockReservationOutcome.CONFIRMED,
++            confirmed = StockReservationConfirmedResult(orderId = orderId, confirmedAt = confirmedAt),
++            notHeld = null,
++        )
++
++    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md
++    override fun expireReservation(input: ExpireReservationInput): List<StockReservation> {
++        TODO("expireReservation: " + input.orderId)
+     }
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/impl/mappers/InventoryServiceMapper.kt b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/impl/mappers/InventoryServiceMapper.kt
+index 524e803..066efe9 100644
+--- a/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/impl/mappers/InventoryServiceMapper.kt
++++ b/src/main/kotlin/com/arcadiaeditions/catalog/inventory/service/impl/mappers/InventoryServiceMapper.kt
+@@ -40,4 +40,10 @@ interface InventoryServiceMapper {
+     // output mappings
+     // StockReservation-ReserveStockResult reserveStock
+     fun asReserveStockResult(entity: StockReservation): ReserveStockResult
++
++    // ExpireReservationInput-StockReservation expireReservation
++    fun asStockReservation(input: ExpireReservationInput): StockReservation
++
++    @Mapping(target = "id", ignore = true)
++    fun update(@MappingTarget entity: StockReservation, input: ExpireReservationInput): StockReservation
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/EventPublisher.kt b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/EventPublisher.kt
+index 578c2dc..b283e16 100644
+--- a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/EventPublisher.kt
++++ b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/EventPublisher.kt
+@@ -10,4 +10,6 @@ interface EventPublisher {
+     fun onFulfillmentReadyToShip(event: FulfillmentReadyToShip)
+ 
+     fun onFulfillmentFailed(event: FulfillmentFailed)
++
++    fun onFulfillmentCancelled(event: FulfillmentCancelled)
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/FulfillmentShippingService.kt b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/FulfillmentShippingService.kt
+index a75ad0f..998614f 100644
+--- a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/FulfillmentShippingService.kt
++++ b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/FulfillmentShippingService.kt
+@@ -10,9 +10,30 @@ import java.time.*
+ @org.jspecify.annotations.NullMarked
+ interface FulfillmentShippingService {
+ 
+-    /** With Events: [[FulfillmentScheduled, FulfillmentFailed]]. */
++    /**
++     * No-op, no event, when a Fulfillment exists for orderId (redelivery).
++     *
++     * With Events: [[FulfillmentScheduled, FulfillmentFailed]].
++     */
+     fun scheduleFulfillment(input: ScheduleFulfillmentInput): Fulfillment
+ 
+-    /** With Events: [FulfillmentReadyToShip]. */
++    /**
++     * Money moved: the warehouse may now prepare the parcel. Sets paymentCapturedAt; no state change, no event. No-op
++     * when there is no Fulfillment, it is not SCHEDULED, or paymentCapturedAt is set.
++     */
++    fun recordPaymentCaptured(input: RecordPaymentCapturedInput): Fulfillment?
++
++    /**
++     * Warehouse action. Refused (no transition, no event) until paymentCapturedAt is set.
++     *
++     * With Events: [FulfillmentReadyToShip].
++     */
+     fun markReadyToShip(id: Long): Fulfillment
++
++    /**
++     * No-op, no event, when there is no Fulfillment for orderId or it is FAILED or CANCELLED.
++     *
++     * With Events: [FulfillmentCancelled].
++     */
++    fun cancelFulfillment(input: CancelFulfillmentInput): Fulfillment?
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/FulfillmentShippingServiceImpl.kt b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/FulfillmentShippingServiceImpl.kt
+index 1403682..6a26e1b 100644
+--- a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/FulfillmentShippingServiceImpl.kt
++++ b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/FulfillmentShippingServiceImpl.kt
+@@ -79,4 +79,10 @@ open class FulfillmentShippingServiceImpl(
+         eventPublisher.onFulfillmentReadyToShip(eventsMapper.asFulfillmentReadyToShip(fulfillment))
+         return fulfillment
+     }
++
++    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md (no-op until then)
++    override fun recordPaymentCaptured(input: RecordPaymentCapturedInput): Fulfillment? = null
++
++    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md (no-op until then)
++    override fun cancelFulfillment(input: CancelFulfillmentInput): Fulfillment? = null
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/checkout/OrdersCheckoutEventsListener.kt b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/checkout/OrdersCheckoutEventsListener.kt
+index 02d2838..e8a063e 100644
+--- a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/checkout/OrdersCheckoutEventsListener.kt
++++ b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/checkout/OrdersCheckoutEventsListener.kt
+@@ -20,4 +20,9 @@ class OrdersCheckoutEventsListener(private val fulfillmentShippingService: Fulfi
+     fun onOrderConfirmed(event: com.arcadiaeditions.orders.checkout.core.domain.events.OrderConfirmed) {
+         fulfillmentShippingService.scheduleFulfillment(mapper.asScheduleFulfillmentInput(event))
+     }
++
++    @ApplicationModuleListener
++    fun onOrderCancelled(event: com.arcadiaeditions.orders.checkout.core.domain.events.OrderCancelled) {
++        fulfillmentShippingService.cancelFulfillment(mapper.asCancelFulfillmentInput(event))
++    }
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/checkout/mappers/OrdersCheckoutEventsListenerMapper.kt b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/checkout/mappers/OrdersCheckoutEventsListenerMapper.kt
+index 4a80414..2a9a244 100644
+--- a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/checkout/mappers/OrdersCheckoutEventsListenerMapper.kt
++++ b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/checkout/mappers/OrdersCheckoutEventsListenerMapper.kt
+@@ -17,4 +17,9 @@ interface OrdersCheckoutEventsListenerMapper {
+     fun asScheduleFulfillmentInput(
+         event: com.arcadiaeditions.orders.checkout.core.domain.events.OrderConfirmed
+     ): com.arcadiaeditions.fulfillment.shipping.dtos.ScheduleFulfillmentInput
++
++    /** Add `@Mapping` here when MapStruct cannot infer the conversion. */
++    fun asCancelFulfillmentInput(
++        event: com.arcadiaeditions.orders.checkout.core.domain.events.OrderCancelled
++    ): com.arcadiaeditions.fulfillment.shipping.dtos.CancelFulfillmentInput
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/domain/Fulfillment.kt b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/domain/Fulfillment.kt
+index 7a7a7b5..2f4b017 100644
+--- a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/domain/Fulfillment.kt
++++ b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/domain/Fulfillment.kt
+@@ -42,6 +42,11 @@ data class Fulfillment(
+     @Column(name = "ready_at") var readyAt: Instant? = null,
+     @Column(name = "failed_at") var failedAt: Instant? = null,
+     @Column(name = "failure_reason") var failureReason: String? = null,
++
++    /** Set from PaymentCaptured; markReadyToShip requires it. */
++    @Column(name = "payment_captured_at") var paymentCapturedAt: Instant? = null,
++    @Column(name = "cancelled_at") var cancelledAt: Instant? = null,
++    @Column(name = "cancellation_reason") var cancellationReason: String? = null,
+ ) : Serializable {
+ 
+     companion object {
+diff --git a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/domain/FulfillmentStatus.kt b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/domain/FulfillmentStatus.kt
+index 0a083ac..5b00814 100644
+--- a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/domain/FulfillmentStatus.kt
++++ b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/domain/FulfillmentStatus.kt
+@@ -6,4 +6,5 @@ enum class FulfillmentStatus {
+     SCHEDULED,
+     READY_TO_SHIP,
+     FAILED,
++    CANCELLED,
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/domain/FulfillmentTransitions.kt b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/domain/FulfillmentTransitions.kt
+index dce9326..69e3239 100644
+--- a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/domain/FulfillmentTransitions.kt
++++ b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/domain/FulfillmentTransitions.kt
+@@ -32,4 +32,8 @@ object FulfillmentTransitions {
+             "Invalid state transition for $entityType (${naturalId ?: "id=$entityId"}): " +
+                 "operation '$operation' not allowed from state $currentState, allowed states: $allowedStates"
+         )
++
++    fun ensureCanCancelFulfillment(entity: Fulfillment) {
++        require("cancelFulfillment", entity, FulfillmentStatus.SCHEDULED, FulfillmentStatus.READY_TO_SHIP)
++    }
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/domain/events/FulfillmentCancelled.kt b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/domain/events/FulfillmentCancelled.kt
+new file mode 100644
+index 0000000..ea44ce6
+--- /dev/null
++++ b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/domain/events/FulfillmentCancelled.kt
+@@ -0,0 +1,24 @@
++package com.arcadiaeditions.fulfillment.shipping.domain.events
++
++import com.arcadiaeditions.fulfillment.shipping.domain.*
++import jakarta.validation.constraints.*
++import java.io.Serializable
++import java.math.*
++import java.time.*
++import java.util.*
++
++/**  */
++@org.springframework.modulith.NamedInterface("events.FulfillmentCancelled")
++@org.jmolecules.event.annotation.DomainEvent
++data class FulfillmentCancelled(
++    var fulfillmentId: String? = null,
++    var orderId: String? = null,
++    var customerId: String? = null,
++    var reason: String? = null,
++    var cancelledAt: Instant? = null,
++) : Serializable {
++
++    companion object {
++        private const val serialVersionUID: Long = 1L
++    }
++}
+diff --git a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/dtos/CancelFulfillmentInput.kt b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/dtos/CancelFulfillmentInput.kt
+new file mode 100644
+index 0000000..1166e03
+--- /dev/null
++++ b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/dtos/CancelFulfillmentInput.kt
+@@ -0,0 +1,11 @@
++package com.arcadiaeditions.fulfillment.shipping.dtos
++
++import com.arcadiaeditions.fulfillment.shipping.domain.*
++import jakarta.validation.constraints.*
++import java.io.Serializable
++import java.math.*
++import java.time.*
++
++/** CancelFulfillmentInput. */
++@org.jmolecules.ddd.annotation.ValueObject
++data class CancelFulfillmentInput(@NotNull val orderId: String, @NotNull val reason: String) : Serializable {}
+diff --git a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/dtos/RecordPaymentCapturedInput.kt b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/dtos/RecordPaymentCapturedInput.kt
+new file mode 100644
+index 0000000..caa4fde
+--- /dev/null
++++ b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/dtos/RecordPaymentCapturedInput.kt
+@@ -0,0 +1,11 @@
++package com.arcadiaeditions.fulfillment.shipping.dtos
++
++import com.arcadiaeditions.fulfillment.shipping.domain.*
++import jakarta.validation.constraints.*
++import java.io.Serializable
++import java.math.*
++import java.time.*
++
++/** RecordPaymentCapturedInput. */
++@org.jmolecules.ddd.annotation.ValueObject
++data class RecordPaymentCapturedInput(@NotNull val orderId: String, @NotNull val capturedAt: Instant) : Serializable {}
+diff --git a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/events/DefaultEventPublisher.kt b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/events/DefaultEventPublisher.kt
+index 6d686b7..331af80 100644
+--- a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/events/DefaultEventPublisher.kt
++++ b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/events/DefaultEventPublisher.kt
+@@ -20,4 +20,8 @@ class DefaultEventPublisher(private val applicationEventPublisher: ApplicationEv
+     override fun onFulfillmentFailed(event: FulfillmentFailed) {
+         applicationEventPublisher.publishEvent(event)
+     }
++
++    override fun onFulfillmentCancelled(event: FulfillmentCancelled) {
++        applicationEventPublisher.publishEvent(event)
++    }
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/mappers/EventsMapper.kt b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/mappers/EventsMapper.kt
+index 1f3715b..12734f3 100644
+--- a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/mappers/EventsMapper.kt
++++ b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/mappers/EventsMapper.kt
+@@ -26,4 +26,9 @@ interface EventsMapper {
+     fun asFulfillmentReadyToShip(
+         fulfillment: Fulfillment
+     ): com.arcadiaeditions.fulfillment.shipping.domain.events.FulfillmentReadyToShip
++
++    @Mapping(target = "reason", source = "cancellationReason")
++    fun asFulfillmentCancelled(
++        fulfillment: Fulfillment
++    ): com.arcadiaeditions.fulfillment.shipping.domain.events.FulfillmentCancelled
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/mappers/FulfillmentShippingServiceMapper.kt b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/mappers/FulfillmentShippingServiceMapper.kt
+index b861a0c..622ec3b 100644
+--- a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/mappers/FulfillmentShippingServiceMapper.kt
++++ b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/mappers/FulfillmentShippingServiceMapper.kt
+@@ -23,4 +23,16 @@ interface FulfillmentShippingServiceMapper {
+     @Mapping(target = "id", ignore = true)
+     fun update(@MappingTarget entity: Fulfillment, input: ScheduleFulfillmentInput): Fulfillment
+     // output mappings
++
++    // CancelFulfillmentInput-Fulfillment cancelFulfillment
++    fun asFulfillment(input: CancelFulfillmentInput): Fulfillment
++
++    @Mapping(target = "id", ignore = true)
++    fun update(@MappingTarget entity: Fulfillment, input: CancelFulfillmentInput): Fulfillment
++
++    // RecordPaymentCapturedInput-Fulfillment recordPaymentCaptured
++    fun asFulfillment(input: RecordPaymentCapturedInput): Fulfillment
++
++    @Mapping(target = "id", ignore = true)
++    fun update(@MappingTarget entity: Fulfillment, input: RecordPaymentCapturedInput): Fulfillment
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/processing/PaymentsProcessingEventsListener.kt b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/processing/PaymentsProcessingEventsListener.kt
+new file mode 100644
+index 0000000..53c8037
+--- /dev/null
++++ b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/processing/PaymentsProcessingEventsListener.kt
+@@ -0,0 +1,23 @@
++package com.arcadiaeditions.fulfillment.shipping.processing
++
++import com.arcadiaeditions.fulfillment.shipping.*
++import com.arcadiaeditions.fulfillment.shipping.domain.events.*
++import com.arcadiaeditions.fulfillment.shipping.processing.mappers.PaymentsProcessingEventsListenerMapper
++import org.springframework.modulith.events.ApplicationModuleListener
++import org.springframework.stereotype.Component
++
++/**
++ * Internal domain event listeners for PaymentsProcessingZdl.
++ *
++ * This class is generated once and can be customized safely.
++ */
++@Component
++class PaymentsProcessingEventsListener(private val fulfillmentShippingService: FulfillmentShippingService) {
++
++    private val mapper: PaymentsProcessingEventsListenerMapper = PaymentsProcessingEventsListenerMapper.INSTANCE
++
++    @ApplicationModuleListener
++    fun onPaymentCaptured(event: com.arcadiaeditions.payments.processing.domain.event.PaymentCaptured) {
++        fulfillmentShippingService.recordPaymentCaptured(mapper.asRecordPaymentCapturedInput(event))
++    }
++}
+diff --git a/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/processing/mappers/PaymentsProcessingEventsListenerMapper.kt b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/processing/mappers/PaymentsProcessingEventsListenerMapper.kt
+new file mode 100644
+index 0000000..5686813
+--- /dev/null
++++ b/src/main/kotlin/com/arcadiaeditions/fulfillment/shipping/processing/mappers/PaymentsProcessingEventsListenerMapper.kt
+@@ -0,0 +1,20 @@
++package com.arcadiaeditions.fulfillment.shipping.processing.mappers
++
++import com.arcadiaeditions.common.mappers.BaseMapper
++import com.arcadiaeditions.fulfillment.shipping.domain.events.*
++import org.mapstruct.Mapper
++import org.mapstruct.factory.Mappers
++
++@Mapper(uses = [BaseMapper::class])
++interface PaymentsProcessingEventsListenerMapper {
++
++    companion object {
++        val INSTANCE: PaymentsProcessingEventsListenerMapper =
++            Mappers.getMapper(PaymentsProcessingEventsListenerMapper::class.java)
++    }
++
++    /** Add `@Mapping` here when MapStruct cannot infer the conversion. */
++    fun asRecordPaymentCapturedInput(
++        event: com.arcadiaeditions.payments.processing.domain.event.PaymentCaptured
++    ): com.arcadiaeditions.fulfillment.shipping.dtos.RecordPaymentCapturedInput
++}
+diff --git a/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/application/mappers/EventsMapper.kt b/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/application/mappers/EventsMapper.kt
+index 4e5a706..37bdbdf 100644
+--- a/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/application/mappers/EventsMapper.kt
++++ b/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/application/mappers/EventsMapper.kt
+@@ -23,4 +23,11 @@ interface EventsMapper {
+     fun asOrderCancelled(order: Order): com.arcadiaeditions.orders.checkout.core.domain.events.OrderCancelled
+ 
+     fun asStockUnavailable(order: Order): com.arcadiaeditions.orders.checkout.core.domain.events.StockUnavailable
++
++    /** reason and rejectedAt come from the command, not from the Order. */
++    @Mapping(target = "reason", ignore = true)
++    @Mapping(target = "rejectedAt", ignore = true)
++    fun asOrderConfirmationRejected(
++        order: Order
++    ): com.arcadiaeditions.orders.checkout.core.domain.events.OrderConfirmationRejected
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/domain/OrderItem.kt b/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/domain/OrderItem.kt
+index ac18c04..b767070 100644
+--- a/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/domain/OrderItem.kt
++++ b/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/domain/OrderItem.kt
+@@ -13,7 +13,7 @@ import java.util.*
+ data class OrderItem(
+     @NotNull @Column(name = "sku", nullable = false) var sku: String? = null,
+     @NotNull @Min(1) @Column(name = "quantity", nullable = false) var quantity: Integer? = null,
+-    @NotNull @Column(name = "unit_price", nullable = false) var unitPrice: BigDecimal? = null,
++    @NotNull @Min(0) @Column(name = "unit_price", nullable = false) var unitPrice: BigDecimal? = null,
+ ) : Serializable {
+ 
+     companion object {
+diff --git a/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/domain/events/OrderConfirmationRejected.kt b/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/domain/events/OrderConfirmationRejected.kt
+new file mode 100644
+index 0000000..c3e6ff3
+--- /dev/null
++++ b/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/domain/events/OrderConfirmationRejected.kt
+@@ -0,0 +1,23 @@
++package com.arcadiaeditions.orders.checkout.core.domain.events
++
++import com.arcadiaeditions.orders.checkout.core.domain.*
++import jakarta.validation.constraints.*
++import java.io.Serializable
++import java.math.*
++import java.time.*
++import java.util.*
++
++/**  */
++@org.springframework.modulith.NamedInterface("events.OrderConfirmationRejected")
++@org.jmolecules.event.annotation.DomainEvent
++data class OrderConfirmationRejected(
++    var orderId: String? = null,
++    var customerId: String? = null,
++    var reason: String? = null,
++    var rejectedAt: Instant? = null,
++) : Serializable {
++
++    companion object {
++        private const val serialVersionUID: Long = 1L
++    }
++}
+diff --git a/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/inbound/OrdersCheckoutService.kt b/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/inbound/OrdersCheckoutService.kt
+index 7b51429..826f4e4 100644
+--- a/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/inbound/OrdersCheckoutService.kt
++++ b/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/inbound/OrdersCheckoutService.kt
+@@ -11,13 +11,26 @@ import java.time.*
+ @org.jmolecules.architecture.hexagonal.PrimaryPort
+ interface OrdersCheckoutService {
+ 
+-    /** With Events: [[OrderCreated, StockUnavailable]]. */
++    /**
++     * Persists the Order only on OrderCreated; StockUnavailable answers 409 and persists nothing (P-03 A).
++     *
++     * With Events: [[OrderCreated, StockUnavailable]].
++     */
+     fun startOrderCheckout(input: StartOrderCheckoutInput): Order
+ 
+-    /** With Events: [OrderConfirmed]. */
++    /**
++     * No-op on CONFIRMED (redelivery). On CANCELLED, or when the stock is no longer held (NOT_HELD), the Order is not
++     * confirmed and OrderConfirmationRejected asks payments to void.
++     *
++     * With Events: [[OrderConfirmed, OrderConfirmationRejected]].
++     */
+     fun confirmOrder(input: ConfirmOrderInput): Order
+ 
+-    /** With Events: [OrderCancelled]. */
++    /**
++     * No-op, no event, on CANCELLED (redelivered StockReleased).
++     *
++     * With Events: [OrderCancelled].
++     */
+     fun cancelOrder(input: CancelOrderInput): Order
+ 
+     /**  */
+diff --git a/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/inbound/dtos/OrderItemInput.kt b/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/inbound/dtos/OrderItemInput.kt
+index 440e23e..ba79455 100644
+--- a/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/inbound/dtos/OrderItemInput.kt
++++ b/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/inbound/dtos/OrderItemInput.kt
+@@ -11,5 +11,5 @@ import java.time.*
+ data class OrderItemInput(
+     @NotNull val sku: String,
+     @NotNull @Min(1) val quantity: Integer,
+-    @NotNull val unitPrice: BigDecimal,
++    @NotNull @Min(0) val unitPrice: BigDecimal,
+ ) : Serializable {}
+diff --git a/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/outbound/events/EventPublisher.kt b/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/outbound/events/EventPublisher.kt
+index 5da0884..063fff9 100644
+--- a/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/outbound/events/EventPublisher.kt
++++ b/src/main/kotlin/com/arcadiaeditions/orders/checkout/core/outbound/events/EventPublisher.kt
+@@ -14,6 +14,8 @@ interface EventPublisher {
+ 
+     fun onStockUnavailable(event: StockUnavailable)
+ 
++    fun onOrderConfirmationRejected(event: OrderConfirmationRejected)
++
+     fun onOrderConfirmed(event: OrderConfirmed)
+ 
+     fun onOrderCancelled(event: OrderCancelled)
+diff --git a/src/main/kotlin/com/arcadiaeditions/orders/checkout/infrastructure/events/DefaultEventPublisher.kt b/src/main/kotlin/com/arcadiaeditions/orders/checkout/infrastructure/events/DefaultEventPublisher.kt
+index db81d93..076d18f 100644
+--- a/src/main/kotlin/com/arcadiaeditions/orders/checkout/infrastructure/events/DefaultEventPublisher.kt
++++ b/src/main/kotlin/com/arcadiaeditions/orders/checkout/infrastructure/events/DefaultEventPublisher.kt
+@@ -26,6 +26,10 @@ class DefaultEventPublisher(private val applicationEventPublisher: ApplicationEv
+         applicationEventPublisher.publishEvent(event)
+     }
+ 
++    override fun onOrderConfirmationRejected(event: OrderConfirmationRejected) {
++        applicationEventPublisher.publishEvent(event)
++    }
++
+     override fun onOrderConfirmed(event: OrderConfirmed) {
+         applicationEventPublisher.publishEvent(event)
+     }
+diff --git a/src/main/kotlin/com/arcadiaeditions/payments/processing/adapter/driven/event/DefaultEventPublisher.kt b/src/main/kotlin/com/arcadiaeditions/payments/processing/adapter/driven/event/DefaultEventPublisher.kt
+index c6f16bd..d9c926f 100644
+--- a/src/main/kotlin/com/arcadiaeditions/payments/processing/adapter/driven/event/DefaultEventPublisher.kt
++++ b/src/main/kotlin/com/arcadiaeditions/payments/processing/adapter/driven/event/DefaultEventPublisher.kt
+@@ -41,4 +41,8 @@ class DefaultEventPublisher(private val applicationEventPublisher: ApplicationEv
+     override fun onPaymentVoided(event: PaymentVoided) {
+         applicationEventPublisher.publishEvent(event)
+     }
++
++    override fun onPaymentVoidFailed(event: PaymentVoidFailed) {
++        applicationEventPublisher.publishEvent(event)
++    }
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/payments/processing/adapter/driving/event/checkout/OrdersCheckoutEventsListener.kt b/src/main/kotlin/com/arcadiaeditions/payments/processing/adapter/driving/event/checkout/OrdersCheckoutEventsListener.kt
+index 05f74de..1f254c1 100644
+--- a/src/main/kotlin/com/arcadiaeditions/payments/processing/adapter/driving/event/checkout/OrdersCheckoutEventsListener.kt
++++ b/src/main/kotlin/com/arcadiaeditions/payments/processing/adapter/driving/event/checkout/OrdersCheckoutEventsListener.kt
+@@ -21,4 +21,11 @@ class OrdersCheckoutEventsListener(private val paymentsProcessingService: Paymen
+     fun onOrderCreated(event: com.arcadiaeditions.orders.checkout.core.domain.events.OrderCreated) {
+         paymentsProcessingService.authorizePayment(mapper.asAuthorizePaymentInput(event))
+     }
++
++    @ApplicationModuleListener
++    fun onOrderConfirmationRejected(
++        event: com.arcadiaeditions.orders.checkout.core.domain.events.OrderConfirmationRejected
++    ) {
++        paymentsProcessingService.voidPayment(mapper.asVoidPaymentInput(event))
++    }
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/payments/processing/adapter/driving/event/checkout/mapper/OrdersCheckoutEventsListenerMapper.kt b/src/main/kotlin/com/arcadiaeditions/payments/processing/adapter/driving/event/checkout/mapper/OrdersCheckoutEventsListenerMapper.kt
+index aea1653..eaf2814 100644
+--- a/src/main/kotlin/com/arcadiaeditions/payments/processing/adapter/driving/event/checkout/mapper/OrdersCheckoutEventsListenerMapper.kt
++++ b/src/main/kotlin/com/arcadiaeditions/payments/processing/adapter/driving/event/checkout/mapper/OrdersCheckoutEventsListenerMapper.kt
+@@ -17,4 +17,9 @@ interface OrdersCheckoutEventsListenerMapper {
+     fun asAuthorizePaymentInput(
+         event: com.arcadiaeditions.orders.checkout.core.domain.events.OrderCreated
+     ): com.arcadiaeditions.payments.processing.application.port.driving.dto.AuthorizePaymentInput
++
++    /** Add `@Mapping` here when MapStruct cannot infer the conversion. */
++    fun asVoidPaymentInput(
++        event: com.arcadiaeditions.orders.checkout.core.domain.events.OrderConfirmationRejected
++    ): com.arcadiaeditions.payments.processing.application.port.driving.dto.VoidPaymentInput
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driven/event/EventPublisher.kt b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driven/event/EventPublisher.kt
+index 754b9e4..fe1b981 100644
+--- a/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driven/event/EventPublisher.kt
++++ b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driven/event/EventPublisher.kt
+@@ -21,4 +21,6 @@ interface EventPublisher {
+     fun onPaymentCaptured(event: PaymentCaptured)
+ 
+     fun onPaymentVoided(event: PaymentVoided)
++
++    fun onPaymentVoidFailed(event: PaymentVoidFailed)
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/PaymentsProcessingService.kt b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/PaymentsProcessingService.kt
+index 85a4faf..8acf219 100644
+--- a/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/PaymentsProcessingService.kt
++++ b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/PaymentsProcessingService.kt
+@@ -11,15 +11,48 @@ import java.time.*
+ @org.jmolecules.architecture.hexagonal.PrimaryPort
+ interface PaymentsProcessingService {
+ 
+-    /** With Events: [[PaymentAuthorized, PaymentDeclined, PaymentFailed]]. */
++    /**
++     * Creation only: no-op when a Payment for orderId exists, in any state (supersedes P-01 D). Saves
++     * AUTHORIZATION_REQUESTED (attemptCount = 1) and commits before calling the processor, so getPaymentStatus sees a
++     * call in flight; then saves the outcome. The processor call times out after 30 seconds and becomes PaymentFailed.
++     *
++     * With Events: [[PaymentAuthorized, PaymentDeclined, PaymentFailed]].
++     */
+     fun authorizePayment(input: AuthorizePaymentInput): Payment
+ 
+-    /** With Events: [[PaymentRetried, PaymentRetryExhausted]]. */
++    /**
++     * No-op unless FAILED and input.attemptCount == attemptCount. Increments attemptCount and commits before calling
++     * the processor. The processor call times out after 30 seconds and becomes PaymentFailed.
++     *
++     * With Events: [[PaymentAuthorized, PaymentDeclined, PaymentFailed]].
++     */
++    fun reauthorizePayment(input: ReauthorizePaymentInput): Payment
++
++    /**
++     * No-op unless FAILED and input.attemptCount == attemptCount. Never increments attemptCount. At most 3 attempts in
++     * all (authorize + reauthorize); backoff before the next attempt: 5 seconds before attempt 2, 15 seconds before
++     * attempt 3. RETRY_EXHAUSTED at the limit.
++     *
++     * With Events: [[PaymentRetried, PaymentRetryExhausted]].
++     */
+     fun retryPayment(input: RetryPaymentInput): Payment
+ 
+-    /** With Events: [[PaymentCaptured, PaymentCaptureFailed]]. */
++    /**
++     * No-op, no event, when CAPTURED, CAPTURE_FAILED or VOIDED (redelivery).
++     *
++     * With Events: [[PaymentCaptured, PaymentCaptureFailed]].
++     */
+     fun capturePayment(input: CapturePaymentInput): Payment
+ 
+-    /** With Events: [PaymentVoided]. */
+-    fun voidPayment(input: VoidPaymentInput): Payment
++    /**
++     * FulfillmentFailed and PaymentCaptureFailed void after a failure downstream; OrderConfirmationRejected voids an
++     * authorization that arrived after expiry or cancellation. No-op, no event, when there is no Payment or it is not
++     * AUTHORIZED or CAPTURE_FAILED (redelivery).
++     *
++     * With Events: [[PaymentVoided, PaymentVoidFailed]].
++     */
++    fun voidPayment(input: VoidPaymentInput): Payment?
++
++    /** Read only, for the reservation timer. STARTED for any existing Payment. */
++    fun getPaymentStatus(input: GetPaymentStatusInput): GetPaymentStatusResult
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/dto/GetPaymentStatusInput.kt b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/dto/GetPaymentStatusInput.kt
+new file mode 100644
+index 0000000..e5e8e7e
+--- /dev/null
++++ b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/dto/GetPaymentStatusInput.kt
+@@ -0,0 +1,11 @@
++package com.arcadiaeditions.payments.processing.application.port.driving.dto
++
++import com.arcadiaeditions.payments.processing.domain.*
++import jakarta.validation.constraints.*
++import java.io.Serializable
++import java.math.*
++import java.time.*
++
++/** GetPaymentStatusInput. */
++@org.jmolecules.ddd.annotation.ValueObject
++data class GetPaymentStatusInput(@NotNull val orderId: String) : Serializable {}
+diff --git a/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/dto/GetPaymentStatusResult.kt b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/dto/GetPaymentStatusResult.kt
+new file mode 100644
+index 0000000..1691c4e
+--- /dev/null
++++ b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/dto/GetPaymentStatusResult.kt
+@@ -0,0 +1,15 @@
++package com.arcadiaeditions.payments.processing.application.port.driving.dto
++
++import com.arcadiaeditions.payments.processing.domain.*
++import jakarta.validation.constraints.*
++import java.io.Serializable
++import java.math.*
++import java.time.*
++
++/** GetPaymentStatusResult. */
++@org.jmolecules.ddd.annotation.ValueObject
++data class GetPaymentStatusResult(
++    @NotNull val outcome: GetPaymentStatusOutcome,
++    val noPayment: NoPaymentResult?,
++    val started: PaymentStartedResult?,
++) : Serializable {}
+diff --git a/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/dto/NoPaymentResult.kt b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/dto/NoPaymentResult.kt
+new file mode 100644
+index 0000000..c5d11fc
+--- /dev/null
++++ b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/dto/NoPaymentResult.kt
+@@ -0,0 +1,10 @@
++package com.arcadiaeditions.payments.processing.application.port.driving.dto
++
++import com.arcadiaeditions.payments.processing.domain.*
++import jakarta.validation.constraints.*
++import java.io.Serializable
++import java.math.*
++import java.time.*
++
++/** NoPaymentResult. */
++@org.jmolecules.ddd.annotation.ValueObject data class NoPaymentResult(val orderId: String?) : Serializable {}
+diff --git a/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/dto/PaymentStartedResult.kt b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/dto/PaymentStartedResult.kt
+new file mode 100644
+index 0000000..fcfc7af
+--- /dev/null
++++ b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/dto/PaymentStartedResult.kt
+@@ -0,0 +1,11 @@
++package com.arcadiaeditions.payments.processing.application.port.driving.dto
++
++import com.arcadiaeditions.payments.processing.domain.*
++import jakarta.validation.constraints.*
++import java.io.Serializable
++import java.math.*
++import java.time.*
++
++/** PaymentStartedResult. */
++@org.jmolecules.ddd.annotation.ValueObject
++data class PaymentStartedResult(val orderId: String?, val status: PaymentStatus?) : Serializable {}
+diff --git a/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/dto/ReauthorizePaymentInput.kt b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/dto/ReauthorizePaymentInput.kt
+new file mode 100644
+index 0000000..a980cdc
+--- /dev/null
++++ b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/dto/ReauthorizePaymentInput.kt
+@@ -0,0 +1,11 @@
++package com.arcadiaeditions.payments.processing.application.port.driving.dto
++
++import com.arcadiaeditions.payments.processing.domain.*
++import jakarta.validation.constraints.*
++import java.io.Serializable
++import java.math.*
++import java.time.*
++
++/** ReauthorizePaymentInput. */
++@org.jmolecules.ddd.annotation.ValueObject
++data class ReauthorizePaymentInput(@NotNull val orderId: String, @NotNull val attemptCount: Integer) : Serializable {}
+diff --git a/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/dto/RetryPaymentInput.kt b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/dto/RetryPaymentInput.kt
+index 8c8cb8a..2af5d0e 100644
+--- a/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/dto/RetryPaymentInput.kt
++++ b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/port/driving/dto/RetryPaymentInput.kt
+@@ -7,4 +7,5 @@ import java.math.*
+ import java.time.*
+ 
+ /** RetryPaymentInput. */
+-@org.jmolecules.ddd.annotation.ValueObject data class RetryPaymentInput(@NotNull val orderId: String) : Serializable {}
++@org.jmolecules.ddd.annotation.ValueObject
++data class RetryPaymentInput(@NotNull val orderId: String, @NotNull val attemptCount: Integer) : Serializable {}
+diff --git a/src/main/kotlin/com/arcadiaeditions/payments/processing/application/service/PaymentsProcessingServiceImpl.kt b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/service/PaymentsProcessingServiceImpl.kt
+index 411a398..c8976d5 100644
+--- a/src/main/kotlin/com/arcadiaeditions/payments/processing/application/service/PaymentsProcessingServiceImpl.kt
++++ b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/service/PaymentsProcessingServiceImpl.kt
+@@ -213,4 +213,14 @@ open class PaymentsProcessingServiceImpl(
+         eventPublisher.onPaymentVoided(eventsMapper.asPaymentVoided(saved))
+         return saved
+     }
++
++    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md (PaymentRetried still reaches authorizePayment, P-01 D, until then)
++    override fun reauthorizePayment(input: ReauthorizePaymentInput): Payment {
++        TODO("reauthorizePayment: " + input.orderId)
++    }
++
++    // baseline/place-order-flow-2 compile stub: implemented by a task of docs/tasks.md
++    override fun getPaymentStatus(input: GetPaymentStatusInput): GetPaymentStatusResult {
++        TODO("getPaymentStatus: " + input.orderId)
++    }
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/payments/processing/application/service/mapper/EventsMapper.kt b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/service/mapper/EventsMapper.kt
+index a7e7928..8d797ba 100644
+--- a/src/main/kotlin/com/arcadiaeditions/payments/processing/application/service/mapper/EventsMapper.kt
++++ b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/service/mapper/EventsMapper.kt
+@@ -40,4 +40,8 @@ interface EventsMapper {
+ 
+     @Mapping(target = "reason", source = "failureReason")
+     fun asPaymentFailed(payment: Payment): com.arcadiaeditions.payments.processing.domain.event.PaymentFailed
++
++    @Mapping(target = "reason", source = "failureReason")
++    @Mapping(target = "failedAt", source = "voidFailedAt")
++    fun asPaymentVoidFailed(payment: Payment): com.arcadiaeditions.payments.processing.domain.event.PaymentVoidFailed
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/payments/processing/application/service/mapper/PaymentsProcessingServiceMapper.kt b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/service/mapper/PaymentsProcessingServiceMapper.kt
+index 6553013..4f7e046 100644
+--- a/src/main/kotlin/com/arcadiaeditions/payments/processing/application/service/mapper/PaymentsProcessingServiceMapper.kt
++++ b/src/main/kotlin/com/arcadiaeditions/payments/processing/application/service/mapper/PaymentsProcessingServiceMapper.kt
+@@ -42,4 +42,10 @@ interface PaymentsProcessingServiceMapper {
+     @Mapping(target = "id", ignore = true)
+     fun update(@MappingTarget entity: Payment, input: CapturePaymentInput): Payment
+     // output mappings
++
++    // ReauthorizePaymentInput-Payment reauthorizePayment
++    fun asPayment(input: ReauthorizePaymentInput): Payment
++
++    @Mapping(target = "id", ignore = true)
++    fun update(@MappingTarget entity: Payment, input: ReauthorizePaymentInput): Payment
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/payments/processing/domain/GetPaymentStatusOutcome.kt b/src/main/kotlin/com/arcadiaeditions/payments/processing/domain/GetPaymentStatusOutcome.kt
+new file mode 100644
+index 0000000..e60f2e6
+--- /dev/null
++++ b/src/main/kotlin/com/arcadiaeditions/payments/processing/domain/GetPaymentStatusOutcome.kt
+@@ -0,0 +1,8 @@
++package com.arcadiaeditions.payments.processing.domain
++
++/** Enum for GetPaymentStatusOutcome. */
++enum class GetPaymentStatusOutcome {
++
++    NO_PAYMENT,
++    STARTED,
++}
+diff --git a/src/main/kotlin/com/arcadiaeditions/payments/processing/domain/Payment.kt b/src/main/kotlin/com/arcadiaeditions/payments/processing/domain/Payment.kt
+index 8bdd9ed..78624a7 100644
+--- a/src/main/kotlin/com/arcadiaeditions/payments/processing/domain/Payment.kt
++++ b/src/main/kotlin/com/arcadiaeditions/payments/processing/domain/Payment.kt
+@@ -39,6 +39,7 @@ data class Payment(
+     @Column(name = "failed_at") var failedAt: Instant? = null,
+     @Column(name = "captured_at") var capturedAt: Instant? = null,
+     @Column(name = "voided_at") var voidedAt: Instant? = null,
++    @Column(name = "void_failed_at") var voidFailedAt: Instant? = null,
+     @Column(name = "failure_reason") var failureReason: String? = null,
+ ) : Serializable {
+ 
+diff --git a/src/main/kotlin/com/arcadiaeditions/payments/processing/domain/PaymentStatus.kt b/src/main/kotlin/com/arcadiaeditions/payments/processing/domain/PaymentStatus.kt
+index e01848d..5afd09c 100644
+--- a/src/main/kotlin/com/arcadiaeditions/payments/processing/domain/PaymentStatus.kt
++++ b/src/main/kotlin/com/arcadiaeditions/payments/processing/domain/PaymentStatus.kt
+@@ -11,4 +11,5 @@ enum class PaymentStatus {
+     CAPTURED,
+     CAPTURE_FAILED,
+     VOIDED,
++    VOID_FAILED,
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/payments/processing/domain/PaymentTransitions.kt b/src/main/kotlin/com/arcadiaeditions/payments/processing/domain/PaymentTransitions.kt
+index c0e77ef..3e3febe 100644
+--- a/src/main/kotlin/com/arcadiaeditions/payments/processing/domain/PaymentTransitions.kt
++++ b/src/main/kotlin/com/arcadiaeditions/payments/processing/domain/PaymentTransitions.kt
+@@ -10,14 +10,7 @@ object PaymentTransitions {
+     }
+ 
+     fun ensureCanVoidPayment(entity: Payment) {
+-        require(
+-            "voidPayment",
+-            entity,
+-            PaymentStatus.AUTHORIZED,
+-            PaymentStatus.AUTHORIZATION_REQUESTED,
+-            PaymentStatus.FAILED,
+-            PaymentStatus.CAPTURE_FAILED,
+-        )
++        require("voidPayment", entity, PaymentStatus.AUTHORIZED, PaymentStatus.CAPTURE_FAILED)
+     }
+ 
+     private fun require(command: String, entity: Payment, vararg allowed: PaymentStatus) {
+@@ -47,4 +40,12 @@ object PaymentTransitions {
+             "Invalid state transition for $entityType (${naturalId ?: "id=$entityId"}): " +
+                 "operation '$operation' not allowed from state $currentState, allowed states: $allowedStates"
+         )
++
++    fun ensureCanAuthorizePayment(entity: Payment) {
++        require("authorizePayment", entity, PaymentStatus.AUTHORIZATION_REQUESTED)
++    }
++
++    fun ensureCanReauthorizePayment(entity: Payment) {
++        require("reauthorizePayment", entity, PaymentStatus.FAILED)
++    }
+ }
+diff --git a/src/main/kotlin/com/arcadiaeditions/payments/processing/domain/event/PaymentVoidFailed.kt b/src/main/kotlin/com/arcadiaeditions/payments/processing/domain/event/PaymentVoidFailed.kt
+new file mode 100644
+index 0000000..27dea28
+--- /dev/null
++++ b/src/main/kotlin/com/arcadiaeditions/payments/processing/domain/event/PaymentVoidFailed.kt
+@@ -0,0 +1,24 @@
++package com.arcadiaeditions.payments.processing.domain.event
++
++import com.arcadiaeditions.payments.processing.domain.*
++import jakarta.validation.constraints.*
++import java.io.Serializable
++import java.math.*
++import java.time.*
++import java.util.*
++
++/**  */
++@org.springframework.modulith.NamedInterface("events.PaymentVoidFailed")
++@org.jmolecules.event.annotation.DomainEvent
++data class PaymentVoidFailed(
++    var orderId: String? = null,
++    var customerId: String? = null,
++    var providerReference: String? = null,
++    var reason: String? = null,
++    var failedAt: Instant? = null,
++) : Serializable {
++
++    companion object {
++        private const val serialVersionUID: Long = 1L
++    }
++}
+diff --git a/src/test/kotlin/com/arcadiaeditions/ArchitectureTest.kt b/src/test/kotlin/com/arcadiaeditions/ArchitectureTest.kt
+index 091cbcc..2de6181 100644
+--- a/src/test/kotlin/com/arcadiaeditions/ArchitectureTest.kt
++++ b/src/test/kotlin/com/arcadiaeditions/ArchitectureTest.kt
+@@ -107,12 +107,14 @@ class ArchitectureTest {
+          * Known and reported (P-04), not fixed here. Cause: the code layout (each producer module owns its
+          * event classes, each consumer's listener imports them), not the models. Anything else fails.
+          *
+-         * 1. Module cycles, exactly these 4 (the flow's event choreography through event types).
++         * 1. Module cycles, exactly these 5 (the flow's event choreography through event types;
++         *    fulfillment>payments>fulfillment since 0.10.0: PaymentCaptured / FulfillmentFailed listeners).
+          */
+         val KNOWN_CYCLES = setOf(
+             "catalog.inventory>payments>fulfillment>orders>catalog.inventory",
+             "catalog.inventory>payments>orders>catalog.inventory",
+             "fulfillment>orders>payments>fulfillment",
++            "fulfillment>payments>fulfillment",
+             "orders>payments>orders",
+         )
+         /**
+diff --git a/src/test/kotlin/com/arcadiaeditions/catalog/inventory/service/impl/InventoryServiceTest.kt b/src/test/kotlin/com/arcadiaeditions/catalog/inventory/service/impl/InventoryServiceTest.kt
+index e37ef49..d6dfd12 100644
+--- a/src/test/kotlin/com/arcadiaeditions/catalog/inventory/service/impl/InventoryServiceTest.kt
++++ b/src/test/kotlin/com/arcadiaeditions/catalog/inventory/service/impl/InventoryServiceTest.kt
+@@ -236,7 +236,7 @@ class InventoryServiceTest {
+         // C-02: ORD-002 has two RESERVED reservations (SKU-001 x2, SKU-002 x1)
+         val result = inventoryService.confirmStockReservation(ConfirmStockReservationInput(orderId = "ORD-002"))
+ 
+-        org.junit.jupiter.api.Assertions.assertEquals(2, result.size)
++        org.junit.jupiter.api.Assertions.assertEquals(ConfirmStockReservationOutcome.CONFIRMED, result.outcome)
+         val saved = stockReservationRepository.findAll().filter { it.orderId == "ORD-002" }
+         org.junit.jupiter.api.Assertions.assertEquals(2, saved.size)
+         saved.forEach {
+@@ -271,7 +271,7 @@ class InventoryServiceTest {
+         val result = inventoryService.confirmStockReservation(ConfirmStockReservationInput(orderId = "ORD-003"))
+ 
+         org.junit.jupiter.api.Assertions.assertEquals(0, confirmedEvents().size)
+-        org.junit.jupiter.api.Assertions.assertTrue(result.none { it.status != ReservationStatus.CONFIRMED })
++        org.junit.jupiter.api.Assertions.assertEquals(ConfirmStockReservationOutcome.CONFIRMED, result.outcome)
+         val after = stockReservationRepository.findAll().single { it.orderId == "ORD-003" }
+         org.junit.jupiter.api.Assertions.assertEquals(before.confirmedAt, after.confirmedAt)
+         org.junit.jupiter.api.Assertions.assertEquals(5, position("SKU-001").soldQuantity!!.toInt())
+diff --git a/src/test/kotlin/com/arcadiaeditions/fulfillment/shipping/events/InMemoryEventPublisher.kt b/src/test/kotlin/com/arcadiaeditions/fulfillment/shipping/events/InMemoryEventPublisher.kt
+index 5cd7a48..e31332c 100644
+--- a/src/test/kotlin/com/arcadiaeditions/fulfillment/shipping/events/InMemoryEventPublisher.kt
++++ b/src/test/kotlin/com/arcadiaeditions/fulfillment/shipping/events/InMemoryEventPublisher.kt
+@@ -23,4 +23,8 @@ class InMemoryEventPublisher : EventPublisher {
+     override fun onFulfillmentFailed(event: FulfillmentFailed) {
+         events.add(event)
+     }
++
++    override fun onFulfillmentCancelled(event: FulfillmentCancelled) {
++        events.add(event)
++    }
+ }
+diff --git a/src/test/kotlin/com/arcadiaeditions/orders/checkout/infrastructure/events/InMemoryEventPublisher.kt b/src/test/kotlin/com/arcadiaeditions/orders/checkout/infrastructure/events/InMemoryEventPublisher.kt
+index 2d906df..77471e9 100644
+--- a/src/test/kotlin/com/arcadiaeditions/orders/checkout/infrastructure/events/InMemoryEventPublisher.kt
++++ b/src/test/kotlin/com/arcadiaeditions/orders/checkout/infrastructure/events/InMemoryEventPublisher.kt
+@@ -28,6 +28,10 @@ class InMemoryEventPublisher : EventPublisher {
+         events.add(event)
+     }
+ 
++    override fun onOrderConfirmationRejected(event: OrderConfirmationRejected) {
++        events.add(event)
++    }
++
+     override fun onOrderConfirmed(event: OrderConfirmed) {
+         events.add(event)
+     }
+diff --git a/src/test/kotlin/com/arcadiaeditions/payments/processing/adapter/driven/event/InMemoryEventPublisher.kt b/src/test/kotlin/com/arcadiaeditions/payments/processing/adapter/driven/event/InMemoryEventPublisher.kt
+index dc025a5..946a84e 100644
+--- a/src/test/kotlin/com/arcadiaeditions/payments/processing/adapter/driven/event/InMemoryEventPublisher.kt
++++ b/src/test/kotlin/com/arcadiaeditions/payments/processing/adapter/driven/event/InMemoryEventPublisher.kt
+@@ -43,4 +43,8 @@ class InMemoryEventPublisher : EventPublisher {
+     override fun onPaymentVoided(event: PaymentVoided) {
+         events.add(event)
+     }
++
++    override fun onPaymentVoidFailed(event: PaymentVoidFailed) {
++        events.add(event)
++    }
+ }
+diff --git a/src/test/kotlin/com/arcadiaeditions/payments/processing/application/service/PaymentsProcessingServiceTest.kt b/src/test/kotlin/com/arcadiaeditions/payments/processing/application/service/PaymentsProcessingServiceTest.kt
+index b87623b..e92b9cd 100644
+--- a/src/test/kotlin/com/arcadiaeditions/payments/processing/application/service/PaymentsProcessingServiceTest.kt
++++ b/src/test/kotlin/com/arcadiaeditions/payments/processing/application/service/PaymentsProcessingServiceTest.kt
+@@ -257,7 +257,7 @@ class PaymentsProcessingServiceTest {
+         org.junit.jupiter.api.Assertions.assertTrue(events.single() is PaymentFailed)
+ 
+         events.clear()
+-        paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-012"))
++        paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-012", attemptCount = 1 as Integer))
+         events.clear()
+         paymentsProcessingService.authorizePayment(retriedInput("ORD-012", "CUST-012"))
+ 
+@@ -306,7 +306,7 @@ class PaymentsProcessingServiceTest {
+         // C-12: ORD-012 Payment FAILED (attempt 1 of 3), PaymentFailed emitted
+         val before = paymentRepository.findAll().size
+ 
+-        val payment = paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-012"))
++        val payment = paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-012", attemptCount = 1 as Integer))
+ 
+         org.junit.jupiter.api.Assertions.assertEquals(before, paymentRepository.findAll().size)
+         val saved = savedPayment("ORD-012")
+@@ -327,7 +327,7 @@ class PaymentsProcessingServiceTest {
+     @Test
+     fun retryPaymentExhaustedTest() {
+         // C-13: ORD-013 Payment FAILED at the retry limit (attempt 3, A-03)
+-        val payment = paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-013"))
++        val payment = paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-013", attemptCount = 3 as Integer))
+ 
+         val saved = savedPayment("ORD-013")
+         org.junit.jupiter.api.Assertions.assertEquals(saved.id, payment.id)
+@@ -348,7 +348,7 @@ class PaymentsProcessingServiceTest {
+     fun retryPaymentInvalidTransitionTest() {
+         // C-04: ORD-004 Payment AUTHORIZED
+         org.junit.jupiter.api.Assertions.assertThrows(PaymentTransitions.InvalidStateTransitionException::class.java) {
+-            paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-004"))
++            paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-004", attemptCount = 1 as Integer))
+         }
+         org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.AUTHORIZED, savedPayment("ORD-004").status)
+         org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+@@ -357,7 +357,7 @@ class PaymentsProcessingServiceTest {
+     @Test
+     fun retryPaymentNotFoundTest() {
+         org.junit.jupiter.api.Assertions.assertThrows(NoSuchElementException::class.java) {
+-            paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-MISSING"))
++            paymentsProcessingService.retryPayment(RetryPaymentInput(orderId = "ORD-MISSING", attemptCount = 1 as Integer))
+         }
+         org.junit.jupiter.api.Assertions.assertTrue(events.isEmpty())
+     }
+@@ -501,7 +501,7 @@ class PaymentsProcessingServiceTest {
+         val payment =
+             paymentsProcessingService.voidPayment(VoidPaymentInput(orderId = "ORD-016", reason = "fulfillment_failed"))
+ 
+-        org.junit.jupiter.api.Assertions.assertEquals(savedPayment("ORD-016").id, payment.id)
++        org.junit.jupiter.api.Assertions.assertEquals(savedPayment("ORD-016").id, payment!!.id)
+         org.junit.jupiter.api.Assertions.assertEquals(
+             Instant.parse("2026-10-01T11:15:30Z"),
+             savedPayment("ORD-016").authorizedAt,
+@@ -540,7 +540,7 @@ class PaymentsProcessingServiceTest {
+             paymentsProcessingService.voidPayment(VoidPaymentInput(orderId = "ORD-010", reason = "warehouse_damage"))
+ 
+         val saved = savedPayment("ORD-010")
+-        org.junit.jupiter.api.Assertions.assertEquals(saved.id, payment.id)
++        org.junit.jupiter.api.Assertions.assertEquals(saved.id, payment!!.id)
+         org.junit.jupiter.api.Assertions.assertEquals(PaymentStatus.VOIDED, saved.status)
+         org.junit.jupiter.api.Assertions.assertEquals(Instant.parse("2026-10-01T10:15:00Z"), saved.voidedAt)
+         org.junit.jupiter.api.Assertions.assertEquals("fulfillment_failed", saved.failureReason)
