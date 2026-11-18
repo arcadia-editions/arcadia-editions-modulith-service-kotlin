@@ -189,7 +189,7 @@ class NotificationsConsumerServiceTest {
 
         assertEquals(NotificationStatus.SENT, n.status)
         assertTrue(n.body!!.contains("PAYMENT_VOID_FAILED"))
-        assertTrue(n.body!!.contains("hold on your card may still show for a few days"))
+        assertTrue(n.body!!.contains("hold on your card may still show until we release it"))
         assertEquals(n.body, context.emailSender().sent.single().body)
         assertEquals("PAYMENT_VOID_FAILED", (events.single() as OrderCancelledNotificationSent).reason)
     }
