@@ -161,6 +161,18 @@
 			<artifactId>spring-modulith-runtime</artifactId>
 			<scope>runtime</scope>
 		</dependency>
+		<!-- spring-modulith-core and archunit arrive transitively with runtime scope: IntelliJ does not put
+		     runtime deps on the test compile classpath (Maven does), so ArchitectureTest is red in the IDE.
+		     Declared compile, not test: a direct test scope would drop them from the app's runtime classpath. -->
+		<dependency>
+			<groupId>org.springframework.modulith</groupId>
+			<artifactId>spring-modulith-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.tngtech.archunit</groupId>
+			<artifactId>archunit</artifactId>
+			<version>${archunit-junit5.version}</version>
+		</dependency>
 		<!-- utils -->
 		<!-- Hibernate Validator (the Jakarta Validation provider): came transitively with spring-cloud-stream before
 		     kafka was removed; without it @Valid is a silent no-op and Validation.buildDefaultValidatorFactory() fails -->
