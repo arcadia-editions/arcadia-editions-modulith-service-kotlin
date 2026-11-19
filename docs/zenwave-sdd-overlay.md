@@ -26,7 +26,7 @@ repositories must be cloned next to this one.
 | Model gap proposals | `docs/proposals/` |
 | Test data and scenario matrix | `src/test/resources/data.sql` (header: scenario and coverage matrices, chains `C-01`..`C-30`, assumptions `A-02`..`A-12`, the fixed test "now" `2026-10-01T12:00:00Z` read by tests through a fixed `Clock`) and `src/test/resources/data/jpa/<Entity>/<n>.json` |
 | Generation script | `zenwave-scripts.zw` (projects generated with ZenWave SDK) |
-| Protected files | root `ModuleMetadata.kt` (removed, T-36); `common/mappers/BaseMapper.kt` (`@NamedInterface("mappers")`); every `*Repository.kt` and its in-memory twin (custom finders); `OrdersCheckoutApiIntegrationTest`, `DockerComposeInitializer`, `data.sql` and fixtures (hand-written) |
+| Protected files | root `ModuleMetadata.kt` (removed, T-36); `orders/ModuleMetadata.kt` (`allowedDependencies`: direct call to `catalog.inventory :: InventoryService` and the events it listens to); `common/mappers/BaseMapper.kt` (`@NamedInterface("mappers")`); every `*Repository.kt` and its in-memory twin (custom finders); `OrdersCheckoutApiIntegrationTest`, `DockerComposeInitializer`, `data.sql` and fixtures (hand-written) |
 
 Required sibling clones: `../arcadia-editions-architecture` (ZFL), `../arcadia-editions-modulith-api` (ZDL, OpenAPI).
 

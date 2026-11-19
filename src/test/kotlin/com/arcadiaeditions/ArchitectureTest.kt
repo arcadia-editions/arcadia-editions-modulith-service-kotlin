@@ -24,12 +24,23 @@ import org.springframework.modulith.core.ApplicationModules
 @AnalyzeClasses(packages = ["com.arcadiaeditions"], importOptions = [DoNotIncludeTests::class])
 class ArchitectureTest {
 
-    /** Module boundaries, `allowedDependencies`, cycles and internal-package access (Spring Modulith). */
+    /**
+     * Module boundaries, `allowedDependencies`, cycles and internal-package access (Spring Modulith).
+     * `allowedDependencies` is declared in `orders` (direct call to `catalog.inventory :: InventoryService` plus the
+     * events it listens to); an undeclared dependency from orders is a violation, not a known message.
+     * Cycles are slice-level and independent of `allowedDependencies`: declaring them does not remove a cycle.
+     */
     @Test
     fun applicationModulesAreValid() {
         val violations = ApplicationModules.of(Application::class.java).detectViolations()
         val unexpected = violations.messages.filterNot { isKnown(it) }
         assertThat(unexpected).describedAs("Spring Modulith violations").isEmpty()
+
+        // the tolerance must not outlive the violation: a known entry that no longer occurs is removed from the list
+        val cycles = violations.messages.filter { it.startsWith("Cycle detected") }.map { cycleChain(it) }.toSet()
+        assertThat(KNOWN_CYCLES - cycles).describedAs("known cycles that no longer occur").isEmpty()
+        val bare = violations.messages.map { LOCATION.replace(it, "").trim() }.toSet()
+        assertThat(KNOWN_PUBLISHER_MESSAGES - bare).describedAs("known publisher messages that no longer occur").isEmpty()
     }
 
     /** The tolerance is bounded: an unlisted cycle, a BaseMapper violation or jMolecules message is not known. */
@@ -77,13 +88,13 @@ class ArchitectureTest {
         "Cycle detected: " + slices.joinToString(" -> \n") { "Slice $it" } + "\n  1. Dependencies of Slice ${slices[0]}"
 
     private fun isKnown(message: String): Boolean {
-        if (message.startsWith("Cycle detected")) {
-            val chain = SLICE.findAll(message.substringBefore("1. Dependencies")).map { it.groupValues[1] }.joinToString(">")
-            return chain in KNOWN_CYCLES
-        }
+        if (message.startsWith("Cycle detected")) return cycleChain(message) in KNOWN_CYCLES
         val bare = LOCATION.replace(message, "").trim()
         return bare in KNOWN_PUBLISHER_MESSAGES || isSameModuleRepositoryMessage(bare)
     }
+
+    private fun cycleChain(message: String): String =
+        SLICE.findAll(message.substringBefore("1. Dependencies")).map { it.groupValues[1] }.joinToString(">")
 
     /** jMolecules layered message from a `<module>.repository.jpa.*Repository` that references only `<module>.domain` types. */
     private fun isSameModuleRepositoryMessage(message: String): Boolean {
