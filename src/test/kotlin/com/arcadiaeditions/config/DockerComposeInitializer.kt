@@ -31,12 +31,11 @@ class DockerComposeInitializer : ApplicationContextInitializer<ConfigurableAppli
     )
 
     companion object {
-        /** Test-only compose: own project name and host ports (15432, 29092, 22181, 18081), not docker-compose.yml. */
+        /** Test-only compose: own project name and host port (15432), not docker-compose.yml. */
         private const val DOCKER_COMPOSE_FILE = "./docker-compose-test.yml"
         private val SERVICES =
             listOf(
                 Service("postgresql", 5432, 15432, "DATASOURCE_URL", "jdbc:postgresql://%s:%s/app"),
-                Service("kafka", 9092, 29092, "KAFKA_BOOTSTRAP_SERVERS", "%s:%s"),
             )
 
         val HOST: String = DockerClientFactory.instance().dockerHostIpAddress()

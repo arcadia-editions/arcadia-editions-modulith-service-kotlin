@@ -74,7 +74,7 @@ mkdir -p target && mvn -q -DskipTests clean compile 2>&1 | tee target/compile.lo
 # focused tests of a task (the implementer runs only these)
 mvn -q test -Dtest='TestClass'   # the task's tests:
 # full suite with integration tests and containers (once per slice review)
-# about 4 to 6 minutes (3:34 and 5:25 on 2026-11-17, 4:53 on 2026-11-18); needs Docker (Testcontainers starts docker-compose: postgres, kafka). Add -Dmaven.test.failure.ignore=true
+# about 4 to 6 minutes (3:34 and 5:25 on 2026-11-17, 4:53 on 2026-11-18); needs Docker (Testcontainers starts docker-compose: postgres). Add -Dmaven.test.failure.ignore=true
 # to reach the failsafe ITs while unit tests still fail (baseline 2026-11-12)
 mvn -q verify
 # lint the models

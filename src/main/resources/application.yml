@@ -1,7 +1,6 @@
 logging:
   level:
     com.arcadiaeditions: DEBUG
-    org.apache.kafka.clients.admin: WARN
 
 springdoc:
   swagger-ui:
@@ -33,8 +32,6 @@ spring:
   modulith:
     detection-strategy: explicitly-annotated
     events:
-      externalization:
-        enabled: true
       jdbc:
         schema-initialization:
           enabled: true
@@ -55,17 +52,3 @@ spring:
         prepStmtCacheSize: 250
         prepStmtCacheSqlLimit: 2048
         useServerPrepStmts: true
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.LongSerializer
-    consumer:
-      key-deserializer: org.apache.kafka.common.serialization.LongDeserializer
-  cloud:
-    stream:
-      kafka.binder.enable-observation: true
-      function:
-        definition: on-customer-event;
-      bindings:
-        on-customer-event-out:
-          destination: customer.events

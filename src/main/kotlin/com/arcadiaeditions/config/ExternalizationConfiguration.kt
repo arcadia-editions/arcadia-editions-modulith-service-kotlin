@@ -1,6 +1,5 @@
 package com.arcadiaeditions.config
 
-import io.zenwave360.modulith.events.scs.config.EnableSpringCloudStreamEventExternalization
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Configuration
 import org.springframework.modulith.events.IncompleteEventPublications
@@ -9,7 +8,6 @@ import org.springframework.scheduling.annotation.Scheduled
 import java.time.Duration
 
 @Configuration
-@EnableSpringCloudStreamEventExternalization
 @EnableScheduling
 class ExternalizationConfiguration(
     private val incompleteEventPublications: IncompleteEventPublications,

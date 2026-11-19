@@ -18,7 +18,7 @@ The Arcadia Editions bounded contexts (orders checkout, catalog inventory, catal
 ## Getting Started
 
 ```bash
-docker-compose up -d     # local infrastructure (database, kafka...)
+docker-compose up -d     # local infrastructure (PostgreSQL)
 mvn spring-boot:run
 ```
 
@@ -43,10 +43,8 @@ Versions are managed in `pom.xml` (`<properties>` and the Spring Boot parent); t
 |---|---|---|
 | Language | Kotlin (`kotlin-maven-plugin`, kapt) on JDK 24 | 2.3.x |
 | Framework | Spring Boot | 4.0.x |
-| | Spring Cloud (Stream) | 2025.1.x |
 | Persistence | Spring Data JPA + PostgreSQL, or Spring Data MongoDB | (Boot managed) |
-| Messaging | Spring Cloud Stream for Kafka + Schema Registry client (optional) | (Cloud managed) |
-| Modular monolith | Spring Modulith + transactional outbox (`spring-modulith-events-scs`) (optional) | 2.0.x |
+| Modular monolith | Spring Modulith + JDBC event publication registry (in-process events, no broker) | 2.0.x |
 | DDD / Architecture | jMolecules + ArchUnit (optional) | 2025.0.x |
 | Security | Spring Security | (Boot managed) |
 | API docs | springdoc-openapi (SwaggerUI) | 2.8.x |
@@ -77,7 +75,7 @@ Files at the project root:
 | models (not in this repo) | ZFL flows in [`../arcadia-editions-architecture`](../arcadia-editions-architecture), one ZDL per bounded context and the OpenAPI in [`../arcadia-editions-modulith-api`](../arcadia-editions-modulith-api), packaged as `com.arcadiaeditions.modulith.application.arcadia-editions-modulith:service-all` (version in `pom.xml` `arcadia-models.version` and `zenwave-scripts.zw`) |
 | `zenwave-scripts.zw` | the ZenWave SDK plugins to run against the model, with their configuration |
 | `pom.xml` | build, dependencies and the OpenAPI / AsyncAPI generators; base packages in `<properties>` |
-| `docker-compose.yml` | local infrastructure (PostgreSQL or MongoDB; Kafka, Zookeeper, Schema Registry) |
+| `docker-compose.yml` | local infrastructure (PostgreSQL) |
 | `src/main/kotlin/<package>/config` | Spring configuration (security, async, database, web, exception translation...) |
 | `src/main/resources/application*.yml` | application configuration (`application-default.yml` for local runs) |
 | `src/main/resources/public/apis` | `openapi.yml` and `asyncapi.yml`, the API contracts |

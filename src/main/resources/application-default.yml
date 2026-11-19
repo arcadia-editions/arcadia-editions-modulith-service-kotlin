@@ -9,4 +9,3 @@ arcadia.fake-adapters.enabled: true
 DATASOURCE_URL: jdbc:postgresql://localhost:5432/app
 DATASOURCE_USERNAME: postgres
 DATASOURCE_PASSWORD: admin123
-KAFKA_BOOTSTRAP_SERVERS: localhost:9092
