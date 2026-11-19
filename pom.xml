@@ -162,6 +162,12 @@
 			<scope>runtime</scope>
 		</dependency>
 		<!-- utils -->
+		<!-- Hibernate Validator (the Jakarta Validation provider): came transitively with spring-cloud-stream before
+		     kafka was removed; without it @Valid is a silent no-op and Validation.buildDefaultValidatorFactory() fails -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>jakarta.validation</groupId>
 			<artifactId>jakarta.validation-api</artifactId>
